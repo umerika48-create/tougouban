@@ -4812,6 +4812,7 @@ function resetPartnerBirthdate() {
 function resetAllBirthdates() {
   resetMyBirthdate();
   resetPartnerBirthdate();
+  resetTargetYearMonth();
 }
 
 
@@ -4921,6 +4922,17 @@ function toggleCoreNum(id) {
     }
   });
   el.classList.toggle('open');
+}
+
+/* 本命数・未来数・過去数カード内の全展開パネルを一括で閉じる */
+function resetCoreNumPanels() {
+  var ids = ['honmei-detail','corenum-life','corenum-future','corenum-past',
+    'corenum-life-work','corenum-life-love','corenum-future-work','corenum-future-love',
+    'corenum-past-work','corenum-past-love'];
+  ids.forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.classList.remove('open');
+  });
 }
 
 /* 数秘コアナンバーの説明（1〜9＋11/22/33） */
@@ -6283,7 +6295,7 @@ function buildHonmeiBannerHTML(birthdate, honmei, kYear, kMonth, isPartner) {
     '<div class="honmei-banner fade-up" style="border-color:'+sd.color+'50">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'+
         '<div class="honmei-label" style="margin-bottom:0;">'+_age+'歳</div>'+
-        _honmeiBtnHTML+
+        '<div style="display:flex;align-items:center;gap:6px;">'+_honmeiBtnHTML+'<button onclick="event.stopPropagation();resetCoreNumPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button></div>'+
       '</div>'+
       '<div class="honmei-star" style="color:'+sd.color+';text-shadow:0 0 40px '+sd.color+'60;cursor:pointer;-webkit-tap-highlight-color:transparent;" onclick="toggleCoreNum(\'honmei-detail\')">'+sd.name+'</div>'+(situation==="meeting"?lt_buildBadges(birthdate):"")+
       '<div class="core-num-detail" id="honmei-detail" style="margin-top:10px;">'+
@@ -6441,7 +6453,7 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
     '<div class="honmei-banner fade-up" style="border-color:'+sd.color+'50">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'+
         '<div class="honmei-label" style="margin-bottom:0;">'+_age+'歳</div>'+
-        _honmeiBtnHTML+
+        '<div style="display:flex;align-items:center;gap:6px;">'+_honmeiBtnHTML+'<button onclick="event.stopPropagation();resetCoreNumPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button></div>'+
       '</div>'+
       '<div class="honmei-star" style="color:'+sd.color+';text-shadow:0 0 40px '+sd.color+'60;cursor:pointer;-webkit-tap-highlight-color:transparent;" onclick="toggleCoreNum(\'honmei-detail\')">'+sd.name+'</div>'+(situation==="meeting"?lt_buildBadges(birthdate):"")+
       '<div class="core-num-detail" id="honmei-detail" style="margin-top:10px;">'+
@@ -7355,7 +7367,7 @@ function calculate() {
     '<div class="honmei-banner fade-up" style="border-color:'+sd.color+'50">'+
       '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'+
         '<div class="honmei-label" style="margin-bottom:0;">'+_age+'歳</div>'+
-        _honmeiBtnHTML+
+        '<div style="display:flex;align-items:center;gap:6px;">'+_honmeiBtnHTML+'<button onclick="event.stopPropagation();resetCoreNumPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button></div>'+
       '</div>'+
       '<div class="honmei-star" style="color:'+sd.color+';text-shadow:0 0 40px '+sd.color+'60;cursor:pointer;-webkit-tap-highlight-color:transparent;" onclick="toggleCoreNum(\'honmei-detail\')">'+sd.name+'</div>'+(situation==="meeting"?lt_buildBadges(birthdate):"")+
       '<div class="core-num-detail" id="honmei-detail" style="margin-top:10px;">'+
