@@ -841,7 +841,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     <div class="row">
       <div>
         <label>Year</label>
-        <input type="number" id="targetYear" min="2020" max="2040">
+        <input type="number" id="targetYear" min="1900" max="2050">
       </div>
       <div>
         <label>Month</label>
@@ -7034,8 +7034,8 @@ function calculate() {
     err.textContent='生年月日を入力してください（例：1990/1/1）'; return;
   }
   if(!birthdate) return;
-  if(isNaN(targetYear)||targetYear<1900||targetYear>2035){
-    err.textContent='年を正しく入力してください（1900〜2035）'; return;
+  if(isNaN(targetYear)||targetYear<1900||targetYear>2050){
+    err.textContent='年を正しく入力してください（1900〜2050）'; return;
   }
   if(isNaN(targetMonth)||targetMonth<1||targetMonth>12){
     err.textContent='月は1〜12で入力してください'; return;
