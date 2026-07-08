@@ -848,6 +848,9 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
         <input type="number" id="targetMonth" min="1" max="12" id2="automonth">
       </div>
     </div>
+    <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+      <button type="button" onclick="resetTargetYearMonth()" style="padding:3px 14px;border-radius:12px;border:1px solid var(--gold);background:rgba(201,168,76,.12);color:var(--gold);font-size:10px;font-weight:700;letter-spacing:.05em;cursor:pointer;">RESET</button>
+    </div>
 
     <!-- 個人鑑定エリア -->
     <div id="area-personal">
@@ -4570,6 +4573,18 @@ function resetMyBirthdate() {
   if (bdHidden) bdHidden.value = '';
   if (bdError) bdError.textContent = '';
   clearResultCards();
+}
+
+/* Year/Month（占いたい年月）を今日時点の気学年月に戻す */
+function resetTargetYearMonth() {
+  var now = new Date();
+  var y = now.getFullYear(), m = now.getMonth() + 1, d = now.getDate();
+  var km = getKigakuMonth(y, m, d);
+  var yEl = document.getElementById('targetYear');
+  var mEl = document.getElementById('targetMonth');
+  if (yEl) yEl.value = km.kYear;
+  if (mEl) mEl.value = km.kMonth;
+  window._kigakuCenterYear = km.centerYear;
 }
 
 function resetPartnerBirthdate() {
