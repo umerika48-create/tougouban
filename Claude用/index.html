@@ -3803,6 +3803,35 @@ function resetMonthCyclePanels() {
   });
 }
 
+/* 年運サイクル：前の9年/次の9年で移動した表示年を、最初のデフォルトの年に戻す */
+function resetNineYearToDefault() {
+  var container = document.getElementById('nine-year-container');
+  if (!container) return;
+  window._nyCurrentYear = window._nyKYear;
+  var el = document.getElementById('targetYear');
+  if (el && window._nyKYear) el.value = window._nyKYear;
+  var bP = document.getElementById('ny-btn-partner');
+  var isPartner = bP && bP.style.background === 'var(--accent)';
+  var honmei = isPartner ? window._nyHonmeiPartner : window._nyHonmeiMe;
+  var bd     = isPartner ? window._compatBdB       : window._nyBirthdateMe;
+  if (!honmei || !bd) return;
+  container.innerHTML = buildNineYearHTML(honmei, window._nyKYear, bd);
+}
+
+/* 月運サイクル：前の12ヶ月/次の12ヶ月で移動した表示年月を、最初のデフォルトの年月に戻す */
+function resetMonthCycleToDefault() {
+  var container = document.getElementById('cycle-container');
+  if (!container) return;
+  window._nyCurrentCycleYear  = window._nyKYear;
+  window._nyCurrentCycleMonth = window._nykMonth;
+  var bP = document.getElementById('cy-btn-partner');
+  var isPartner = bP && bP.style.background === 'var(--accent)';
+  var honmei = isPartner ? window._nyHonmeiPartner : window._nyHonmeiMe;
+  var bd     = isPartner ? window._compatBdB       : window._nyBirthdateMe;
+  if (!honmei || !bd) return;
+  container.innerHTML = buildMonthCycleHTML(honmei, window._nyKYear, window._nykMonth, bd);
+}
+
 
 function toggleNycPanel(idx) {
   var panel = document.getElementById('nycyc-panel-' + idx);
@@ -5669,7 +5698,7 @@ function buildPersonalCardsHTML(birthdate, honmei, kYear, kMonth, isPartner) {
   }
   h +=
     '<div class="card fade-up">'+
-      '<div class="card-title" style="display:flex;align-items:center;gap:8px;">年運サイクル' + _nineYearBtnHTML + '<button onclick="resetNineYearPanels()" style="margin-left:auto;padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">↺ リセット</button></div>'+
+      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>年運サイクル</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' + _nineYearBtnHTML + '<button onclick="resetNineYearPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button><button onclick="resetNineYearToDefault()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">年:RE</button></div></div></div>'+
       '<div id="nine-year-container">' + buildNineYearHTML(honmei, kYear, birthdate) + '</div>'+
     '</div>';
   /* 年運サイクル切替用データはswitchCompatTabで管理するため、ここでは書き換えない */
@@ -5700,7 +5729,7 @@ function buildPersonalCardsHTML(birthdate, honmei, kYear, kMonth, isPartner) {
   }
   h +=
     '<div class="card fade-up">'+
-      '<div class="card-title" style="display:flex;align-items:center;gap:8px;">月運サイクル' + _cycleBtnHTML + '<button onclick="resetMonthCyclePanels()" style="margin-left:auto;padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">↺ リセット</button></div>'+
+      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>月運サイクル</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' + _cycleBtnHTML + '<button onclick="resetMonthCyclePanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button><button onclick="resetMonthCycleToDefault()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">月:RE</button></div></div></div>'+
       '<div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin:-4px 0 10px;line-height:1.6;">'+
         '※九星気学の1年は立春（2月頃）から翌年1月末までです。'+
         '1月のみ翌年カレンダーですが気学上は'+kYear+'年のサイクルに属します。'+
@@ -6270,7 +6299,7 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
   }
   h +=
     '<div class="card fade-up">'+
-      '<div class="card-title" style="display:flex;align-items:center;gap:8px;">年運サイクル' + _nineYearBtnHTML + '<button onclick="resetNineYearPanels()" style="margin-left:auto;padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">↺ リセット</button></div>'+
+      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>年運サイクル</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' + _nineYearBtnHTML + '<button onclick="resetNineYearPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button><button onclick="resetNineYearToDefault()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">年:RE</button></div></div></div>'+
       '<div id="nine-year-container">' + buildNineYearHTML(honmei, kYear, birthdate) + '</div>'+
     '</div>';
   /* 年運サイクル切替用データはswitchCompatTabで管理 */
@@ -6301,7 +6330,7 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
   }
   h +=
     '<div class="card fade-up">'+
-      '<div class="card-title" style="display:flex;align-items:center;gap:8px;">月運サイクル' + _cycleBtnHTML + '<button onclick="resetMonthCyclePanels()" style="margin-left:auto;padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">↺ リセット</button></div>'+
+      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>月運サイクル</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' + _cycleBtnHTML + '<button onclick="resetMonthCyclePanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button><button onclick="resetMonthCycleToDefault()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">月:RE</button></div></div></div>'+
       '<div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin:-4px 0 10px;line-height:1.6;">'+
         '※九星気学の1年は立春（2月頃）から翌年1月末までです。'+
         '1月のみ翌年カレンダーですが気学上は'+kYear+'年のサイクルに属します。'+
@@ -7177,7 +7206,7 @@ function calculate() {
   }
   html +=
     '<div class="card fade-up">'+
-      '<div class="card-title" style="display:flex;align-items:center;gap:8px;">年運サイクル' + _nineYearBtnHTML + '<button onclick="resetNineYearPanels()" style="margin-left:auto;padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">↺ リセット</button></div>'+
+      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>年運サイクル</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' + _nineYearBtnHTML + '<button onclick="resetNineYearPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button><button onclick="resetNineYearToDefault()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">年:RE</button></div></div></div>'+
       '<div id="nine-year-container">' + buildNineYearHTML(honmei, kYear, birthdate) + '</div>'+
     '</div>';
   /* 年運サイクル切替用データはswitchCompatTabで管理 */
@@ -7206,7 +7235,7 @@ function calculate() {
   }
   html +=
     '<div class="card fade-up">'+
-      '<div class="card-title" style="display:flex;align-items:center;gap:8px;">月運サイクル' + _cycleBtnHTML + '<button onclick="resetMonthCyclePanels()" style="margin-left:auto;padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">↺ リセット</button></div>'+
+      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>月運サイクル</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' + _cycleBtnHTML + '<button onclick="resetMonthCyclePanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button><button onclick="resetMonthCycleToDefault()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">月:RE</button></div></div></div>'+
       '<div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin:-4px 0 10px;line-height:1.6;">'+
         '※九星気学の1年は立春（2月頃）から翌年1月末までです。'+
         '1月のみ翌年カレンダーですが気学上は'+kYear+'年のサイクルに属します。'+
