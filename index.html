@@ -824,7 +824,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     <!-- 相手の生年月日（常時表示） -->
     <div id="area-compat" style="margin-top:10px;">
       <label style="font-size:12px;color:var(--muted);letter-spacing:.05em;">相手の生年月日 <span style="font-size:11px;">（入力なしで個人鑑定）</span></label>
-      <input type="text" id="compat-bd-text" placeholder="例: 19950820 または 1995/8/20"
+      <input type="text" id="compat-bd-text" placeholder="例: 19950820 または 1995/8/20 または 199508201430福岡"
         style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);color:var(--text);font-size:15px;margin-bottom:4px;"
         oninput="syncCompatBirthdate()">
       <!-- 相手用RESET（相手の入力欄のすぐ下） -->
@@ -951,6 +951,15 @@ function buildAspectHTML(p) {
     {name:'海王星', sym:'♆',  lon:plon('NEPTUNE')},
     {name:'冥王星', sym:'♇',  lon:plon('PLUTO')},
   ];
+  /* 出生時刻・出生地が揃っている場合はASC・MCもアスペクト対象に追加 */
+  if (p.ascmc) {
+    if (p.ascmc.ASC && p.ascmc.ASC.lon !== undefined && p.ascmc.ASC.lon !== null) {
+      bodies.push({name:'ASC', sym:'ASC', lon:p.ascmc.ASC.lon});
+    }
+    if (p.ascmc.MC && p.ascmc.MC.lon !== undefined && p.ascmc.MC.lon !== null) {
+      bodies.push({name:'MC', sym:'MC', lon:p.ascmc.MC.lon});
+    }
+  }
 
   /* アスペクト定義 [角度, 許容誤差, 名前, 記号, 色] */
   var ASPECTS = [
@@ -2328,6 +2337,14 @@ function getRokkuFull(birthdate) {
   };
 }
 
+/* 本命数カードに併記する六星占術の短縮ラベル（例：木星霊合、水星－） */
+function getRokkuShortLabel(birthdate) {
+  var full = getRokkuFull(birthdate);
+  var shortName = full.starName.replace('人','');
+  var sign = full.pmLabel === '+' ? '＋' : '－';
+  return shortName + (full.reigo ? '霊合' : sign);
+}
+
 /* 後方互換：starId だけ返す */
 function getRokkuStar(birthdate) {
   return getRokkuFull(birthdate).starId;
@@ -2464,7 +2481,7 @@ function buildRokkuAishoHTML(bdA, bdB) {
   /* 他セクション（九星・数秘など）とスタイルを統一したカード */
   var h = '<div style="margin-bottom:14px;padding:14px;border-radius:12px;background:rgba(255,255,255,.04);border-left:3px solid '+rokkuColor+';">';
   h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
-  h += '<div style="font-size:12px;font-weight:700;color:var(--text);">🌠 六星占術の相性　'+fullA.starName+fullA.pmLabel+' × '+fullB.starName+fullB.pmLabel+'</div>';
+  h += '<div style="font-size:12px;font-weight:700;color:var(--text);">🌠 六星占術の相性　'+fullA.starName+fullA.pmLabel+(fullA.reigo?'（霊合）':'')+' × '+fullB.starName+fullB.pmLabel+(fullB.reigo?'（霊合）':'')+'</div>';
   h += '<div style="display:flex;align-items:center;gap:8px;">';
   h += '<span style="font-size:10px;padding:2px 8px;border-radius:20px;background:'+rokkuColor+'22;color:'+rokkuColor+';font-weight:700;">'+rokkuTag+'</span>';
   h += '<span style="font-size:15px;font-weight:800;color:'+rokkuColor+';">'+rokkuScore+'</span>';
@@ -2506,6 +2523,55 @@ function buildRokkuAishoHTML(bdA, bdB) {
   h += '</div>';
   h += '<div id="'+idBA+'" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--text);line-height:1.7;"></div>';
   h += '</div>';
+
+  /* ③ 霊合星人のサブ星との相性（片方または両方が霊合の場合のみ表示） */
+  if (fullA.reigo || fullB.reigo) {
+    h += '<div style="font-size:9px;color:var(--muted);letter-spacing:.05em;margin:10px 0 6px;">③ サブの星との相性（霊合星人の裏の面）</div>';
+
+    if (fullA.reigo) {
+      var subKeyA = fullA.subStarId + (fullA.plus ? '+' : '-');
+      var subMapA = ROKKU_ETTO_MAP[subKeyA] || {};
+      var idxSubAviewB = subMapA[ettoB] !== undefined ? subMapA[ettoB] : 0;
+      var stageSubAviewB = ROKKU_CYCLE[idxSubAviewB].name;
+      var rankSubAviewB = ROKKU_AISHO_RANK[stageSubAviewB] || '△';
+      var scoreSubAviewB = ROKKU_AISHO_SCORE[stageSubAviewB] !== undefined ? ROKKU_AISHO_SCORE[stageSubAviewB] : 60;
+      var textSubAviewB = ROKKU_AISHO_TEXT[stageSubAviewB] || {short:'', detail:''};
+      var idSubAB = 'rokku-aisho-detail-suba-' + suffix;
+      h += '<div onclick="event.stopPropagation();showRokkuAishoDetail(\''+idSubAB+'\',\''+stageSubAviewB+'\')" style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);margin-bottom:8px;cursor:pointer;border:1px dashed rgba(255,255,255,.1);">';
+      h += '<div style="display:flex;align-items:center;gap:8px;">';
+      h += '<span style="font-size:16px;font-weight:700;color:var(--muted);">'+rankSubAviewB+'</span>';
+      h += '<div style="flex:1;">';
+      h += '<div style="font-size:10px;color:var(--muted);">あなたのサブ（'+fullA.subStarName+'）→ 相手（'+stageSubAviewB+'）</div>';
+      h += '<div style="font-size:12px;color:var(--text);">'+textSubAviewB.short+'</div>';
+      h += '</div>';
+      h += '<span style="font-size:13px;font-weight:800;color:var(--muted);">'+scoreSubAviewB+'</span>';
+      h += '</div>';
+      h += '<div id="'+idSubAB+'" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--text);line-height:1.7;"></div>';
+      h += '</div>';
+    }
+
+    if (fullB.reigo) {
+      var subKeyB = fullB.subStarId + (fullB.plus ? '+' : '-');
+      var subMapB = ROKKU_ETTO_MAP[subKeyB] || {};
+      var idxSubBviewA = subMapB[ettoA] !== undefined ? subMapB[ettoA] : 0;
+      var stageSubBviewA = ROKKU_CYCLE[idxSubBviewA].name;
+      var rankSubBviewA = ROKKU_AISHO_RANK[stageSubBviewA] || '△';
+      var scoreSubBviewA = ROKKU_AISHO_SCORE[stageSubBviewA] !== undefined ? ROKKU_AISHO_SCORE[stageSubBviewA] : 60;
+      var textSubBviewA = ROKKU_AISHO_TEXT[stageSubBviewA] || {short:'', detail:''};
+      var idSubBA = 'rokku-aisho-detail-subb-' + suffix;
+      h += '<div onclick="event.stopPropagation();showRokkuAishoDetail(\''+idSubBA+'\',\''+stageSubBviewA+'\')" style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.03);cursor:pointer;border:1px dashed rgba(255,255,255,.1);">';
+      h += '<div style="display:flex;align-items:center;gap:8px;">';
+      h += '<span style="font-size:16px;font-weight:700;color:var(--muted);">'+rankSubBviewA+'</span>';
+      h += '<div style="flex:1;">';
+      h += '<div style="font-size:10px;color:var(--muted);">相手のサブ（'+fullB.subStarName+'）→ あなた（'+stageSubBviewA+'）</div>';
+      h += '<div style="font-size:12px;color:var(--text);">'+textSubBviewA.short+'</div>';
+      h += '</div>';
+      h += '<span style="font-size:13px;font-weight:800;color:var(--muted);">'+scoreSubBviewA+'</span>';
+      h += '</div>';
+      h += '<div id="'+idSubBA+'" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.08);font-size:11px;color:var(--text);line-height:1.7;"></div>';
+      h += '</div>';
+    }
+  }
 
   h += '</div>';
   return h;
@@ -3287,12 +3353,14 @@ function getSanmeiEnergy(birthdate) {
 
 /* 算命学エネルギー値カードのHTML生成 */
 var SANMEI_EL_LABEL = {
-  '木': {name:'守備', color:'#5fd98a'},
-  '火': {name:'表現', color:'#ff8a65'},
-  '土': {name:'魅力', color:'#e8c96a'},
-  '金': {name:'攻撃', color:'#c9c9d9'},
-  '水': {name:'学習', color:'#6fb8ff'}
+  '木': {name:'安定・継続・守備', color:'#5fd98a'},
+  '火': {name:'情熱・発信・表現', color:'#ff8a65'},
+  '土': {name:'親和・信頼・注目・魅力', color:'#e8c96a'},
+  '金': {name:'実行性・行動・攻撃', color:'#c9c9d9'},
+  '水': {name:'知性・追究・学習', color:'#6fb8ff'}
 };
+/* 2万人分のランダム生年月日シミュレーションによる平均値（本能ごとに実測） */
+var SANMEI_EL_AVG = { '木': 40, '火': 40, '土': 54, '金': 39, '水': 40 };
 var SANMEI_EL_DESC = {
   '木': '危険から自分や周囲を守ろうとする力。安定・継続・コミュニティを大切にする。',
   '火': '自分の意志や個性を表現し、外に発信しようとする力。自己主張・創作・アピール。',
@@ -3316,14 +3384,25 @@ function buildSanmeiEnergyHTML(birthdate) {
     + '</div>';
   ['木','火','土','金','水'].forEach(function(el){
     var val = els[el];
+    var avg = SANMEI_EL_AVG[el];
     var pct = Math.min(100, Math.round(val / 1.6));
+    var avgPct = Math.min(100, Math.round(avg / 1.6));
+    var diff = val - avg;
+    var diffText = diff === 0 ? '±0' : (diff > 0 ? '+'+diff : ''+diff);
+    var diffColor = diff > 0 ? '#5fd98a' : (diff < 0 ? '#ff8a65' : 'var(--muted)');
     var lbl = SANMEI_EL_LABEL[el];
-    h += '<div style="margin-bottom:8px;">'
-      + '<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text);margin-bottom:3px;">'
-      + '<span>'+el+'（'+lbl.name+'）</span><span style="font-weight:700;color:'+lbl.color+';">'+val+'</span>'
+    h += '<div style="margin-bottom:10px;">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--text);margin-bottom:3px;">'
+      + '<span>'+el+'（'+lbl.name+'）</span>'
+      + '<span style="text-align:right;">'
+      + '<span style="font-weight:700;font-size:13px;color:'+lbl.color+';">'+val+'</span>'
+      + '<span style="font-size:10px;color:var(--muted);"> 平均'+avg+'　</span>'
+      + '<span style="font-size:10px;font-weight:700;color:'+diffColor+';">'+diffText+'</span>'
+      + '</span>'
       + '</div>'
-      + '<div style="height:6px;border-radius:3px;background:rgba(255,255,255,.08);overflow:hidden;">'
-      + '<div style="height:100%;width:'+pct+'%;background:'+lbl.color+';border-radius:3px;"></div>'
+      + '<div style="position:relative;height:6px;border-radius:3px;background:rgba(255,255,255,.08);">'
+      + '<div style="position:absolute;left:0;top:0;height:100%;width:'+pct+'%;background:'+lbl.color+';border-radius:3px;"></div>'
+      + '<div style="position:absolute;left:'+avgPct+'%;top:-2px;width:2px;height:10px;background:var(--muted);"></div>'
       + '</div></div>';
   });
   h += '<div style="margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04);font-size:11px;color:var(--text);line-height:1.7;">'
@@ -3332,6 +3411,66 @@ function buildSanmeiEnergyHTML(birthdate) {
     + '</div>';
   return h;
 }
+
+/* 通常鑑定用：生年月日だけでアスペクト表を計算するための簡易p生成
+   window._normalBirthTime / window._normalCityData があればASC・MCも計算する */
+function buildNormalAspectBody(birthdate) {
+  var parts = birthdate.split('-');
+  var y=+parts[0], mo=+parts[1], d=+parts[2];
+  var hasTime = !!window._normalBirthTime;
+  var birthHour=12, birthMin=0;
+  if (hasTime) {
+    var tm = window._normalBirthTime.match(/^(\d{2}):(\d{2})$/);
+    if (tm) { birthHour=+tm[1]; birthMin=+tm[2]; }
+  }
+  var birthHourDec = birthHour + birthMin/60;
+  var cityData = window._normalCityData || null;
+
+  var moon = lt_getMoonSign(y, mo, d);
+  var _moonHourUT = hasTime ? (birthHourDec - (cityData ? cityData.tz : 9)) : 12;
+  var moonLonVal = lt_moonLon(y, mo, d, _moonHourUT);
+  function lonToDeg(lon) {
+    var lon2=((lon%360)+360)%360;
+    var s=Math.floor(lon2/30)%12;
+    var deg=lon2-s*30;
+    return {deg:Math.floor(deg), min:Math.floor((deg%1)*60)};
+  }
+  var ascmc = null;
+  if (hasTime && cityData) {
+    var hourUtc = birthHourDec - cityData.tz;
+    ascmc = lt_getAscMC(y, mo, d, hourUtc, cityData.lat, cityData.lon);
+  }
+  var p = {
+    y:y, mo:mo, d:d,
+    hasTime:hasTime, birthHour:birthHour, birthMin:birthMin,
+    cityData:cityData, moon:moon, moonDeg:lonToDeg(moonLonVal),
+    ascmc:ascmc
+  };
+  return buildAspectHTML(p);
+}
+
+/* タップで開閉するアスペクトカード（算命学エネルギー値カードの下に配置） */
+function toggleAspectCard(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
+  var arrow = document.getElementById(id + '-arrow');
+  if (arrow) arrow.innerHTML = (el.style.display === 'block') ? '▲' : '▼';
+}
+function buildAspectCardHTML(birthdate) {
+  if (!birthdate) return '';
+  var body = buildNormalAspectBody(birthdate);
+  if (!body) return '';
+  var id = 'aspect-card-body-' + birthdate.replace(/[^0-9]/g,'');
+  var h = '<div onclick="toggleAspectCard(\''+id+'\')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">'
+    + '<span style="font-size:11px;color:var(--muted);">タップして展開</span>'
+    + '<span id="'+id+'-arrow" style="font-size:10px;color:var(--muted);">▼</span>'
+    + '</div>'
+    + '<div id="'+id+'" style="display:none;margin-top:8px;">' + body + '</div>';
+  return h;
+}
+
+
 
 /* -------------------------------------------------------
    年の気学補正: 立春前（1/1〜立春前日）は前年扱い
@@ -4820,21 +4959,40 @@ function syncBirthdate() {
   var raw=document.getElementById('bd-text').value.trim();
   var err=document.getElementById('bd-error');
   var hidden=document.getElementById('birthdate');
-  if(!raw){ hidden.value=''; err.textContent=''; return; }
+  if(!raw){ hidden.value=''; err.textContent=''; window._normalBirthTime=null; window._normalBirthPlace=null; window._normalCityData=null; return; }
 
   var y,m,d;
   var m1=raw.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
   var m2=raw.match(/^(\d{4})(\d{2})(\d{2})$/);
+  /* 拡張形式: 198604301317福岡 → 生年月日+時刻(4桁)+出生地 */
+  var m3=raw.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(.*)$/);
+
+  window._normalBirthTime=null; window._normalBirthPlace=null; window._normalCityData=null;
+  err.textContent='';
+
   if(m1){ y=parseInt(m1[1]); m=parseInt(m1[2]); d=parseInt(m1[3]); }
   else if(m2){ y=parseInt(m2[1]); m=parseInt(m2[2]); d=parseInt(m2[3]); }
-  else { err.textContent='形式が正しくありません（例：1990/1/1 または 19900101）'; hidden.value=''; return; }
+  else if(m3){
+    y=parseInt(m3[1]); m=parseInt(m3[2]); d=parseInt(m3[3]);
+    var hh=parseInt(m3[4]), mi=parseInt(m3[5]), place=m3[6].trim();
+    if(hh>=0 && hh<=23 && mi>=0 && mi<=59){
+      window._normalBirthTime = ('0'+hh).slice(-2)+':'+('0'+mi).slice(-2);
+      if(place){
+        window._normalBirthPlace = place;
+        window._normalCityData = lookupCity(place);
+        if(!window._normalCityData){
+          err.textContent='⚠ 出生地が見つかりません（都道府県名や主要都市、海外の主要都市に対応）。日付のみで計算します';
+        }
+      }
+    }
+  }
+  else { err.textContent='形式が正しくありません（例：1990/1/1 または 19900101 または 198604301317福岡）'; hidden.value=''; return; }
 
   if(y<1900||y>2030){ err.textContent='西暦を正しく入力してください（1900〜2030）'; hidden.value=''; return; }
   if(m<1||m>12){ err.textContent='月は1〜12で入力してください'; hidden.value=''; return; }
   var maxDay=new Date(y,m,0).getDate();
   if(d<1||d>maxDay){ err.textContent=m+'月'+d+'日は存在しません'; hidden.value=''; return; }
 
-  err.textContent='';
   hidden.value=y+'-'+('0'+m).slice(-2)+'-'+('0'+d).slice(-2);
 }
 
@@ -5224,18 +5382,37 @@ function syncCompatBirthdate() {
   var raw = (document.getElementById('compat-bd-text').value || '').trim();
   var err = document.getElementById('compat-bd-error');
   var hidden = document.getElementById('compat-birthdate');
-  if (!raw) { hidden.value=''; err.textContent=''; return; }
+  if (!raw) { hidden.value=''; err.textContent=''; window._compatBirthTime=null; window._compatBirthPlace=null; window._compatCityData=null; return; }
   var y,mo,d;
   var m1 = raw.match(/^(\d{4})[\/\-\.](\d{1,2})[\/\-\.](\d{1,2})$/);
   var m2 = raw.match(/^(\d{4})(\d{2})(\d{2})$/);
+  /* 拡張形式: 198604301317福岡 → 生年月日+時刻(4桁)+出生地 */
+  var m3 = raw.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(.*)$/);
+
+  window._compatBirthTime=null; window._compatBirthPlace=null; window._compatCityData=null;
+  err.textContent='';
+
   if (m1) { y=parseInt(m1[1]); mo=parseInt(m1[2]); d=parseInt(m1[3]); }
   else if (m2) { y=parseInt(m2[1]); mo=parseInt(m2[2]); d=parseInt(m2[3]); }
-  else { hidden.value=''; if (raw.length>4) err.textContent='形式が正しくありません（例：19950820 または 1995/8/20）'; return; }
+  else if (m3) {
+    y=parseInt(m3[1]); mo=parseInt(m3[2]); d=parseInt(m3[3]);
+    var hh=parseInt(m3[4]), mi=parseInt(m3[5]), place=m3[6].trim();
+    if (hh>=0 && hh<=23 && mi>=0 && mi<=59) {
+      window._compatBirthTime = ('0'+hh).slice(-2)+':'+('0'+mi).slice(-2);
+      if (place) {
+        window._compatBirthPlace = place;
+        window._compatCityData = lookupCity(place);
+        if (!window._compatCityData) {
+          err.textContent='⚠ 出生地が見つかりません（都道府県名や主要都市、海外の主要都市に対応）。日付のみで計算します';
+        }
+      }
+    }
+  }
+  else { hidden.value=''; if (raw.length>4) err.textContent='形式が正しくありません（例：19950820 または 1995/8/20 または 198604301317福岡）'; return; }
   if (y<1900||y>2030) { err.textContent='西暦を正しく入力してください（1900〜2030）'; hidden.value=''; return; }
   if (mo<1||mo>12) { err.textContent='月は1〜12で入力してください'; hidden.value=''; return; }
   var maxDay=new Date(y,mo,0).getDate();
   if (d<1||d>maxDay) { err.textContent=mo+'月'+d+'日は存在しません'; hidden.value=''; return; }
-  err.textContent='';
   hidden.value=y+'-'+('0'+mo).slice(-2)+'-'+('0'+d).slice(-2);
 }
 
@@ -5942,6 +6119,11 @@ function buildPersonalCardsHTML(birthdate, honmei, kYear, kMonth, isPartner) {
     '</div>';
   h +=
     '<div class="card fade-up">'+
+      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>アスペクト</span></div></div>'+
+      buildAspectCardHTML(birthdate, isPartner) +
+    '</div>';
+  h +=
+    '<div class="card fade-up">'+
       '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>年運サイクル</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' + _nineYearBtnHTML + '<button onclick="resetNineYearPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button><button onclick="resetNineYearToDefault()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">年:RE</button></div></div></div>'+
       '<div id="nine-year-container">' + buildNineYearHTML(honmei, kYear, birthdate) + '</div>'+
     '</div>';
@@ -6297,7 +6479,7 @@ function buildHonmeiBannerHTML(birthdate, honmei, kYear, kMonth, isPartner) {
         '<div class="honmei-label" style="margin-bottom:0;">'+_age+'歳</div>'+
         '<div style="display:flex;align-items:center;gap:6px;">'+_honmeiBtnHTML+'<button onclick="event.stopPropagation();resetCoreNumPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button></div>'+
       '</div>'+
-      '<div class="honmei-star" style="color:'+sd.color+';text-shadow:0 0 40px '+sd.color+'60;cursor:pointer;-webkit-tap-highlight-color:transparent;" onclick="toggleCoreNum(\'honmei-detail\')">'+sd.name+'</div>'+(situation==="meeting"?lt_buildBadges(birthdate):"")+
+      '<div class="honmei-star" style="color:'+sd.color+';text-shadow:0 0 40px '+sd.color+'60;cursor:pointer;-webkit-tap-highlight-color:transparent;" onclick="toggleCoreNum(\'honmei-detail\')">'+sd.name+'<span style="font-size:13px;font-weight:400;opacity:.75;">（'+getRokkuShortLabel(birthdate)+'）</span></div>'+(situation==="meeting"?lt_buildBadges(birthdate):"")+
       '<div class="core-num-detail" id="honmei-detail" style="margin-top:10px;">'+
         '<div class="core-num-detail-title">'+sd.name+'</div>'+
         sd.desc+
@@ -6455,7 +6637,7 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
         '<div class="honmei-label" style="margin-bottom:0;">'+_age+'歳</div>'+
         '<div style="display:flex;align-items:center;gap:6px;">'+_honmeiBtnHTML+'<button onclick="event.stopPropagation();resetCoreNumPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button></div>'+
       '</div>'+
-      '<div class="honmei-star" style="color:'+sd.color+';text-shadow:0 0 40px '+sd.color+'60;cursor:pointer;-webkit-tap-highlight-color:transparent;" onclick="toggleCoreNum(\'honmei-detail\')">'+sd.name+'</div>'+(situation==="meeting"?lt_buildBadges(birthdate):"")+
+      '<div class="honmei-star" style="color:'+sd.color+';text-shadow:0 0 40px '+sd.color+'60;cursor:pointer;-webkit-tap-highlight-color:transparent;" onclick="toggleCoreNum(\'honmei-detail\')">'+sd.name+'<span style="font-size:13px;font-weight:400;opacity:.75;">（'+getRokkuShortLabel(birthdate)+'）</span></div>'+(situation==="meeting"?lt_buildBadges(birthdate):"")+
       '<div class="core-num-detail" id="honmei-detail" style="margin-top:10px;">'+
         '<div class="core-num-detail-title">'+sd.name+'</div>'+
         sd.desc+
@@ -6545,6 +6727,11 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
     '<div class="card fade-up">'+
       '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span></div></div>'+
       buildSanmeiEnergyHTML(birthdate) +
+    '</div>';
+  h +=
+    '<div class="card fade-up">'+
+      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>アスペクト</span></div></div>'+
+      buildAspectCardHTML(birthdate, isPartner) +
     '</div>';
   h +=
     '<div class="card fade-up">'+
@@ -6993,6 +7180,54 @@ var CITY_COORDS = {
   'taipei':{'lat':25.0330,'lon':121.5654,'tz':8},'台北':{'lat':25.0330,'lon':121.5654,'tz':8},
   'shanghai':{'lat':31.2304,'lon':121.4737,'tz':8},'上海':{'lat':31.2304,'lon':121.4737,'tz':8},
   'beijing':{'lat':39.9042,'lon':116.4074,'tz':8},'北京':{'lat':39.9042,'lon':116.4074,'tz':8},
+  /* ── 47都道府県（県庁所在地の座標） ── */
+  '北海道':{'lat':43.0642,'lon':141.3469,'tz':9},
+  '青森':{'lat':40.8244,'lon':140.7400,'tz':9},'青森県':{'lat':40.8244,'lon':140.7400,'tz':9},
+  '岩手':{'lat':39.7036,'lon':141.1527,'tz':9},'岩手県':{'lat':39.7036,'lon':141.1527,'tz':9},
+  '宮城':{'lat':38.2682,'lon':140.8694,'tz':9},'宮城県':{'lat':38.2682,'lon':140.8694,'tz':9},
+  '秋田':{'lat':39.7186,'lon':140.1024,'tz':9},'秋田県':{'lat':39.7186,'lon':140.1024,'tz':9},
+  '山形':{'lat':38.2404,'lon':140.3633,'tz':9},'山形県':{'lat':38.2404,'lon':140.3633,'tz':9},
+  '福島':{'lat':37.7503,'lon':140.4676,'tz':9},'福島県':{'lat':37.7503,'lon':140.4676,'tz':9},
+  '茨城':{'lat':36.3418,'lon':140.4468,'tz':9},'茨城県':{'lat':36.3418,'lon':140.4468,'tz':9},
+  '栃木':{'lat':36.5658,'lon':139.8836,'tz':9},'栃木県':{'lat':36.5658,'lon':139.8836,'tz':9},
+  '群馬':{'lat':36.3907,'lon':139.0604,'tz':9},'群馬県':{'lat':36.3907,'lon':139.0604,'tz':9},
+  '埼玉':{'lat':35.8617,'lon':139.6455,'tz':9},'埼玉県':{'lat':35.8617,'lon':139.6455,'tz':9},
+  '千葉':{'lat':35.6047,'lon':140.1233,'tz':9},'千葉県':{'lat':35.6047,'lon':140.1233,'tz':9},
+  '東京都':{'lat':35.6762,'lon':139.6503,'tz':9},
+  '神奈川':{'lat':35.4437,'lon':139.6380,'tz':9},'神奈川県':{'lat':35.4437,'lon':139.6380,'tz':9},
+  '新潟':{'lat':37.9026,'lon':139.0232,'tz':9},'新潟県':{'lat':37.9026,'lon':139.0232,'tz':9},
+  '富山':{'lat':36.6953,'lon':137.2113,'tz':9},'富山県':{'lat':36.6953,'lon':137.2113,'tz':9},
+  '石川':{'lat':36.5947,'lon':136.6256,'tz':9},'石川県':{'lat':36.5947,'lon':136.6256,'tz':9},
+  '福井':{'lat':36.0652,'lon':136.2216,'tz':9},'福井県':{'lat':36.0652,'lon':136.2216,'tz':9},
+  '山梨':{'lat':35.6642,'lon':138.5686,'tz':9},'山梨県':{'lat':35.6642,'lon':138.5686,'tz':9},
+  '長野':{'lat':36.6513,'lon':138.1810,'tz':9},'長野県':{'lat':36.6513,'lon':138.1810,'tz':9},
+  '岐阜':{'lat':35.3912,'lon':136.7223,'tz':9},'岐阜県':{'lat':35.3912,'lon':136.7223,'tz':9},
+  '静岡':{'lat':34.9769,'lon':138.3831,'tz':9},'静岡県':{'lat':34.9769,'lon':138.3831,'tz':9},
+  '愛知':{'lat':35.1815,'lon':136.9066,'tz':9},'愛知県':{'lat':35.1815,'lon':136.9066,'tz':9},
+  '三重':{'lat':34.7303,'lon':136.5086,'tz':9},'三重県':{'lat':34.7303,'lon':136.5086,'tz':9},
+  '滋賀':{'lat':35.0045,'lon':135.8686,'tz':9},'滋賀県':{'lat':35.0045,'lon':135.8686,'tz':9},
+  '京都府':{'lat':35.0116,'lon':135.7681,'tz':9},
+  '大阪府':{'lat':34.6937,'lon':135.5023,'tz':9},
+  '兵庫':{'lat':34.6901,'lon':135.1955,'tz':9},'兵庫県':{'lat':34.6901,'lon':135.1955,'tz':9},
+  '奈良':{'lat':34.6851,'lon':135.8048,'tz':9},'奈良県':{'lat':34.6851,'lon':135.8048,'tz':9},
+  '和歌山':{'lat':34.2306,'lon':135.1708,'tz':9},'和歌山県':{'lat':34.2306,'lon':135.1708,'tz':9},
+  '鳥取':{'lat':35.5039,'lon':134.2378,'tz':9},'鳥取県':{'lat':35.5039,'lon':134.2378,'tz':9},
+  '島根':{'lat':35.4723,'lon':133.0505,'tz':9},'島根県':{'lat':35.4723,'lon':133.0505,'tz':9},
+  '岡山':{'lat':34.6551,'lon':133.9195,'tz':9},'岡山県':{'lat':34.6551,'lon':133.9195,'tz':9},
+  '広島':{'lat':34.3853,'lon':132.4553,'tz':9},'広島県':{'lat':34.3853,'lon':132.4553,'tz':9},
+  '山口':{'lat':34.1859,'lon':131.4714,'tz':9},'山口県':{'lat':34.1859,'lon':131.4714,'tz':9},
+  '徳島':{'lat':34.0658,'lon':134.5593,'tz':9},'徳島県':{'lat':34.0658,'lon':134.5593,'tz':9},
+  '香川':{'lat':34.3401,'lon':134.0434,'tz':9},'香川県':{'lat':34.3401,'lon':134.0434,'tz':9},
+  '愛媛':{'lat':33.8416,'lon':132.7657,'tz':9},'愛媛県':{'lat':33.8416,'lon':132.7657,'tz':9},
+  '高知':{'lat':33.5597,'lon':133.5311,'tz':9},'高知県':{'lat':33.5597,'lon':133.5311,'tz':9},
+  '福岡県':{'lat':33.5904,'lon':130.4017,'tz':9},
+  '佐賀':{'lat':33.2494,'lon':130.2988,'tz':9},'佐賀県':{'lat':33.2494,'lon':130.2988,'tz':9},
+  '長崎':{'lat':32.7448,'lon':129.8737,'tz':9},'長崎県':{'lat':32.7448,'lon':129.8737,'tz':9},
+  '熊本':{'lat':32.7898,'lon':130.7417,'tz':9},'熊本県':{'lat':32.7898,'lon':130.7417,'tz':9},
+  '大分':{'lat':33.2382,'lon':131.6126,'tz':9},'大分県':{'lat':33.2382,'lon':131.6126,'tz':9},
+  '宮崎':{'lat':31.9111,'lon':131.4239,'tz':9},'宮崎県':{'lat':31.9111,'lon':131.4239,'tz':9},
+  '鹿児島':{'lat':31.5602,'lon':130.5581,'tz':9},'鹿児島県':{'lat':31.5602,'lon':130.5581,'tz':9},
+  '沖縄':{'lat':26.2124,'lon':127.6809,'tz':9},'沖縄県':{'lat':26.2124,'lon':127.6809,'tz':9},
 };
 
 function lookupCity(name) {
@@ -7025,7 +7260,7 @@ function runHoroscope() {
   var cityData = placeVal ? lookupCity(placeVal) : null;
   var placeResult = document.getElementById('birth-place-result');
   if (placeVal && !cityData) {
-    placeResult.textContent = '⚠ 都市が見つかりません。対応都市: 東京、大阪、福岡、ニューヨーク 等';
+    placeResult.textContent = '⚠ 都市が見つかりません（都道府県名や主要都市、海外の主要都市に対応）';
   } else if (cityData) {
     placeResult.textContent = '✓ ' + placeVal + ' (lat:' + cityData.lat.toFixed(2) + ', lon:' + cityData.lon.toFixed(2) + ')';
   } else {
@@ -7219,13 +7454,14 @@ function buildHoroscopeHTML(p) {
 
   h += '</div>'; /* 2カラム終了 */
 
-  /* アスペクト */
-  if (p.ascmc) {
-    h += buildAspectHTML(p);
-  } else if (p.hasTime && !p.cityData) {
-    h += '<div style="font-size:11px;color:var(--muted);padding:10px;border-radius:8px;background:rgba(255,255,255,.04);">ASC・MC：出生地を入力すると表示されます</div>';
-  } else if (!p.hasTime) {
-    h += '<div style="font-size:11px;color:var(--muted);padding:10px;border-radius:8px;background:rgba(255,255,255,.04);">ASC・MC：出生時刻と出生地を入力すると表示されます</div>';
+  /* アスペクト（10天体は常に表示、ASC・MCは条件が揃えば追加で表示） */
+  h += buildAspectHTML(p);
+  if (!p.ascmc) {
+    if (p.hasTime && !p.cityData) {
+      h += '<div style="font-size:11px;color:var(--muted);padding:10px;border-radius:8px;background:rgba(255,255,255,.04);">ASC・MC：出生地を入力すると表示されます</div>';
+    } else if (!p.hasTime) {
+      h += '<div style="font-size:11px;color:var(--muted);padding:10px;border-radius:8px;background:rgba(255,255,255,.04);">ASC・MC：出生時刻と出生地を入力すると表示されます</div>';
+    }
   }
 
 
@@ -7369,7 +7605,7 @@ function calculate() {
         '<div class="honmei-label" style="margin-bottom:0;">'+_age+'歳</div>'+
         '<div style="display:flex;align-items:center;gap:6px;">'+_honmeiBtnHTML+'<button onclick="event.stopPropagation();resetCoreNumPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button></div>'+
       '</div>'+
-      '<div class="honmei-star" style="color:'+sd.color+';text-shadow:0 0 40px '+sd.color+'60;cursor:pointer;-webkit-tap-highlight-color:transparent;" onclick="toggleCoreNum(\'honmei-detail\')">'+sd.name+'</div>'+(situation==="meeting"?lt_buildBadges(birthdate):"")+
+      '<div class="honmei-star" style="color:'+sd.color+';text-shadow:0 0 40px '+sd.color+'60;cursor:pointer;-webkit-tap-highlight-color:transparent;" onclick="toggleCoreNum(\'honmei-detail\')">'+sd.name+'<span style="font-size:13px;font-weight:400;opacity:.75;">（'+getRokkuShortLabel(birthdate)+'）</span></div>'+(situation==="meeting"?lt_buildBadges(birthdate):"")+
       '<div class="core-num-detail" id="honmei-detail" style="margin-top:10px;">'+
         '<div class="core-num-detail-title">'+sd.name+'</div>'+
         sd.desc+
@@ -7457,6 +7693,11 @@ function calculate() {
     '<div class="card fade-up">'+
       '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span></div></div>'+
       buildSanmeiEnergyHTML(birthdate) +
+    '</div>';
+  html +=
+    '<div class="card fade-up">'+
+      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>アスペクト</span></div></div>'+
+      buildAspectCardHTML(birthdate, false) +
     '</div>';
   html +=
     '<div class="card fade-up">'+
