@@ -841,14 +841,14 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     <div class="row">
       <div>
         <label>Year</label>
-        <input type="number" id="targetYear" min="1900" max="2050">
+        <input type="number" id="targetYear" min="1900" max="2050" style="margin-bottom:4px;">
       </div>
       <div>
         <label>Month</label>
-        <input type="number" id="targetMonth" min="1" max="12" id2="automonth">
+        <input type="number" id="targetMonth" min="1" max="12" id2="automonth" style="margin-bottom:4px;">
       </div>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+    <div style="display:flex;justify-content:flex-end;margin-top:0;">
       <button type="button" onclick="resetTargetYearMonth()" style="padding:3px 14px;border-radius:12px;border:1px solid var(--gold);background:rgba(201,168,76,.12);color:var(--gold);font-size:10px;font-weight:700;letter-spacing:.05em;cursor:pointer;">RESET</button>
     </div>
 
