@@ -858,13 +858,15 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
       <select id="loveSituation" onchange="onSituationChange(this.value);">
         <option value="meeting">通常鑑定</option>
         <option value="horoscope">✦ Horoscope</option>
+        <option value="shichuu">☯ 四柱推命</option>
+        <option value="lovetype">✦ 恋愛タイプ</option>
         <option value="crush">片思い中</option>
         <option value="reunion">復縁を考えている</option>
         <option value="confused">恋愛に迷っている</option>
-        <option value="lovetype">✦ Love Type Reading</option>
       </select>
-      <button id="btn-lovetype" class="btn" onclick="runLovetype()" style="display:none;background:linear-gradient(135deg,#a89aff,#7b68ee);">✦ Love Type Reading</button>
+      <button id="btn-lovetype" class="btn" onclick="runLovetype()" style="display:none;background:linear-gradient(135deg,#a89aff,#7b68ee);">✦ 恋愛タイプ</button>
       <button id="btn-horoscope" class="btn" onclick="runHoroscope()" style="display:none;background:linear-gradient(135deg,#60a5fa,#a78bfa);">✦ Horoscope</button>
+      <button id="btn-shichuu" class="btn" onclick="runShichuu()" style="display:none;background:linear-gradient(135deg,#c9a84c,#8a6d1f);">☯ 四柱推命</button>
     </div>
 
 
@@ -2419,6 +2421,54 @@ function getRokkuTypeMatch(keyA, keyB) {
   return ROKKU_TYPE_MATRIX[iA][iB];
 }
 
+/* 「こんな人と縁がありやすい」用：各星人の簡潔な特徴（恋愛タイプ診断で使用） */
+var ROKKU_STAR_TRAIT = {
+  1: '温厚で堅実、じっくり型の安心感がある',
+  2: '社交的で気配り上手、人を惹きつける魅力がある',
+  3: '情熱的でまっすぐ、行動力がある',
+  4: '個性的で自分の世界観を持つ、自由な発想の持ち主',
+  5: '明るくおおらか、面倒見が良いリーダータイプ',
+  6: '知的でクール、多才で好奇心旺盛'
+};
+/* サマリー文用の短縮版キーワード（数語だけ） */
+var ROKKU_STAR_TRAIT_SHORT = {
+  1: '温厚・堅実',
+  2: '社交的・魅力的',
+  3: '情熱的・行動力',
+  4: '個性的・自由人',
+  5: 'おおらか・面倒見が良い',
+  6: '知的・クール'
+};
+
+/* 生年月日から、六星占術で相性の良い星人タイプ（◎の相手、なければ○も含めて最大2種類）を抽出 */
+function getRokkuBestMatchStars(birthdate) {
+  var full = getRokkuFull(birthdate);
+  var myKey = full.starId + (full.plus ? '+' : '-');
+  var bestStarIds = [];
+  /* まず◎（最も相性が良い）から集める */
+  ROKKU_TYPE_ORDER.forEach(function(key){
+    if (key === myKey) return;
+    var sym = getRokkuTypeMatch(myKey, key);
+    if (sym === '◎') {
+      var starId = parseInt(key);
+      if (bestStarIds.indexOf(starId) < 0) bestStarIds.push(starId);
+    }
+  });
+  /* 2種類に満たなければ○（良好）からも追加、最大2種類まで */
+  if (bestStarIds.length < 2) {
+    ROKKU_TYPE_ORDER.forEach(function(key){
+      if (bestStarIds.length >= 2) return;
+      if (key === myKey) return;
+      var sym = getRokkuTypeMatch(myKey, key);
+      if (sym === '○') {
+        var starId = parseInt(key);
+        if (bestStarIds.indexOf(starId) < 0) bestStarIds.push(starId);
+      }
+    });
+  }
+  return bestStarIds.map(function(id){ return ROKKU_STARS[id].name; });
+}
+
 /* 相性カード（九星・数秘など）の「詳細を見る」タップ展開 */
 function toggleSectionDetail(elId) {
   var el = document.getElementById(elId);
@@ -3326,6 +3376,170 @@ function getSanmeiMeishiki(birthdate) {
   var yearGZ = getYearGanzhiSanmei(km.kYear);
   var monthGZ = getMonthGanzhiSanmei(yearGZ[0], km.kMonth);
   return { year: yearGZ, month: monthGZ, day: dayGZ };
+}
+
+/* =======================================================
+   四柱推命モジュール（子平法）
+   ・年柱月柱日柱は算命学モジュールの干支計算を流用（実データ検証済み）
+   ・時柱は五鼠遁＋出生地の経度による真太陽時補正で算出
+   ======================================================= */
+var GOSO_START = {0:0,5:0, 1:2,6:2, 2:4,7:4, 3:6,8:6, 4:8,9:8}; /* 日干index(甲=0)→子時の時干index */
+function getHourBranchIdx(hourDec) {
+  /* 子=23:00-00:59を0とし、2時間ごとに支が進む */
+  return Math.floor((hourDec + 1) / 2) % 12;
+}
+/* 真太陽時補正込みの時柱を算出。cityDataがあれば経度補正、なければ標準時のまま */
+function getHourGanzhiTrue(dayStem, hourDec, cityData) {
+  var correctedDec = hourDec;
+  if (cityData && cityData.lon !== undefined) {
+    /* 標準時子午線135°Eとの経度差×4分で真太陽時補正 */
+    var diffMin = (cityData.lon - 135) * 4;
+    correctedDec = hourDec + diffMin / 60;
+    correctedDec = ((correctedDec % 24) + 24) % 24;
+  }
+  var branchIdx = getHourBranchIdx(correctedDec);
+  var startIdx = GOSO_START[JIKKAN.indexOf(dayStem)];
+  var stemIdx = (startIdx + branchIdx) % 10;
+  return { ganzhi: JIKKAN[stemIdx] + JUNISHI[branchIdx], correctedDec: correctedDec };
+}
+
+/* 四柱推命の命式一式を算出。timeStr='HH:MM' があれば時柱・真太陽時補正も算出 */
+function getShichuuMeishiki(birthdate, timeStr, cityData) {
+  var ms = getSanmeiMeishiki(birthdate);
+  var result = { year: ms.year, month: ms.month, day: ms.day, hour: null, hourNote: '' };
+  if (timeStr) {
+    var tm = timeStr.match(/^(\d{1,2}):(\d{2})$/);
+    if (tm) {
+      var hourDec = (+tm[1]) + (+tm[2])/60;
+      var hg = getHourGanzhiTrue(ms.day[0], hourDec, cityData);
+      result.hour = hg.ganzhi;
+      if (cityData) {
+        var diffMin = Math.round((cityData.lon - 135) * 4);
+        result.hourNote = '真太陽時補正：標準時との経度差 ' + (diffMin>=0?'+':'') + diffMin + '分';
+      }
+    }
+  }
+  return result;
+}
+
+/* 命式の五行バランスを数える（本にある「命式の五行バランス表」と同じ考え方） */
+function getShichuuGokyoBalance(meishiki) {
+  var counts = {'木':0,'火':0,'土':0,'金':0,'水':0};
+  var pillars = [meishiki.year, meishiki.month, meishiki.day];
+  if (meishiki.hour) pillars.push(meishiki.hour);
+  pillars.forEach(function(gz){
+    counts[STEM_EL_SANMEI[gz[0]]]++;
+    var branchEl = {'子':'水','丑':'土','寅':'木','卯':'木','辰':'土','巳':'火','午':'火','未':'土','申':'金','酉':'金','戌':'土','亥':'水'};
+    counts[branchEl[gz[1]]]++;
+  });
+  return counts;
+}
+
+function buildShichuuHTML(birthdate, timeStr, cityData) {
+  var meishiki = getShichuuMeishiki(birthdate, timeStr, cityData);
+  var dayStem = meishiki.day[0];
+  var pillarDefs = [
+    {label:'年柱', gz:meishiki.year},
+    {label:'月柱', gz:meishiki.month},
+    {label:'日柱', gz:meishiki.day}
+  ];
+  if (meishiki.hour) pillarDefs.push({label:'時柱', gz:meishiki.hour});
+
+  var h = '<div class="card fade-up">';
+  h += '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>☯ 四柱推命</span></div></div>';
+
+  /* 命式表 */
+  h += '<div style="display:flex;gap:8px;margin-bottom:14px;">';
+  pillarDefs.forEach(function(p){
+    var hidden = SANMEI_HIDDEN[p.gz[1]] || [];
+    h += '<div style="flex:1;text-align:center;padding:10px 4px;border-radius:10px;background:rgba(255,255,255,.04);">'
+      + '<div style="font-size:9px;color:var(--muted);margin-bottom:4px;">'+p.label+'</div>'
+      + '<div style="font-size:18px;font-weight:700;color:var(--gold);letter-spacing:.1em;">'+p.gz+'</div>'
+      + '<div style="font-size:8px;color:var(--muted);margin-top:4px;">蔵干：'+hidden.join('・')+'</div>'
+      + '</div>';
+  });
+  h += '</div>';
+  if (meishiki.hourNote) {
+    h += '<div style="font-size:10px;color:var(--muted);margin-bottom:10px;">'+meishiki.hourNote+'</div>';
+  } else if (!meishiki.hour) {
+    h += '<div style="font-size:10px;color:var(--muted);margin-bottom:10px;">※出生時刻を入力すると時柱・真太陽時補正も表示されます</div>';
+  }
+
+  /* 五行バランス */
+  var bal = getShichuuGokyoBalance(meishiki);
+  var maxEl='木', minEl='木', maxV=-1, minV=999;
+  ['木','火','土','金','水'].forEach(function(el){
+    if (bal[el] > maxV) { maxV = bal[el]; maxEl = el; }
+    if (bal[el] < minV) { minV = bal[el]; minEl = el; }
+  });
+  h += '<div style="font-size:10px;color:var(--muted);margin-bottom:8px;">命式の五行バランス</div>';
+  h += '<div style="display:flex;gap:6px;margin-bottom:10px;">';
+  ['木','火','土','金','水'].forEach(function(el){
+    var lbl = SANMEI_EL_LABEL[el];
+    h += '<div style="flex:1;text-align:center;padding:8px 2px;border-radius:8px;background:rgba(255,255,255,.04);'
+      + (el===maxEl?'border:1px solid '+lbl.color+';':'')+'">'
+      + '<div style="font-size:10px;color:'+lbl.color+';">'+el+'</div>'
+      + '<div style="font-size:16px;font-weight:700;color:var(--text);">'+bal[el]+'</div>'
+      + '</div>';
+  });
+  h += '</div>';
+  h += '<div style="font-size:11px;color:var(--text);line-height:1.6;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.04);">'
+    + '過多な五行：<b style="color:'+SANMEI_EL_LABEL[maxEl].color+';">'+maxEl+'</b>　不足している五行：<b style="color:'+SANMEI_EL_LABEL[minEl].color+';">'+minEl+'</b>'
+    + '</div>';
+
+  /* 十二運星（日干からみた各柱の状態） */
+  h += '<div style="font-size:10px;color:var(--muted);margin:14px 0 8px;">十二運星（日干「'+dayStem+'」から見た各柱の勢い）</div>';
+  h += '<div style="display:flex;gap:8px;">';
+  pillarDefs.forEach(function(p){
+    var stage = JUNIUN_STAGE_ORDER[(function(){
+      var yy = STEM_YY_SANMEI[dayStem];
+      var bi = JUNISHI.indexOf(p.gz[1]);
+      if (yy===1){ var si=JUNISHI.indexOf(YANG_CHOSEI[dayStem]); return ((bi-si)%12+12)%12; }
+      else { var si2=JUNISHI.indexOf(YIN_CHOSEI[dayStem]); return ((si2-bi)%12+12)%12; }
+    })()];
+    h += '<div style="flex:1;text-align:center;padding:8px 4px;border-radius:8px;background:rgba(255,255,255,.04);">'
+      + '<div style="font-size:9px;color:var(--muted);">'+p.label+'</div>'
+      + '<div style="font-size:12px;color:var(--gold-light);font-weight:700;">'+stage+'</div>'
+      + '</div>';
+  });
+  h += '</div>';
+
+  h += '</div>';
+  return h;
+}
+
+function runShichuu() {
+  syncBirthdate();
+  var bd = document.getElementById('birthdate').value;
+  var err = document.getElementById('bd-error');
+  if (!bd) { err.textContent = '生年月日を入力してください'; return; }
+
+  /* 前回の九星気学カード（年運×月運重ね読み・なぜこの運気か・方位ガイド・今日の日運など）が
+     残らないよう、別枠のenhanced-wrapもクリアする */
+  var ew = document.getElementById('enhanced-wrap');
+  if (ew) ew.innerHTML = '';
+
+  var timeVal = document.getElementById('birth-time').value.trim();
+  var placeVal = document.getElementById('birth-place').value.trim();
+  var tm4 = timeVal.match(/^(\d{1,2}):(\d{2})$/);
+  var tmC = timeVal.match(/^(\d{1,2})(\d{2})$/);
+  var timeStr = null;
+  if (tm4) timeStr = ('0'+tm4[1]).slice(-2)+':'+tm4[2];
+  else if (tmC) timeStr = ('0'+tmC[1]).slice(-2)+':'+tmC[2];
+
+  var cityData = placeVal ? lookupCity(placeVal) : null;
+  var placeResult = document.getElementById('birth-place-result');
+  if (placeVal && !cityData) {
+    placeResult.textContent = '⚠ 都市が見つかりません（都道府県名や主要都市、海外の主要都市に対応）';
+  } else {
+    placeResult.textContent = '';
+  }
+
+  var html = buildShichuuHTML(bd, timeStr, cityData);
+  var rd = document.getElementById('result');
+  rd.innerHTML = html;
+  rd.style.display = 'block';
+  rd.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
 /* 生年月日から算命学エネルギー値（総エネルギー値・五本能）を算出 */
@@ -7227,10 +7441,11 @@ function switchCompatTab(tab, source) {
 
 /* ── Horoscope ── */
 function onSituationChange(v) {
-  document.getElementById('btn-fortune').style.display    = (v==='lovetype'||v==='horoscope') ? 'none' : 'block';
+  document.getElementById('btn-fortune').style.display    = (v==='lovetype'||v==='horoscope'||v==='shichuu') ? 'none' : 'block';
   document.getElementById('btn-lovetype').style.display   = (v==='lovetype') ? 'block' : 'none';
   document.getElementById('btn-horoscope').style.display  = (v==='horoscope') ? 'block' : 'none';
-  document.getElementById('area-horoscope-inputs').style.display = (v==='horoscope') ? 'block' : 'none';
+  document.getElementById('btn-shichuu').style.display    = (v==='shichuu') ? 'block' : 'none';
+  document.getElementById('area-horoscope-inputs').style.display = (v==='horoscope'||v==='shichuu') ? 'block' : 'none';
 }
 
 /* 都市名→緯度経度（主要都市） */
@@ -7313,6 +7528,10 @@ function runHoroscope() {
   var bd = document.getElementById('birthdate').value;
   if (!bd) { document.getElementById('bd-error').textContent = '生年月日を入力してください'; return; }
   document.getElementById('bd-error').textContent = '';
+
+  /* 前回の九星気学カードが残らないよう、別枠のenhanced-wrapもクリアする */
+  var ewClear = document.getElementById('enhanced-wrap');
+  if (ewClear) ewClear.innerHTML = '';
 
   var parts = bd.split('-');
   var y=+parts[0], mo=+parts[1], d=+parts[2];
@@ -9006,6 +9225,52 @@ function buildLoveDiag(bd){
   var vd=LT_VD[venus], md=LT_MD[mars], sd=LT_SD[lp];
   if(!vd||!md) return "<p>1940-2028年対応</p>";
   var h="";
+
+  /* 「こんな人と縁がありやすい」サマリー：金星×火星×六星占術のタイプ相性を短い文章にまとめる */
+  var rokkuMatches = getRokkuBestMatchStars(bd);
+  h += '<div style="padding:16px;background:rgba(232,201,122,.08);border:1px solid rgba(232,201,122,.3);border-radius:10px;margin-bottom:12px;">';
+  h += '<div style="color:#e8c97a;font-size:10px;letter-spacing:.1em;margin-bottom:8px;">《 こんな人と縁がありやすい 》</div>';
+  h += '<div style="font-size:13px;color:var(--text);line-height:2.0;">';
+  h += 'あなたが惹かれやすいのは「<b style="color:#c8bcff;">'+vd.m+'</b>」なタイプ。';
+  h += '恋愛の進め方的には「<b style="color:#c8bcff;">'+md.m+'</b>」な相手と合いやすいです。';
+  if (rokkuMatches.length > 0) {
+    var rokkuWithTrait = rokkuMatches.map(function(name){
+      var id = null;
+      for (var k in ROKKU_STARS) { if (ROKKU_STARS[k].name === name) id = k; }
+      return name + '（' + ROKKU_STAR_TRAIT_SHORT[id] + '）';
+    });
+    h += '六星占術で相性が良いのは、<b style="color:#e8d4ff;">'+rokkuWithTrait.join('・')+'</b>タイプの人です。';
+  }
+  h += '</div></div>';
+
+  /* 「あなたはこんな人だから、こんな人が合う」パネル
+     ※算命学(五行の相生関係)と六星占術(タイプ構造)、2つの異なる理屈を
+       それぞれ根拠を示して説明する（無理に一致させない誠実な構成） */
+  var full = getRokkuFull(bd);
+  var myTrait = ROKKU_STAR_TRAIT[full.starId];
+  var GOKYO_GENERATED_BY = {'火':'木','土':'火','金':'土','水':'金','木':'水'};
+  var EL_TO_ROKKU_STARID = {'木':5,'火':3,'土':1,'金':2,'水':6};
+  var energy = getSanmeiEnergy(bd).elements;
+  var dominantEl='木', maxV=-1;
+  ['木','火','土','金','水'].forEach(function(el){ if(energy[el]>maxV){maxV=energy[el];dominantEl=el;} });
+  var nurtureEl = GOKYO_GENERATED_BY[dominantEl];
+  var nurtureStarId = EL_TO_ROKKU_STARID[nurtureEl];
+  var nurtureStarName = ROKKU_STARS[nurtureStarId].name;
+  var nurtureTrait = ROKKU_STAR_TRAIT[nurtureStarId];
+
+  h += '<div style="padding:16px;background:rgba(95,217,138,.07);border:1px solid rgba(95,217,138,.3);border-radius:10px;margin-bottom:12px;">';
+  h += '<div style="color:#5fd98a;font-size:10px;letter-spacing:.1em;margin-bottom:8px;">《 あなたはこんな人だから、こんな人が合う 》</div>';
+  h += '<div style="font-size:13px;color:var(--text);line-height:2.0;">';
+  h += '算命学で見ると、あなたは「<b style="color:#a8e8c0;">'+dominantEl+'</b>」の気（エネルギー）が一番強く出ています。';
+  h += '五行の関係では「<b style="color:#a8e8c0;">'+nurtureEl+'</b>」の気があなたの「'+dominantEl+'」を支える関係にあるため、';
+  h += '六星占術でいう「<b style="color:#e8d4ff;">'+nurtureStarName+'（'+nurtureTrait+'）</b>」のような気質の人がそばにいると、無理せず自然体でいられやすいでしょう。';
+  h += '<br><br>';
+  h += 'また、六星占術の型そのものの相性から見ると、あなたは「<b style="color:#a8e8c0;">'+full.starName.replace('人','')+'（'+myTrait+'）</b>」タイプ。';
+  if (rokkuMatches.length > 0) {
+    h += 'この型と構造的に噛み合いやすいのは「<b style="color:#e8d4ff;">'+rokkuMatches.join('・')+'</b>」タイプで、こちらは価値観や生活リズムの面で摩擦が起きにくい相手と言えます。';
+  }
+  h += '</div></div>';
+
   h += '<div style="padding:16px;background:rgba(168,154,255,.07);border-left:3px solid #a89aff;border-radius:10px;">';
   h += '<div style="color:#a89aff;font-size:10px;letter-spacing:.1em;margin-bottom:14px;">《 恋愛タイプ診断 》</div>';
   h += '<div style="font-size:13px;color:var(--silver);line-height:2.4;">';
@@ -9036,9 +9301,9 @@ function buildLoveDiag(bd){
     }
     h += '</div>';
   }
+  h += '</div></div>';
   return h;
 }
-/* 恋愛タイプ診断：コピー用プレーンテキスト生成 */
 function buildLoveDiagText(bd){
   var p=lt_parseDt(bd.replace(/-/g,"/"));
   if(!p) return "";
@@ -9076,7 +9341,7 @@ function buildLoveDiagText(bd){
 
 /* コピーボタン用：クリップボードにコピー */
 function copyLoveDiag(btn){
-  var bd = document.getElementById("birthdate").value;
+  var bd = (btn && btn.getAttribute && btn.getAttribute("data-bd")) || document.getElementById("birthdate").value;
   if(!bd) return;
   var text = buildLoveDiagText(bd);
   var fallback = function(){
@@ -9105,8 +9370,30 @@ function copyLoveDiag(btn){
 function runLovetype(){
   var bd=document.getElementById("birthdate").value;
   if(!bd){alert("生年月日を入力してください");return;}
+  var ewClear = document.getElementById('enhanced-wrap');
+  if (ewClear) ewClear.innerHTML = '';
   var rd=document.getElementById("result");
-  rd.innerHTML='<div class="card fade-up" style="margin-top:24px;"><div style="display:flex;align-items:center;justify-content:space-between;"><div class="card-title" style="color:#a89aff;margin-bottom:0;">✨ 恋愛タイプ診断</div><button onclick="copyLoveDiag(this)" style="padding:5px 12px;border-radius:14px;border:1px solid #a89aff;background:rgba(168,154,255,.1);color:#a89aff;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">📋 コピー</button></div>'+buildLoveDiag(bd)+'</div>';
+  var compatBd = document.getElementById("compat-birthdate") ? document.getElementById("compat-birthdate").value : '';
+
+  var h = '<div class="card fade-up" style="margin-top:24px;border-left:3px solid #a89aff;">'
+    + '<div style="display:flex;align-items:center;justify-content:space-between;">'
+    + '<div class="card-title" style="color:#a89aff;margin-bottom:0;">✨ 恋愛タイプ診断'+(compatBd?'　あなた':'')+'</div>'
+    + '<button onclick="copyLoveDiag(this)" data-bd="'+bd+'" style="padding:5px 12px;border-radius:14px;border:1px solid #a89aff;background:rgba(168,154,255,.1);color:#a89aff;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">📋 コピー</button>'
+    + '</div>'
+    + buildLoveDiag(bd)
+    + '</div>';
+
+  if (compatBd) {
+    h += '<div class="card fade-up" style="margin-top:24px;border-left:3px solid #5fd98a;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;">'
+      + '<div class="card-title" style="color:#5fd98a;margin-bottom:0;">✨ 恋愛タイプ診断　相手</div>'
+      + '<button onclick="copyLoveDiag(this)" data-bd="'+compatBd+'" style="padding:5px 12px;border-radius:14px;border:1px solid #5fd98a;background:rgba(95,217,138,.1);color:#5fd98a;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">📋 コピー</button>'
+      + '</div>'
+      + buildLoveDiag(compatBd)
+      + '</div>';
+  }
+
+  rd.innerHTML = h;
   rd.style.display="block";
   rd.scrollIntoView({behavior:"smooth",block:"start"});
 }
