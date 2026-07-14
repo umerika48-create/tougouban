@@ -841,14 +841,14 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     <div class="row">
       <div>
         <label>Year</label>
-        <input type="number" id="targetYear" min="1900" max="2050" style="margin-bottom:4px;">
+        <input type="number" id="targetYear" min="1900" max="2050">
       </div>
       <div>
         <label>Month</label>
-        <input type="number" id="targetMonth" min="1" max="12" id2="automonth" style="margin-bottom:4px;">
+        <input type="number" id="targetMonth" min="1" max="12" id2="automonth">
       </div>
     </div>
-    <div style="display:flex;justify-content:flex-end;margin-top:0;">
+    <div style="display:flex;justify-content:flex-end;margin-top:4px;">
       <button type="button" onclick="resetTargetYearMonth()" style="padding:3px 14px;border-radius:12px;border:1px solid var(--gold);background:rgba(201,168,76,.12);color:var(--gold);font-size:10px;font-weight:700;letter-spacing:.05em;cursor:pointer;">RESET</button>
     </div>
 
@@ -3450,19 +3450,82 @@ function buildNormalAspectBody(birthdate) {
 }
 
 /* タップで開閉するアスペクトカード（算命学エネルギー値カードの下に配置） */
-function toggleAspectCard(id) {
+function toggleAspectCard(id, cardId) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var opening = (el.style.display === 'none' || !el.style.display);
+  el.style.display = opening ? 'block' : 'none';
+  var arrow = document.getElementById(id + '-arrow');
+  if (arrow) arrow.innerHTML = opening ? '▲' : '▼';
+  if (cardId) {
+    var card = document.getElementById(cardId);
+    if (card) card.style.padding = opening ? '24px 20px' : '14px 16px';
+  }
+}
+function buildAspectCardHTML(birthdate, isPartner) {
+  if (!birthdate) return '';
+  var body = buildNormalAspectBody(birthdate);
+  if (!body) return '';
+  var suffix = birthdate.replace(/[^0-9]/g,'') + (isPartner ? '-p' : '');
+  return makeAccordion('aspect-'+suffix, 'アスペクト', body, true);
+}
+
+/* ── 吉日カレンダー（結婚・転職向き）：六星占術の年運＋九星気学の年運を組み合わせたスコア ──
+   ※算命学のエネルギー値は一生固定の数値のため、年ごとの吉凶判断には使用していません */
+function buildLuckyCalendarBody(birthdate) {
+  var honmei = getHonmeiStar(birthdate);
+  var now = new Date();
+  var km = getKigakuMonth(now.getFullYear(), now.getMonth()+1, now.getDate());
+  var startYear = km.kYear;
+  var birthYearNum = +(birthdate.split('-')[0]);
+  var rows = [];
+  for (var i=0; i<10; i++) {
+    var yr = startYear + i;
+    var rIdx = getRokkuYearPos(birthdate, yr);
+    var rStage = ROKKU_CYCLE[rIdx];
+    var kPalace = getYearPalace(honmei, yr);
+    var kData = getPalaceData(honmei, kPalace, yr);
+    var combined = Math.round((rStage.score + kData.score) / 2);
+    rows.push({ yr:yr, age: yr - birthYearNum, rName: rStage.name, rScore: rStage.score, kLabel: kData.label, kScore: kData.score, combined: combined });
+  }
+  var sorted = rows.slice().sort(function(a,b){ return b.combined - a.combined; });
+  var topYears = {};
+  topYears[sorted[0].yr] = true;
+  topYears[sorted[1].yr] = true;
+
+  var h = '<div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">'
+    + '六星占術の年運と、九星気学の年運を組み合わせたスコアです。結婚・転職など、大きな決断のタイミング選びの参考にしてください。'
+    + '</div>';
+  rows.forEach(function(r){
+    var isTop = topYears[r.yr];
+    var color = r.combined >= 80 ? '#e8c96a' : (r.combined >= 60 ? '#5fd98a' : (r.combined >= 40 ? '#8a8098' : '#ff8a65'));
+    h += '<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;margin-bottom:6px;border-radius:10px;background:rgba(255,255,255,.04);'
+      + (isTop ? 'border:1px solid '+color+';' : '') + '">'
+      + '<div style="width:44px;text-align:center;">'
+      + '<div style="font-size:9px;color:var(--muted);">'+r.age+'歳</div>'
+      + '<div style="font-size:13px;font-weight:700;color:var(--text);">'+r.yr+'</div>'
+      + '</div>'
+      + '<div style="flex:1;font-size:11px;color:var(--text);">'
+      + (isTop ? '<span style="color:'+color+';font-weight:700;">★ おすすめ　</span>' : '')
+      + '六星：'+r.rName+'（'+r.rScore+'）／九星：'+r.kLabel+'（'+r.kScore+'）'
+      + '</div>'
+      + '<div style="font-size:16px;font-weight:800;color:'+color+';">'+r.combined+'</div>'
+      + '</div>';
+  });
+  return h;
+}
+function toggleLuckyCalendar(id) {
   var el = document.getElementById(id);
   if (!el) return;
   el.style.display = (el.style.display === 'none' || !el.style.display) ? 'block' : 'none';
   var arrow = document.getElementById(id + '-arrow');
   if (arrow) arrow.innerHTML = (el.style.display === 'block') ? '▲' : '▼';
 }
-function buildAspectCardHTML(birthdate) {
+function buildLuckyCalendarHTML(birthdate) {
   if (!birthdate) return '';
-  var body = buildNormalAspectBody(birthdate);
-  if (!body) return '';
-  var id = 'aspect-card-body-' + birthdate.replace(/[^0-9]/g,'');
-  var h = '<div onclick="toggleAspectCard(\''+id+'\')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">'
+  var body = buildLuckyCalendarBody(birthdate);
+  var id = 'lucky-cal-body-' + birthdate.replace(/[^0-9]/g,'');
+  var h = '<div onclick="toggleLuckyCalendar(\''+id+'\')" style="display:flex;align-items:center;justify-content:space-between;cursor:pointer;">'
     + '<span style="font-size:11px;color:var(--muted);">タップして展開</span>'
     + '<span id="'+id+'-arrow" style="font-size:10px;color:var(--muted);">▼</span>'
     + '</div>'
@@ -3943,15 +4006,31 @@ function getPalaceData(honmei, palace, targetYear) {
   };
 }
 
-function buildNineYearCycle(honmei, targetYear) {
+function buildNineYearCycle(honmei, targetYear, birthdate) {
   var nowYear = new Date().getFullYear();
-  return Array.from({length:9}, function(_,i) {
+  var cycle = Array.from({length:9}, function(_,i) {
     var yr = targetYear - 4 + i;
     var palace = getYearPalace(honmei, yr);
-    var d = getPalaceData(honmei, palace, yr);   /* 五行補正済み */
-    return { yr:yr, palace:palace, rank:d.rank, level:d.level, score:d.score, label:d.label,
+    var d = getPalaceData(honmei, palace, yr);   /* 五行補正済み（九星気学のみのスコア） */
+    var kyuseiScore = d.score;
+    var rokkuScore = null;
+    if (birthdate) {
+      var rIdx = getRokkuYearPos(birthdate, yr);
+      rokkuScore = ROKKU_CYCLE[rIdx].score;
+    }
+    /* 六星占術＋九星気学の組み合わせスコア（生年月日がある場合のみ） */
+    var combined = (rokkuScore !== null) ? Math.round((rokkuScore + kyuseiScore) / 2) : kyuseiScore;
+    var cLevel = combined>=60?"ex":combined>=42?"good":combined>=28?"mid":"low";
+    var cRank  = combined>=60?"◎":combined>=42?"○":combined>=28?"△":"✕";
+    return { yr:yr, palace:palace, rank:cRank, level:cLevel, score:combined, label:d.label,
+             kyuseiScore:kyuseiScore, rokkuScore:rokkuScore,
              isTarget:(yr===targetYear), isNow:(yr===nowYear), gokyoAdj:d.gokyoAdj, breakdown:d.gokyoAdj&&d.gokyoAdj.breakdown?d.gokyoAdj.breakdown:null };
   });
+  /* 結婚・転職におすすめの年（組み合わせスコア上位2年）にマークを付ける */
+  var sorted = cycle.slice().sort(function(a,b){ return b.score - a.score; });
+  var top2 = [sorted[0], sorted[1]].filter(Boolean).map(function(c){ return c.yr; });
+  cycle.forEach(function(c){ c.isRecommended = top2.indexOf(c.yr) >= 0; });
+  return cycle;
 }
 
 function buildCycleWaveSVG(cycle, tColor) {
@@ -3981,7 +4060,7 @@ function buildCycleWaveSVG(cycle, tColor) {
 }
 
 function buildNineYearHTML(honmei, targetYear, birthdate) {
-  var cycle = buildNineYearCycle(honmei, targetYear);
+  var cycle = buildNineYearCycle(honmei, targetYear, birthdate);
   var tColor = getLuckColor(PALACE_LUCK[getYearPalace(honmei,targetYear)].level);
   var pos = 4;
   var nextScore = cycle[pos+1] ? cycle[pos+1].score : 50;
@@ -4046,6 +4125,7 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
            'style="cursor:pointer;" onclick="toggleNycPanel('+idx+')">'+
         (ageAtYear !== null ? '<div style="position:absolute;top:4px;left:6px;font-size:8px;color:var(--muted);letter-spacing:.02em;">'+ageAtYear+'歳</div>' : '')+
         (c.isTarget ? '<div class="cycle-now-badge">占いたい年</div>' : '')+
+        (c.isRecommended ? '<div style="position:absolute;top:4px;right:6px;font-size:6px;color:var(--gold);background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);border-radius:6px;padding:1px 4px;">★おすすめ</div>' : '')+
         '<div class="cycle-year" style="color:'+(c.isTarget?'var(--gold-light)':'var(--muted)')+'">'+c.yr+'</div>'+
         '<div class="cycle-rank '+c.level+'" style="display:flex;align-items:baseline;gap:4px;justify-content:center;cursor:pointer;" onclick="toggleScoreBreakdown(\'nyscore-'+idx+'\',event);">'+c.rank+'<span style="font-size:10px;font-weight:400;opacity:.7;">'+c.score+'</span></div>'+
         '<div class="core-num-detail" id="nyscore-'+idx+'">'+(c.breakdown?renderBreakdown(c.breakdown):'')+'</div>'+
@@ -6117,11 +6197,8 @@ function buildPersonalCardsHTML(birthdate, honmei, kYear, kMonth, isPartner) {
       '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span></div></div>'+
       buildSanmeiEnergyHTML(birthdate) +
     '</div>';
-  h +=
-    '<div class="card fade-up">'+
-      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>アスペクト</span></div></div>'+
-      buildAspectCardHTML(birthdate, isPartner) +
-    '</div>';
+  h += buildAspectCardHTML(birthdate, isPartner);
+
   h +=
     '<div class="card fade-up">'+
       '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>年運サイクル</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' + _nineYearBtnHTML + '<button onclick="resetNineYearPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button><button onclick="resetNineYearToDefault()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">年:RE</button></div></div></div>'+
@@ -6728,11 +6805,8 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
       '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span></div></div>'+
       buildSanmeiEnergyHTML(birthdate) +
     '</div>';
-  h +=
-    '<div class="card fade-up">'+
-      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>アスペクト</span></div></div>'+
-      buildAspectCardHTML(birthdate, isPartner) +
-    '</div>';
+  h += buildAspectCardHTML(birthdate, isPartner);
+
   h +=
     '<div class="card fade-up">'+
       '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>年運サイクル</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' + _nineYearBtnHTML + '<button onclick="resetNineYearPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button><button onclick="resetNineYearToDefault()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">年:RE</button></div></div></div>'+
@@ -7694,11 +7768,8 @@ function calculate() {
       '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span></div></div>'+
       buildSanmeiEnergyHTML(birthdate) +
     '</div>';
-  html +=
-    '<div class="card fade-up">'+
-      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>アスペクト</span></div></div>'+
-      buildAspectCardHTML(birthdate, false) +
-    '</div>';
+  html += buildAspectCardHTML(birthdate, false);
+
   html +=
     '<div class="card fade-up">'+
       '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>年運サイクル</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' + _nineYearBtnHTML + '<button onclick="resetNineYearPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button><button onclick="resetNineYearToDefault()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">年:RE</button></div></div></div>'+
