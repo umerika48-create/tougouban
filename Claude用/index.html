@@ -875,6 +875,13 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   <div id="result"></div>
   <div id="enhanced-wrap" style="margin-top:0"></div>
 
+  <div id="global-modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);z-index:9999;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;" onclick="if(event.target===this)closeModal();">
+    <div style="position:relative;background:#1a1626;border:1px solid rgba(201,168,76,.35);border-radius:16px;padding:28px 20px 20px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto;box-shadow:0 10px 40px rgba(0,0,0,.5);">
+      <button onclick="closeModal()" style="position:absolute;top:8px;right:10px;background:transparent;border:none;color:var(--muted);font-size:22px;line-height:1;cursor:pointer;padding:4px 8px;">×</button>
+      <div id="global-modal-content" style="font-size:12px;color:var(--text);line-height:1.8;"></div>
+    </div>
+  </div>
+
   <footer>
     Produced by Sakuraco<br>
     立春（2月4日）を年の切替
@@ -3435,7 +3442,172 @@ function getShichuuGokyoBalance(meishiki) {
   return counts;
 }
 
-function buildShichuuHTML(birthdate, timeStr, cityData) {
+/* 五行の生剋関係（グローバル） */
+var GOKYO_GEN    = {'木':'火','火':'土','土':'金','金':'水','水':'木'}; /* 生む */
+var GOKYO_GEN_BY = {'火':'木','土':'火','金':'土','水':'金','木':'水'}; /* 生まれる・支えられる */
+var GOKYO_OVER    = {'木':'土','土':'水','水':'火','火':'金','金':'木'}; /* 剋す */
+var GOKYO_OVER_BY = {'土':'木','水':'土','火':'水','金':'火','木':'金'}; /* 剋される */
+
+/* 日主（十干）ごとの性格描写 */
+var NICHISHU_TRAIT = {
+  '甲': '大樹のようにまっすぐ育っていく、周囲を導くリーダー気質',
+  '乙': '草花のようにしなやかで、逆境にも折れない柔らかな強さを持つ人',
+  '丙': '太陽のように明るく、周りを自然と照らす積極性のある人',
+  '丁': '灯火のように繊細で、静かな情熱を内側に秘めている人',
+  '戊': '山のようにどっしり構え、周囲に安定感を与える人',
+  '己': '田園のように、人を育て世話することに喜びを感じる柔らかい人',
+  '庚': '剣のように白黒はっきりしていて、決断力のある人',
+  '辛': '宝石のように繊細で美意識が高く、洗練を求める人',
+  '壬': '大海のように懐が深く、自由でスケールの大きい人',
+  '癸': '雨露のように物静かで、内に知性を湛えている人'
+};
+
+/* 日主ごとの詳しい性格解説（タップで開く「性格を詳しく見る」パネル用） */
+var NICHISHU_DETAIL = {
+  '甲': '大樹のようにまっすぐ上を目指して育っていくタイプ。正義感が強く、曲がったことが嫌いで、周囲から自然とリーダー役を任されやすい人です。まっすぐすぎるあまり融通が利かず、頑固に見られることもありますが、一度決めた目標には粘り強く向かっていく芯の強さがあります。',
+  '乙': '草花のように、一見しなやかで柔らかい印象を持たれますが、踏まれても立ち上がる強さを内側に持っている人です。人当たりが良く協調性がありますが、その柔軟さゆえに周りに合わせすぎて、本音を飲み込みがちな一面も。実は芯があり、じっくり物事を進めるタイプです。',
+  '丙': '太陽のように明るく、いるだけで周囲を元気にする存在感のある人です。物事をポジティブに捉え、行動力もありますが、感情の浮き沈みが表に出やすく、一時的に燃え尽きたように見えることも。裏表がなく、素直でまっすぐな性格です。',
+  '丁': '灯火のように、静かだけれど確かな情熱を内側に燃やしている人です。表面的には物静かで繊細ですが、大切なもののためには粘り強く努力を続けられる人。人の気持ちに敏感で、細やかな気配りができる反面、繊細さゆえに傷つきやすい一面もあります。',
+  '戊': '山のようにどっしりと構え、多少のことでは動じない安定感のある人です。周囲から頼りにされることが多く、責任感も強いタイプ。その反面、変化を好まず慎重になりすぎることがあり、新しい一歩を踏み出すのに時間がかかることも。',
+  '己': '田園のように、人を育て、世話をすることに喜びを感じる柔らかい人です。控えめで謙虚、聞き上手なため人望を集めやすいタイプ。ただし自分のことは後回しにしがちで、頼まれると断れず、知らないうちに無理を重ねてしまうこともあります。',
+  '庚': '剣のように、物事を白黒はっきりさせたい、筋を通したいタイプの人です。決断力があり、いざという時の行動力は抜群。正義感が強く頼れる存在ですが、白黒つけたがるあまり、周囲との衝突を招きやすい一面もあります。',
+  '辛': '宝石のように繊細で美意識が高く、洗練されたものを好む人です。感受性が鋭く、細部までこだわる完璧主義な一面がありますが、繊細さゆえに小さなことを気にしすぎたり、傷つきやすかったりすることも。プライドの高さが芯の強さにもなります。',
+  '壬': '大海のように懐が深く、スケールの大きい自由な発想を持つ人です。束縛を嫌い、常に新しいことへ興味を持って動き回るタイプ。行動力と柔軟さがある反面、一つのことに腰を据えて取り組むのが苦手で、飽きっぽく見られることもあります。',
+  '癸': '雨露のように物静かで、内側に深い知性と直感を秘めている人です。控えめですが観察力が鋭く、物事の本質を見抜く力があります。感情を表に出すのが苦手で、周囲から何を考えているか分かりにくいと言われることもありますが、実は情に厚いタイプです。'
+};
+
+/* 四柱推命：身強・身弱を判定し、必要な五行（用神）を導く
+   ・日主と同じ五行、日主を生む五行 → 身強を強める要素
+   ・それ以外 → 身弱に傾ける要素
+   身強なら「日主を剋す・抑える五行」、身弱なら「日主を支える五行」が用神 */
+function getShichuuShinYoujin(birthdate) {
+  var meishiki = getSanmeiMeishiki(birthdate);
+  var dayStem = meishiki.day[0];
+  var dayEl = STEM_EL_SANMEI[dayStem];
+  var branchEl = {'子':'水','丑':'土','寅':'木','卯':'木','辰':'土','巳':'火','午':'火','未':'土','申':'金','酉':'金','戌':'土','亥':'水'};
+  var supportEls = [dayEl, GOKYO_GEN_BY[dayEl]]; /* 同类・印星＝自分を強める */
+  var supportCount = 0, drainCount = 0;
+  [meishiki.year, meishiki.month, meishiki.day].forEach(function(gz, idx){
+    var stemEl = STEM_EL_SANMEI[gz[0]];
+    var brEl = branchEl[gz[1]];
+    if (idx === 2) { /* 日柱の干は自分自身なので支柱としてカウント、支のみ判定 */
+      if (supportEls.indexOf(brEl) >= 0) supportCount++; else drainCount++;
+      return;
+    }
+    if (supportEls.indexOf(stemEl) >= 0) supportCount++; else drainCount++;
+    if (supportEls.indexOf(brEl) >= 0) supportCount++; else drainCount++;
+  });
+  var isShinkyou = supportCount > drainCount; /* 身強 */
+  var youjinEl = isShinkyou ? GOKYO_OVER_BY[dayEl] : GOKYO_GEN_BY[dayEl];
+  return { dayStem: dayStem, dayEl: dayEl, isShinkyou: isShinkyou, youjinEl: youjinEl, supportCount: supportCount, drainCount: drainCount };
+}
+
+/* 十神：相手の日主が、自分の日主から見てどんな関係かを判定 */
+var JUSSHIN_INFO = {
+  '比肩': '対等な仲間のような関係。価値観が似ていて、自然体でいられます。',
+  '劫財': '良きライバルのような関係。刺激し合いながらお互いを高め合えます。',
+  '食神': '一緒にいて楽しく、リラックスできる関係。気を遣わずに過ごせます。',
+  '傷官': 'お互いの才能を引き出し合う、刺激的な関係。ただし摩擦も出やすい面があります。',
+  '偏財': '自由に与え合える、気楽でオープンな関係。',
+  '正財': '堅実に支え合う、安定感のある関係。将来を見据えた話がしやすい相手です。',
+  '偏官': '緊張感のある関係。時にぶつかりながらも、お互いを鍛え合える相手です。',
+  '正官': '規律や信頼を与えてくれる、頼れる関係。',
+  '偏印': '独特な理解者のような関係。マイペースなまま支え合えます。',
+  '印綬': '包み込むように支えてくれる、安心感のある関係。'
+};
+function getJusshin(dayStemSelf, dayStemOther) {
+  var elSelf = STEM_EL_SANMEI[dayStemSelf];
+  var elOther = STEM_EL_SANMEI[dayStemOther];
+  var sameYY = (STEM_YY_SANMEI[dayStemSelf] === STEM_YY_SANMEI[dayStemOther]);
+  if (elOther === elSelf) return sameYY ? '比肩' : '劫財';
+  if (GOKYO_GEN[elSelf] === elOther) return sameYY ? '食神' : '傷官';
+  if (GOKYO_OVER[elSelf] === elOther) return sameYY ? '偏財' : '正財';
+  if (GOKYO_OVER_BY[elSelf] === elOther) return sameYY ? '偏官' : '正官';
+  return sameYY ? '偏印' : '印綬';
+}
+
+/* 四柱推命の相性カード：お互いの日主の十神関係＋用神の観点で相性を見る */
+function buildShichuuAishoHTML(bdA, bdB) {
+  var meishikiA = getSanmeiMeishiki(bdA);
+  var meishikiB = getSanmeiMeishiki(bdB);
+  var dayA = meishikiA.day[0], dayB = meishikiB.day[0];
+  var jusshinAviewB = getJusshin(dayA, dayB); /* 相手があなたから見て何にあたるか */
+  var jusshinBviewA = getJusshin(dayB, dayA); /* あなたが相手から見て何にあたるか */
+  var syjA = getShichuuShinYoujin(bdA);
+  var syjB = getShichuuShinYoujin(bdB);
+
+  var h = '<div class="card fade-up">';
+  h += '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>☯ 四柱推命の相性</span></div></div>';
+
+  h += '<div style="font-size:11px;color:var(--muted);margin-bottom:12px;">日主同士：あなた「'+dayA+'」×相手「'+dayB+'」</div>';
+
+  h += '<div style="padding:12px;border-radius:10px;background:rgba(255,255,255,.04);margin-bottom:10px;">';
+  h += '<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">相手はあなたから見ると「<b style="color:var(--gold-light);">'+jusshinAviewB+'</b>」</div>';
+  h += '<div style="font-size:12px;color:var(--text);line-height:1.7;">'+JUSSHIN_INFO[jusshinAviewB]+'</div>';
+  h += '</div>';
+
+  h += '<div style="padding:12px;border-radius:10px;background:rgba(255,255,255,.04);margin-bottom:12px;">';
+  h += '<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">あなたは相手から見ると「<b style="color:var(--gold-light);">'+jusshinBviewA+'</b>」</div>';
+  h += '<div style="font-size:12px;color:var(--text);line-height:1.7;">'+JUSSHIN_INFO[jusshinBviewA]+'</div>';
+  h += '</div>';
+
+  /* 用神の観点：相手があなたの用神にあたるか、あなたが相手の用神にあたるか */
+  var aNeedsB = (STEM_EL_SANMEI[dayB] === syjA.youjinEl);
+  var bNeedsA = (STEM_EL_SANMEI[dayA] === syjB.youjinEl);
+  h += '<div style="padding:12px;border-radius:10px;background:rgba(232,201,122,.08);border:1px solid rgba(232,201,122,.3);">';
+  h += '<div style="font-size:10px;color:#e8c97a;margin-bottom:6px;">用神（お互いに必要な気）の観点</div>';
+  if (aNeedsB && bNeedsA) {
+    h += '<div style="font-size:12px;color:var(--text);line-height:1.7;">お互いがお互いの「用神」にあたる、支え合いの相性です。無理をしなくても自然に助け合える関係と言えます。</div>';
+  } else if (aNeedsB) {
+    h += '<div style="font-size:12px;color:var(--text);line-height:1.7;">相手の気（'+STEM_EL_SANMEI[dayB]+'）が、あなたの用神にあたります。相手といることで、あなたの力が発揮されやすくなる関係です。</div>';
+  } else if (bNeedsA) {
+    h += '<div style="font-size:12px;color:var(--text);line-height:1.7;">あなたの気（'+STEM_EL_SANMEI[dayA]+'）が、相手の用神にあたります。あなたがそばにいることで、相手の力が発揮されやすくなる関係です。</div>';
+  } else {
+    h += '<div style="font-size:12px;color:var(--text);line-height:1.7;">用神の観点では直接支え合う関係ではありませんが、上記の十神の関係性が二人の距離感の目安になります。</div>';
+  }
+  h += '</div>';
+
+  h += '</div>';
+  return h;
+}
+
+/* 四柱推命の相性：お互いの用神（必要な気）を、相手が日主として生まれ持っているかで判定 */
+function buildShichuuAishoHTML(bdA, bdB) {
+  var syjA = getShichuuShinYoujin(bdA);
+  var syjB = getShichuuShinYoujin(bdB);
+  var aNeedsB = (syjA.youjinEl === syjB.dayEl); /* 相手があなたの用神を体現している */
+  var bNeedsA = (syjB.youjinEl === syjA.dayEl); /* あなたが相手の用神を体現している */
+
+  var h = '<div class="card fade-up">';
+  h += '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>☯ 四柱推命の相性</span></div></div>';
+  h += '<div style="font-size:13px;color:var(--text);line-height:2.0;">';
+
+  h += 'あなたの日主は「<b style="color:var(--gold-light);">'+syjA.dayStem+'</b>」で、'+(syjA.isShinkyou?'身強':'身弱')+'の傾向。必要な気（用神）は「<b style="color:var(--gold-light);">'+syjA.youjinEl+'</b>」です。<br>';
+  h += '相手の日主は「<b style="color:var(--gold-light);">'+syjB.dayStem+'</b>」で、'+(syjB.isShinkyou?'身強':'身弱')+'の傾向。必要な気（用神）は「<b style="color:var(--gold-light);">'+syjB.youjinEl+'</b>」です。';
+  h += '<br><br>';
+
+  if (aNeedsB && bNeedsA) {
+    h += '<div style="padding:10px 12px;border-radius:8px;background:rgba(95,217,138,.1);border:1px solid rgba(95,217,138,.3);">'
+      + '相手の日主「'+syjB.dayStem+'（'+syjB.dayEl+'）」は、まさにあなたが必要とする「'+syjA.youjinEl+'」の気そのもの。そしてあなたの日主「'+syjA.dayStem+'（'+syjA.dayEl+'）」も、相手が必要とする「'+syjB.youjinEl+'」の気にあたります。<b style="color:#5fd98a;">お互いが、相手の足りないところを生まれ持って補い合える、理想的な支え合いの相性</b>と言えます。'
+      + '</div>';
+  } else if (aNeedsB) {
+    h += '<div style="padding:10px 12px;border-radius:8px;background:rgba(95,217,138,.1);border:1px solid rgba(95,217,138,.3);">'
+      + '相手の日主「'+syjB.dayStem+'（'+syjB.dayEl+'）」は、あなたが必要とする「'+syjA.youjinEl+'」の気そのもの。<b style="color:#5fd98a;">相手が自然とあなたを支えてくれる相性</b>です。あなたにとって心地よく感じやすい相手でしょう。'
+      + '</div>';
+  } else if (bNeedsA) {
+    h += '<div style="padding:10px 12px;border-radius:8px;background:rgba(95,217,138,.1);border:1px solid rgba(95,217,138,.3);">'
+      + 'あなたの日主「'+syjA.dayStem+'（'+syjA.dayEl+'）」は、相手が必要とする「'+syjB.youjinEl+'」の気そのもの。<b style="color:#5fd98a;">あなたが自然と相手を支えてあげられる相性</b>です。頼られたり、必要とされることが多い関係になりやすいでしょう。'
+      + '</div>';
+  } else {
+    h += '<div style="padding:10px 12px;border-radius:8px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.15);">'
+      + '五行の観点では、直接的に支え合う関係ではありません。ただしこれは相性が悪いという意味ではなく、<b style="color:var(--gold-light);">似た者同士、または全く違う角度からお互いを見られる関係</b>になりやすいということ。日々の会話や歩み寄りが、より大切になる相性と言えます。'
+      + '</div>';
+  }
+  h += '</div></div>';
+  return h;
+}
+
+function buildShichuuHTML(birthdate, timeStr, cityData, label) {
   var meishiki = getShichuuMeishiki(birthdate, timeStr, cityData);
   var dayStem = meishiki.day[0];
   var pillarDefs = [
@@ -3446,7 +3618,7 @@ function buildShichuuHTML(birthdate, timeStr, cityData) {
   if (meishiki.hour) pillarDefs.push({label:'時柱', gz:meishiki.hour});
 
   var h = '<div class="card fade-up">';
-  h += '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>☯ 四柱推命</span></div></div>';
+  h += '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>☯ 四柱推命'+(label?'　'+label:'')+'</span></div></div>';
 
   /* 命式表 */
   h += '<div style="display:flex;gap:8px;margin-bottom:14px;">';
@@ -3504,8 +3676,36 @@ function buildShichuuHTML(birthdate, timeStr, cityData) {
   });
   h += '</div>';
 
+  /* タップで開く「性格を詳しく見る」パネル */
+  var detailId = 'shichuu-detail-' + birthdate.replace(/[^0-9]/g,'');
+  var syj = getShichuuShinYoujin(birthdate);
+  var youjinStarId2 = {'木':5,'火':3,'土':1,'金':2,'水':6}[syj.youjinEl];
+  var youjinStarName2 = ROKKU_STARS[youjinStarId2].name;
+  var youjinTrait2 = ROKKU_STAR_TRAIT[youjinStarId2];
+  h += '<div onclick="toggleShichuuDetail(\''+detailId+'\')" style="margin-top:14px;width:100%;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:11px 16px;cursor:pointer;">'
+    + '<span style="font-size:11px;letter-spacing:.1em;color:var(--gold);">🔍 性格を詳しく見る</span>'
+    + '<span id="'+detailId+'-arrow" style="font-size:10px;color:var(--muted);">▼</span>'
+    + '</div>';
+  h += '<div id="'+detailId+'" style="display:none;margin-top:10px;padding:14px;border-radius:10px;background:rgba(255,255,255,.03);font-size:12px;color:var(--text);line-height:1.9;">';
+  h += '日主「<b style="color:var(--gold-light);">'+dayStem+'</b>」は、'+(NICHISHU_DETAIL[dayStem] || NICHISHU_TRAIT[dayStem])+'<br><br>';
+  if (syj.isShinkyou) {
+    h += '命式全体では「身強（しんきょう）」の傾向があります。生まれつきのパワーが強く、自分の力で物事を推し進めていけるタイプ。ただしパワーがある分、周りに強く出すぎたり、一人で抱え込みすぎたりすることもあるので、そのエネルギーを程よく受け止めてくれたり、時にブレーキ役になってくれる相手がいると、より力を活かしやすくなります。';
+  } else {
+    h += '命式全体では「身弱（しんじゃく）」の傾向があります。自分のエネルギーを周りのために使いやすく、繊細で気配りができるタイプ。ただしその分、無理をしすぎたり、エネルギー切れを起こしやすい面もあるので、そばで支えてくれたり、後押ししてくれる相手がいると、安定して力を発揮しやすくなります。';
+  }
+  h += '<br><br>あなたを支えてくれる五行は「<b style="color:var(--gold-light);">'+syj.youjinEl+'</b>」の気（専門用語で「用神」）。六星占術でいう「<b style="color:#e8d4ff;">'+youjinStarName2+'（'+youjinTrait2+'）</b>」のような人が、まさにこれにあたります。';
+  h += '</div>';
+
   h += '</div>';
   return h;
+}
+function toggleShichuuDetail(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  var opening = (el.style.display === 'none' || !el.style.display);
+  el.style.display = opening ? 'block' : 'none';
+  var arrow = document.getElementById(id + '-arrow');
+  if (arrow) arrow.innerHTML = opening ? '▲' : '▼';
 }
 
 function runShichuu() {
@@ -3535,7 +3735,13 @@ function runShichuu() {
     placeResult.textContent = '';
   }
 
-  var html = buildShichuuHTML(bd, timeStr, cityData);
+  var compatBd = document.getElementById('compat-birthdate') ? document.getElementById('compat-birthdate').value : '';
+
+  var html = buildShichuuHTML(bd, timeStr, cityData, compatBd ? 'あなた' : '');
+  if (compatBd) {
+    html += buildShichuuHTML(compatBd, null, null, '相手');
+    html += buildShichuuAishoHTML(bd, compatBd);
+  }
   var rd = document.getElementById('result');
   rd.innerHTML = html;
   rd.style.display = 'block';
@@ -4481,18 +4687,23 @@ function resetMonthCycleToDefault() {
 }
 
 
+/* ── 共通ポップアップ（モーダル） ── */
+function showModal(html) {
+  var overlay = document.getElementById('global-modal-overlay');
+  var content = document.getElementById('global-modal-content');
+  if (!overlay || !content) return;
+  content.innerHTML = html;
+  overlay.style.display = 'flex';
+}
+function closeModal() {
+  var overlay = document.getElementById('global-modal-overlay');
+  if (overlay) overlay.style.display = 'none';
+}
+
 function toggleNycPanel(idx) {
   var panel = document.getElementById('nycyc-panel-' + idx);
   if(!panel) return;
-  var isOpen = panel.style.display !== 'none';
-  for(var i=0; i<9; i++){
-    var p = document.getElementById('nycyc-panel-' + i);
-    if(p) p.style.display = 'none';
-  }
-  if(!isOpen){
-    panel.style.display = '';
-    setTimeout(function(){ panel.scrollIntoView({behavior:'smooth', block:'nearest'}); }, 50);
-  }
+  showModal(panel.innerHTML);
 }
 
 
@@ -5040,7 +5251,7 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
         '</button>'+
         '<div class="panel-mini-body" id="mptbody-'+m.mo+'">'+m.d.monthDesc+'</div>'+
         /* 閉じるボタン */
-        '<button onclick="toggleMcycPanel('+m.mo+')" '+
+        '<button onclick="closeModal()" '+
           'style="display:block;width:100%;margin-top:10px;padding:6px;'+
           'background:transparent;border:1px solid rgba(255,255,255,.1);border-radius:8px;'+
           'color:var(--muted);font-size:11px;cursor:pointer;font-family:\'Shippori Mincho\',serif;">'+
@@ -5060,16 +5271,7 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
 function toggleMcycPanel(mo) {
   var panel = document.getElementById('mcyc-panel-'+mo);
   if(!panel) return;
-  var isOpen = panel.style.display !== 'none';
-  /* 全部閉じる */
-  for(var i=1;i<=12;i++){
-    var p = document.getElementById('mcyc-panel-'+i);
-    if(p) p.style.display='none';
-  }
-  if(!isOpen){
-    panel.style.display='';
-    setTimeout(function(){ panel.scrollIntoView({behavior:'smooth',block:'nearest'}); }, 50);
-  }
+  showModal(panel.innerHTML);
 }
 
 /* =======================================================
@@ -5345,22 +5547,46 @@ function toggleScoreBreakdown(id, event){
   if(event) event.stopPropagation();
   var el=document.getElementById(id);
   if(!el) return;
-  el.classList.toggle('open');
+  showModal(el.innerHTML);
 }
 
 function togglePYCard(el, pyNum){
-  var existing=el.nextElementSibling;
-  if(existing && existing.classList.contains('py-card')){
-    existing.remove(); return;
-  }
   var base=pyNum===11?2:pyNum===22?4:pyNum===33?6:pyNum;
   var msg=PY_DATA[base];
   if(!msg) return;
-  var div=document.createElement('div');
-  div.className='py-card core-num-detail open';
-  div.style.cssText='margin-top:4px;padding:8px 12px;font-size:11px;line-height:1.8;';
-  div.innerHTML='<b style="color:#e8c97a;">PY'+pyNum+'</b><br>'+msg;
-  el.parentNode.insertBefore(div,el.nextSibling);
+  showModal('<b style="color:#e8c97a;font-size:14px;">PY'+pyNum+'</b><br><br>'+msg);
+}
+
+/* ── パネルごとのメモ機能（localStorageに生年月日＋パネルID単位で保存） ── */
+function buildPanelTitleWithMemo(panelId, titleText, birthdate) {
+  var memoKey = 'memo_' + (birthdate||'') + '_' + panelId;
+  return '<div class="core-num-detail-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">'
+    + '<span>'+titleText+'</span>'
+    + '<span onclick="event.stopPropagation();toggleMemo(&quot;'+memoKey+'&quot;)" style="font-size:9px;color:var(--gold);cursor:pointer;text-decoration:underline;white-space:nowrap;">（MEMO）</span>'
+    + '</div>'
+    + '<div id="memowrap-'+memoKey+'" style="display:none;margin:6px 0 10px;" onclick="event.stopPropagation();">'
+    + '<textarea id="memotext-'+memoKey+'" oninput="saveMemo(&quot;'+memoKey+'&quot;)" placeholder="ここにメモを書けます（この端末に保存されます）" style="width:100%;min-height:60px;background:rgba(255,255,255,.05);border:1px solid rgba(201,168,76,.3);border-radius:8px;padding:8px;color:var(--text);font-size:12px;box-sizing:border-box;font-family:inherit;"></textarea>'
+    + '</div>';
+}
+function toggleMemo(memoKey) {
+  var wrap = document.getElementById('memowrap-' + memoKey);
+  if (!wrap) return;
+  var opening = (wrap.style.display === 'none' || !wrap.style.display);
+  wrap.style.display = opening ? 'block' : 'none';
+  if (opening) {
+    var ta = document.getElementById('memotext-' + memoKey);
+    if (ta) {
+      try {
+        var saved = localStorage.getItem(memoKey);
+        ta.value = saved || '';
+      } catch(e) {}
+    }
+  }
+}
+function saveMemo(memoKey) {
+  var ta = document.getElementById('memotext-' + memoKey);
+  if (!ta) return;
+  try { localStorage.setItem(memoKey, ta.value); } catch(e) {}
 }
 
 function toggleCoreNum(id) {
@@ -5414,14 +5640,10 @@ var ELEMENT_DESC = {
 
 /* 運気名タップで説明展開 */
 function toggleCycleLabel(id, event) {
-  event.stopPropagation();
+  if(event) event.stopPropagation();
   var el = document.getElementById(id);
   if(!el) return;
-  var grid = el.parentElement;
-  grid.querySelectorAll('.cycle-label-detail.open').forEach(function(p){
-    if(p.id !== id) p.classList.remove('open');
-  });
-  el.classList.toggle('open');
+  showModal(el.innerHTML);
 }
 
 /* パネル内ミニアコーディオン */
@@ -5436,15 +5658,10 @@ function togglePanelMini(btnId, bodyId) {
 
 /* 六星キーワード展開トグル */
 function toggleRokkuDetail(id, event) {
-  event.stopPropagation(); /* 親セルのタップイベントを止める */
+  if(event) event.stopPropagation(); /* 親セルのタップイベントを止める */
   var panel = document.getElementById(id);
   if(!panel) return;
-  /* 同じグリッド内の他パネルを閉じる */
-  var grid = panel.parentElement;
-  grid.querySelectorAll('.rokku-detail-panel.open').forEach(function(p){
-    if(p.id !== id) p.classList.remove('open');
-  });
-  panel.classList.toggle('open');
+  showModal(panel.innerHTML);
 }
 
 /* =======================================================
@@ -6270,6 +6487,29 @@ function switchCycleCard(view) {
   container.innerHTML = buildMonthCycleHTML(honmei, window._nyCurrentCycleYear, window._nyCurrentCycleMonth, bd);
 }
 
+/* 算命学カードの「あなた／相手」切替 */
+function switchSanmeiCard(view) {
+  var isPartner = (view === 'partner');
+  var bM = document.getElementById('sm-btn-me');
+  var bP = document.getElementById('sm-btn-partner');
+  if(!bM||!bP) return;
+  bM.style.background = isPartner ? 'transparent' : 'var(--accent)';
+  bM.style.color      = isPartner ? 'rgba(168,154,255,.4)' : '#fff';
+  bM.style.borderColor = isPartner ? 'rgba(168,154,255,.3)' : 'var(--accent)';
+  bM.style.fontWeight  = isPartner ? '600' : '700';
+  bP.style.background = isPartner ? 'var(--accent)' : 'transparent';
+  bP.style.color      = isPartner ? '#fff' : 'rgba(168,154,255,.4)';
+  bP.style.borderColor = isPartner ? 'var(--accent)' : 'rgba(168,154,255,.3)';
+  bP.style.fontWeight  = isPartner ? '700' : '600';
+
+  var bd = isPartner ? window._compatBdB : window._nyBirthdateMe;
+  if (!bd) return;
+
+  var container = document.getElementById('sanmei-body');
+  if (!container) return;
+  container.innerHTML = buildSanmeiEnergyHTML(bd);
+}
+
 function switchNineYear(view) {
   var isPartner = (view === 'partner');
   var bM = document.getElementById('ny-btn-me');
@@ -6406,10 +6646,20 @@ function buildPersonalCardsHTML(birthdate, honmei, kYear, kMonth, isPartner) {
         '<button id="ny-btn-partner" onclick="switchNineYear(&quot;partner&quot;)" style="' + _nyInact + '">相手</button>' +
       '</div>';
   }
+  var _sanmeiBtnHTML = '';
+  if (window._compatBdB) {
+    var _smAct = isPartner ? 'padding:2px 8px;border-radius:20px;border:1px solid rgba(168,154,255,.3);background:transparent;color:rgba(168,154,255,.4);font-size:10px;font-weight:600;cursor:pointer;' : 'padding:2px 8px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:10px;font-weight:700;cursor:pointer;';
+    var _smInact = isPartner ? 'padding:2px 8px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:10px;font-weight:700;cursor:pointer;' : 'padding:2px 8px;border-radius:20px;border:1px solid rgba(168,154,255,.3);background:transparent;color:rgba(168,154,255,.4);font-size:10px;font-weight:600;cursor:pointer;';
+    _sanmeiBtnHTML =
+      '<div style="display:flex;gap:4px;">' +
+        '<button id="sm-btn-me" onclick="switchSanmeiCard(&quot;me&quot;)" style="' + _smAct + '">あなた</button>' +
+        '<button id="sm-btn-partner" onclick="switchSanmeiCard(&quot;partner&quot;)" style="' + _smInact + '">相手</button>' +
+      '</div>';
+  }
   h +=
     '<div class="card fade-up">'+
-      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span></div></div>'+
-      buildSanmeiEnergyHTML(birthdate) +
+      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span>'+_sanmeiBtnHTML+'</div></div>'+
+      '<div id="sanmei-body">' + buildSanmeiEnergyHTML(birthdate) + '</div>'+
     '</div>';
   h += buildAspectCardHTML(birthdate, isPartner);
 
@@ -6772,7 +7022,7 @@ function buildHonmeiBannerHTML(birthdate, honmei, kYear, kMonth, isPartner) {
       '</div>'+
       '<div class="honmei-star" style="color:'+sd.color+';text-shadow:0 0 40px '+sd.color+'60;cursor:pointer;-webkit-tap-highlight-color:transparent;" onclick="toggleCoreNum(\'honmei-detail\')">'+sd.name+'<span style="font-size:13px;font-weight:400;opacity:.75;">（'+getRokkuShortLabel(birthdate)+'）</span></div>'+(situation==="meeting"?lt_buildBadges(birthdate):"")+
       '<div class="core-num-detail" id="honmei-detail" style="margin-top:10px;">'+
-        '<div class="core-num-detail-title">'+sd.name+'</div>'+
+        buildPanelTitleWithMemo('honmei-detail', sd.name, birthdate)+
         sd.desc+
         '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);">'+
           '<div class="core-num-detail-title" style="font-size:12px;">五行：'+sd.element+'</div>'+
@@ -6806,18 +7056,18 @@ function buildHonmeiBannerHTML(birthdate, honmei, kYear, kMonth, isPartner) {
           '</div>'+
         '</div>'+
       '</div>'+
-      '<div class="core-num-detail" id="corenum-life-work">'+'<div class="core-num-detail-title">本命数 '+lifeDisp+'　仕事・適職</div>'+makeWorkHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life-love">'+'<div class="core-num-detail-title">本命数 '+lifeDisp+'　恋愛パターン</div>'+makeLoveHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life">'+
-        '<div class="core-num-detail-title">本命数 '+lifeDisp+'　'+(CORE_NUM_DESC[lifeBase]?CORE_NUM_DESC[lifeBase].name:'')+'</div>'+
+      '<div class="core-num-detail" id="corenum-life-work">'+buildPanelTitleWithMemo('corenum-life-work', '本命数 '+lifeDisp+'　仕事・適職', birthdate)+makeWorkHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life-love">'+buildPanelTitleWithMemo('corenum-life-love', '本命数 '+lifeDisp+'　恋愛パターン', birthdate)+makeLoveHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life">'+
+        buildPanelTitleWithMemo('corenum-life', '本命数 '+lifeDisp+'　'+(CORE_NUM_DESC[lifeBase]?CORE_NUM_DESC[lifeBase].name:''), birthdate)+
         (CORE_NUM_DESC[lifeBase]&&CORE_NUM_DESC[lifeBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[lifeBase].keyword+'</div>':'')+
         (CORE_NUM_DESC[lifeBase]?CORE_NUM_DESC[lifeBase].desc:'')+
       '</div>'+
-      '<div class="core-num-detail" id="corenum-future-work">'+'<div class="core-num-detail-title">未来数 '+futureDisp+'　仕事・適職</div>'+makeWorkHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future-love">'+'<div class="core-num-detail-title">未来数 '+futureDisp+'　恋愛パターン</div>'+makeLoveHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future">'+
-        '<div class="core-num-detail-title">未来数 '+futureDisp+'　'+(CORE_NUM_DESC[futureBase]?CORE_NUM_DESC[futureBase].name:'')+'</div>'+
+      '<div class="core-num-detail" id="corenum-future-work">'+buildPanelTitleWithMemo('corenum-future-work', '未来数 '+futureDisp+'　仕事・適職', birthdate)+makeWorkHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future-love">'+buildPanelTitleWithMemo('corenum-future-love', '未来数 '+futureDisp+'　恋愛パターン', birthdate)+makeLoveHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future">'+
+        buildPanelTitleWithMemo('corenum-future', '未来数 '+futureDisp+'　'+(CORE_NUM_DESC[futureBase]?CORE_NUM_DESC[futureBase].name:''), birthdate)+
         (CORE_NUM_DESC[futureBase]&&CORE_NUM_DESC[futureBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[futureBase].keyword+'</div>':'')+
         (CORE_NUM_DESC[futureBase]?CORE_NUM_DESC[futureBase].desc:'')+
       '</div>'+
-      '<div class="core-num-detail" id="corenum-past-work">'+'<div class="core-num-detail-title">過去数 '+pastDisp+'　仕事・適職</div>'+makeWorkHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past-love">'+'<div class="core-num-detail-title">過去数 '+pastDisp+'　恋愛パターン</div>'+makeLoveHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past">'+
-        '<div class="core-num-detail-title">過去数 '+pastDisp+'　'+(CORE_NUM_DESC[pastBase]?CORE_NUM_DESC[pastBase].name:'')+'</div>'+
+      '<div class="core-num-detail" id="corenum-past-work">'+buildPanelTitleWithMemo('corenum-past-work', '過去数 '+pastDisp+'　仕事・適職', birthdate)+makeWorkHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past-love">'+buildPanelTitleWithMemo('corenum-past-love', '過去数 '+pastDisp+'　恋愛パターン', birthdate)+makeLoveHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past">'+
+        buildPanelTitleWithMemo('corenum-past', '過去数 '+pastDisp+'　'+(CORE_NUM_DESC[pastBase]?CORE_NUM_DESC[pastBase].name:''), birthdate)+
         (CORE_NUM_DESC[pastBase]&&CORE_NUM_DESC[pastBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[pastBase].keyword+'</div>':'')+
         (CORE_NUM_DESC[pastBase]?CORE_NUM_DESC[pastBase].desc:'')+
       '</div>'+
@@ -6930,7 +7180,7 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
       '</div>'+
       '<div class="honmei-star" style="color:'+sd.color+';text-shadow:0 0 40px '+sd.color+'60;cursor:pointer;-webkit-tap-highlight-color:transparent;" onclick="toggleCoreNum(\'honmei-detail\')">'+sd.name+'<span style="font-size:13px;font-weight:400;opacity:.75;">（'+getRokkuShortLabel(birthdate)+'）</span></div>'+(situation==="meeting"?lt_buildBadges(birthdate):"")+
       '<div class="core-num-detail" id="honmei-detail" style="margin-top:10px;">'+
-        '<div class="core-num-detail-title">'+sd.name+'</div>'+
+        buildPanelTitleWithMemo('honmei-detail', sd.name, birthdate)+
         sd.desc+
         '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);">'+
           '<div class="core-num-detail-title" style="font-size:12px;">五行：'+sd.element+'</div>'+
@@ -6964,18 +7214,18 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
           '</div>'+
         '</div>'+
       '</div>'+
-      '<div class="core-num-detail" id="corenum-life-work">'+'<div class="core-num-detail-title">本命数 '+lifeDisp+'　仕事・適職</div>'+makeWorkHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life-love">'+'<div class="core-num-detail-title">本命数 '+lifeDisp+'　恋愛パターン</div>'+makeLoveHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life">'+
-        '<div class="core-num-detail-title">本命数 '+lifeDisp+'　'+(CORE_NUM_DESC[lifeBase]?CORE_NUM_DESC[lifeBase].name:'')+'</div>'+
+      '<div class="core-num-detail" id="corenum-life-work">'+buildPanelTitleWithMemo('corenum-life-work', '本命数 '+lifeDisp+'　仕事・適職', birthdate)+makeWorkHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life-love">'+buildPanelTitleWithMemo('corenum-life-love', '本命数 '+lifeDisp+'　恋愛パターン', birthdate)+makeLoveHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life">'+
+        buildPanelTitleWithMemo('corenum-life', '本命数 '+lifeDisp+'　'+(CORE_NUM_DESC[lifeBase]?CORE_NUM_DESC[lifeBase].name:''), birthdate)+
         (CORE_NUM_DESC[lifeBase]&&CORE_NUM_DESC[lifeBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[lifeBase].keyword+'</div>':'')+
         (CORE_NUM_DESC[lifeBase]?CORE_NUM_DESC[lifeBase].desc:'')+
       '</div>'+
-      '<div class="core-num-detail" id="corenum-future-work">'+'<div class="core-num-detail-title">未来数 '+futureDisp+'　仕事・適職</div>'+makeWorkHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future-love">'+'<div class="core-num-detail-title">未来数 '+futureDisp+'　恋愛パターン</div>'+makeLoveHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future">'+
-        '<div class="core-num-detail-title">未来数 '+futureDisp+'　'+(CORE_NUM_DESC[futureBase]?CORE_NUM_DESC[futureBase].name:'')+'</div>'+
+      '<div class="core-num-detail" id="corenum-future-work">'+buildPanelTitleWithMemo('corenum-future-work', '未来数 '+futureDisp+'　仕事・適職', birthdate)+makeWorkHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future-love">'+buildPanelTitleWithMemo('corenum-future-love', '未来数 '+futureDisp+'　恋愛パターン', birthdate)+makeLoveHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future">'+
+        buildPanelTitleWithMemo('corenum-future', '未来数 '+futureDisp+'　'+(CORE_NUM_DESC[futureBase]?CORE_NUM_DESC[futureBase].name:''), birthdate)+
         (CORE_NUM_DESC[futureBase]&&CORE_NUM_DESC[futureBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[futureBase].keyword+'</div>':'')+
         (CORE_NUM_DESC[futureBase]?CORE_NUM_DESC[futureBase].desc:'')+
       '</div>'+
-      '<div class="core-num-detail" id="corenum-past-work">'+'<div class="core-num-detail-title">過去数 '+pastDisp+'　仕事・適職</div>'+makeWorkHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past-love">'+'<div class="core-num-detail-title">過去数 '+pastDisp+'　恋愛パターン</div>'+makeLoveHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past">'+
-        '<div class="core-num-detail-title">過去数 '+pastDisp+'　'+(CORE_NUM_DESC[pastBase]?CORE_NUM_DESC[pastBase].name:'')+'</div>'+
+      '<div class="core-num-detail" id="corenum-past-work">'+buildPanelTitleWithMemo('corenum-past-work', '過去数 '+pastDisp+'　仕事・適職', birthdate)+makeWorkHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past-love">'+buildPanelTitleWithMemo('corenum-past-love', '過去数 '+pastDisp+'　恋愛パターン', birthdate)+makeLoveHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past">'+
+        buildPanelTitleWithMemo('corenum-past', '過去数 '+pastDisp+'　'+(CORE_NUM_DESC[pastBase]?CORE_NUM_DESC[pastBase].name:''), birthdate)+
         (CORE_NUM_DESC[pastBase]&&CORE_NUM_DESC[pastBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[pastBase].keyword+'</div>':'')+
         (CORE_NUM_DESC[pastBase]?CORE_NUM_DESC[pastBase].desc:'')+
       '</div>'+
@@ -7014,10 +7264,20 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
         '<button id="ny-btn-partner" onclick="switchNineYear(&quot;partner&quot;)" style="' + _nyI + '">相手</button>' +
       '</div>';
   }
+  var _sanmeiBtnHTML = '';
+  if (window._compatBdB) {
+    var _smAct = isPartner ? 'padding:2px 8px;border-radius:20px;border:1px solid rgba(168,154,255,.3);background:transparent;color:rgba(168,154,255,.4);font-size:10px;font-weight:600;cursor:pointer;' : 'padding:2px 8px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:10px;font-weight:700;cursor:pointer;';
+    var _smInact = isPartner ? 'padding:2px 8px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:10px;font-weight:700;cursor:pointer;' : 'padding:2px 8px;border-radius:20px;border:1px solid rgba(168,154,255,.3);background:transparent;color:rgba(168,154,255,.4);font-size:10px;font-weight:600;cursor:pointer;';
+    _sanmeiBtnHTML =
+      '<div style="display:flex;gap:4px;">' +
+        '<button id="sm-btn-me" onclick="switchSanmeiCard(&quot;me&quot;)" style="' + _smAct + '">あなた</button>' +
+        '<button id="sm-btn-partner" onclick="switchSanmeiCard(&quot;partner&quot;)" style="' + _smInact + '">相手</button>' +
+      '</div>';
+  }
   h +=
     '<div class="card fade-up">'+
-      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span></div></div>'+
-      buildSanmeiEnergyHTML(birthdate) +
+      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span>'+_sanmeiBtnHTML+'</div></div>'+
+      '<div id="sanmei-body">' + buildSanmeiEnergyHTML(birthdate) + '</div>'+
     '</div>';
   h += buildAspectCardHTML(birthdate, isPartner);
 
@@ -7900,7 +8160,7 @@ function calculate() {
       '</div>'+
       '<div class="honmei-star" style="color:'+sd.color+';text-shadow:0 0 40px '+sd.color+'60;cursor:pointer;-webkit-tap-highlight-color:transparent;" onclick="toggleCoreNum(\'honmei-detail\')">'+sd.name+'<span style="font-size:13px;font-weight:400;opacity:.75;">（'+getRokkuShortLabel(birthdate)+'）</span></div>'+(situation==="meeting"?lt_buildBadges(birthdate):"")+
       '<div class="core-num-detail" id="honmei-detail" style="margin-top:10px;">'+
-        '<div class="core-num-detail-title">'+sd.name+'</div>'+
+        buildPanelTitleWithMemo('honmei-detail', sd.name, birthdate)+
         sd.desc+
         '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);">'+
           '<div class="core-num-detail-title" style="font-size:12px;">五行：'+sd.element+'</div>'+
@@ -7934,18 +8194,18 @@ function calculate() {
           '</div>'+
         '</div>'+
       '</div>'+
-      '<div class="core-num-detail" id="corenum-life-work">'+'<div class="core-num-detail-title">本命数 '+lifeDisp+'　仕事・適職</div>'+makeWorkHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life-love">'+'<div class="core-num-detail-title">本命数 '+lifeDisp+'　恋愛パターン</div>'+makeLoveHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life">'+
-        '<div class="core-num-detail-title">本命数 '+lifeDisp+'　'+(CORE_NUM_DESC[lifeBase]?CORE_NUM_DESC[lifeBase].name:'')+'</div>'+
+      '<div class="core-num-detail" id="corenum-life-work">'+buildPanelTitleWithMemo('corenum-life-work', '本命数 '+lifeDisp+'　仕事・適職', birthdate)+makeWorkHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life-love">'+buildPanelTitleWithMemo('corenum-life-love', '本命数 '+lifeDisp+'　恋愛パターン', birthdate)+makeLoveHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life">'+
+        buildPanelTitleWithMemo('corenum-life', '本命数 '+lifeDisp+'　'+(CORE_NUM_DESC[lifeBase]?CORE_NUM_DESC[lifeBase].name:''), birthdate)+
         (CORE_NUM_DESC[lifeBase]&&CORE_NUM_DESC[lifeBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[lifeBase].keyword+'</div>':'')+
         (CORE_NUM_DESC[lifeBase]?CORE_NUM_DESC[lifeBase].desc:'')+
       '</div>'+
-      '<div class="core-num-detail" id="corenum-future-work">'+'<div class="core-num-detail-title">未来数 '+futureDisp+'　仕事・適職</div>'+makeWorkHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future-love">'+'<div class="core-num-detail-title">未来数 '+futureDisp+'　恋愛パターン</div>'+makeLoveHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future">'+
-        '<div class="core-num-detail-title">未来数 '+futureDisp+'　'+(CORE_NUM_DESC[futureBase]?CORE_NUM_DESC[futureBase].name:'')+'</div>'+
+      '<div class="core-num-detail" id="corenum-future-work">'+buildPanelTitleWithMemo('corenum-future-work', '未来数 '+futureDisp+'　仕事・適職', birthdate)+makeWorkHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future-love">'+buildPanelTitleWithMemo('corenum-future-love', '未来数 '+futureDisp+'　恋愛パターン', birthdate)+makeLoveHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future">'+
+        buildPanelTitleWithMemo('corenum-future', '未来数 '+futureDisp+'　'+(CORE_NUM_DESC[futureBase]?CORE_NUM_DESC[futureBase].name:''), birthdate)+
         (CORE_NUM_DESC[futureBase]&&CORE_NUM_DESC[futureBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[futureBase].keyword+'</div>':'')+
         (CORE_NUM_DESC[futureBase]?CORE_NUM_DESC[futureBase].desc:'')+
       '</div>'+
-      '<div class="core-num-detail" id="corenum-past-work">'+'<div class="core-num-detail-title">過去数 '+pastDisp+'　仕事・適職</div>'+makeWorkHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past-love">'+'<div class="core-num-detail-title">過去数 '+pastDisp+'　恋愛パターン</div>'+makeLoveHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past">'+
-        '<div class="core-num-detail-title">過去数 '+pastDisp+'　'+(CORE_NUM_DESC[pastBase]?CORE_NUM_DESC[pastBase].name:'')+'</div>'+
+      '<div class="core-num-detail" id="corenum-past-work">'+buildPanelTitleWithMemo('corenum-past-work', '過去数 '+pastDisp+'　仕事・適職', birthdate)+makeWorkHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past-love">'+buildPanelTitleWithMemo('corenum-past-love', '過去数 '+pastDisp+'　恋愛パターン', birthdate)+makeLoveHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past">'+
+        buildPanelTitleWithMemo('corenum-past', '過去数 '+pastDisp+'　'+(CORE_NUM_DESC[pastBase]?CORE_NUM_DESC[pastBase].name:''), birthdate)+
         (CORE_NUM_DESC[pastBase]&&CORE_NUM_DESC[pastBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[pastBase].keyword+'</div>':'')+
         (CORE_NUM_DESC[pastBase]?CORE_NUM_DESC[pastBase].desc:'')+
       '</div>'+
@@ -7985,7 +8245,7 @@ function calculate() {
   html +=
     '<div class="card fade-up">'+
       '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span></div></div>'+
-      buildSanmeiEnergyHTML(birthdate) +
+      '<div id="sanmei-body">' + buildSanmeiEnergyHTML(birthdate) + '</div>'+
     '</div>';
   html += buildAspectCardHTML(birthdate, false);
 
@@ -9248,26 +9508,28 @@ function buildLoveDiag(bd){
        それぞれ根拠を示して説明する（無理に一致させない誠実な構成） */
   var full = getRokkuFull(bd);
   var myTrait = ROKKU_STAR_TRAIT[full.starId];
-  var GOKYO_GENERATED_BY = {'火':'木','土':'火','金':'土','水':'金','木':'水'};
   var EL_TO_ROKKU_STARID = {'木':5,'火':3,'土':1,'金':2,'水':6};
-  var energy = getSanmeiEnergy(bd).elements;
-  var dominantEl='木', maxV=-1;
-  ['木','火','土','金','水'].forEach(function(el){ if(energy[el]>maxV){maxV=energy[el];dominantEl=el;} });
-  var nurtureEl = GOKYO_GENERATED_BY[dominantEl];
-  var nurtureStarId = EL_TO_ROKKU_STARID[nurtureEl];
-  var nurtureStarName = ROKKU_STARS[nurtureStarId].name;
-  var nurtureTrait = ROKKU_STAR_TRAIT[nurtureStarId];
 
   h += '<div style="padding:16px;background:rgba(95,217,138,.07);border:1px solid rgba(95,217,138,.3);border-radius:10px;margin-bottom:12px;">';
   h += '<div style="color:#5fd98a;font-size:10px;letter-spacing:.1em;margin-bottom:8px;">《 あなたはこんな人だから、こんな人が合う 》</div>';
   h += '<div style="font-size:13px;color:var(--text);line-height:2.0;">';
-  h += '算命学で見ると、あなたは「<b style="color:#a8e8c0;">'+dominantEl+'</b>」の気（エネルギー）が一番強く出ています。';
-  h += '五行の関係では「<b style="color:#a8e8c0;">'+nurtureEl+'</b>」の気があなたの「'+dominantEl+'」を支える関係にあるため、';
-  h += '六星占術でいう「<b style="color:#e8d4ff;">'+nurtureStarName+'（'+nurtureTrait+'）</b>」のような気質の人がそばにいると、無理せず自然体でいられやすいでしょう。';
+
+  /* 四柱推命：日主・身強身弱・用神から、性格と「支えてくれる相手」を導く */
+  var syj = getShichuuShinYoujin(bd);
+  var youjinStarId = EL_TO_ROKKU_STARID[syj.youjinEl];
+  var youjinStarName = ROKKU_STARS[youjinStarId].name;
+  var youjinTrait = ROKKU_STAR_TRAIT[youjinStarId];
+  h += '四柱推命では、生まれた日の干支から「日主（にっしゅ）＝その人の核となる性質」を見ます。あなたの日主は「<b style="color:#a8e8c0;">'+syj.dayStem+'</b>」。'+NICHISHU_TRAIT[syj.dayStem]+'タイプです。';
+  if (syj.isShinkyou) {
+    h += 'さらに命式全体を見ると、「身強（しんきょう）＝生まれつきのパワーが強く、自分の力で押していけるタイプ」の傾向があります。パワーがある分、そのエネルギーを程よく受け止めてくれたり、時にブレーキ役になってくれたりする相手といると、力がうまく活きやすいでしょう。';
+  } else {
+    h += 'さらに命式全体を見ると、「身弱（しんじゃく）＝自分のエネルギーを周りのために使いやすく、サポートがあると力を発揮しやすいタイプ」の傾向があります。そばで支えてくれる相手がいると、安定して力を発揮しやすいでしょう。';
+  }
+  h += 'この「支えてくれる・活かしてくれる」役割にあたるのが、五行でいう「<b style="color:#a8e8c0;">'+syj.youjinEl+'</b>」の気（＝あなたに必要な気のこと。専門用語で「用神（ようじん）」と呼びます）。六星占術でいうと「<b style="color:#e8d4ff;">'+youjinStarName+'（'+youjinTrait+'）</b>」のような人がまさにこれにあたり、あなたを支えてくれる相性と言えます。';
   h += '<br><br>';
   h += 'また、六星占術の型そのものの相性から見ると、あなたは「<b style="color:#a8e8c0;">'+full.starName.replace('人','')+'（'+myTrait+'）</b>」タイプ。';
   if (rokkuMatches.length > 0) {
-    h += 'この型と構造的に噛み合いやすいのは「<b style="color:#e8d4ff;">'+rokkuMatches.join('・')+'</b>」タイプで、こちらは価値観や生活リズムの面で摩擦が起きにくい相手と言えます。';
+    h += 'この型と自然と噛み合いやすいのは「<b style="color:#e8d4ff;">'+rokkuMatches.join('・')+'</b>」タイプ。価値観や生活リズムが近く、一緒にいて摩擦が起きにくい相手と言えます。';
   }
   h += '</div></div>';
 
