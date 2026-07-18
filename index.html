@@ -935,6 +935,203 @@ function getHouseNumber(planetLon, houseCusps) {
 
 
 /* ── アスペクト計算・表示 ── */
+/* 円形ホロスコープ図（SVG）を生成 */
+/* サイン(0-11)ごとの元素・区分・性質 */
+var SIGN_INFO = [
+  {name:'牡羊座', el:'火', mode:'活動宮', gender:'男性宮', color:'#e85c6e'},
+  {name:'牡牛座', el:'土', mode:'不動宮', gender:'女性宮', color:'#c98a4a'},
+  {name:'双子座', el:'風', mode:'柔軟宮', gender:'男性宮', color:'#d4b048'},
+  {name:'蟹座',   el:'水', mode:'活動宮', gender:'女性宮', color:'#8fae4a'},
+  {name:'獅子座', el:'火', mode:'不動宮', gender:'男性宮', color:'#4aa86a'},
+  {name:'乙女座', el:'土', mode:'柔軟宮', gender:'女性宮', color:'#3aada0'},
+  {name:'天秤座', el:'風', mode:'活動宮', gender:'男性宮', color:'#4a95c9'},
+  {name:'蠍座',   el:'水', mode:'不動宮', gender:'女性宮', color:'#5a72d4'},
+  {name:'射手座', el:'火', mode:'柔軟宮', gender:'男性宮', color:'#8a5ac9'},
+  {name:'山羊座', el:'土', mode:'活動宮', gender:'女性宮', color:'#b04ac2'},
+  {name:'水瓶座', el:'風', mode:'不動宮', gender:'男性宮', color:'#c94a95'},
+  {name:'魚座',   el:'水', mode:'柔軟宮', gender:'女性宮', color:'#d44a6e'}
+];
+function lonToSignDeg(lon) {
+  var lon2 = ((lon%360)+360)%360;
+  var s = Math.floor(lon2/30);
+  var d = lon2 - s*30;
+  return { signIdx:s, sign:SIGN_INFO[s].name, deg:Math.floor(d), min:Math.floor((d%1)*60) };
+}
+/* cusps(12個の宮境界の黄経)から、指定の黄経が何ハウスかを判定 */
+function lonToHouse(lon, cusps) {
+  if (!cusps || cusps.length !== 12) return null;
+  var lon2 = ((lon%360)+360)%360;
+  for (var i=0; i<12; i++) {
+    var start = ((cusps[i]%360)+360)%360;
+    var end = ((cusps[(i+1)%12]%360)+360)%360;
+    if (start < end) {
+      if (lon2 >= start && lon2 < end) return i+1;
+    } else {
+      if (lon2 >= start || lon2 < end) return i+1;
+    }
+  }
+  return null;
+}
+
+function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
+  var size = 400, cx = size/2, cy = size/2;
+  var zodiacOuterR = 195, zodiacInnerR = 168, signR = 181, houseR = 152, tickR = 160, aspectR = 118, labelR = 140;
+  var ZODIAC_SYMS = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
+
+  /* ハウスがある場合、ASC（1ハウスの始点）が必ず左（9時の位置）に来るよう盤全体を回転させる */
+  var rotOffset = (cusps && cusps.length === 12) ? cusps[0] : 0;
+
+  function pt(lon, r) {
+    var ang = (180 - (lon - rotOffset)) * Math.PI / 180;
+    return { x: cx + r * Math.cos(ang), y: cy + r * Math.sin(ang) };
+  }
+
+  /* 天体が近すぎる場合に表示上の角度をずらして重なりを防ぐ（実際の位置はtickで示す） */
+  var sortedIdx = bodies.map(function(b,i){return i;}).filter(function(i){return bodies[i].lon!==null;})
+    .sort(function(a,b){ return bodies[a].lon - bodies[b].lon; });
+  var dispLon = {};
+  sortedIdx.forEach(function(i){ dispLon[i] = bodies[i].lon; });
+  var minSep = 16;
+  for (var pass=0; pass<14; pass++) {
+    for (var k=0; k<sortedIdx.length; k++) {
+      var cur = sortedIdx[k], prev = sortedIdx[(k-1+sortedIdx.length)%sortedIdx.length];
+      var diff = dispLon[cur] - dispLon[prev];
+      while (diff < 0) diff += 360;
+      if (k>0 && diff < minSep) {
+        dispLon[cur] = dispLon[prev] + minSep;
+      }
+    }
+  }
+
+  var svg = '<div style="display:flex;justify-content:center;padding:10px 0;background:#fff;border-radius:10px;margin-bottom:10px;">';
+  svg += '<svg viewBox="0 0 '+size+' '+size+'" width="320" height="320">';
+  svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+(zodiacOuterR+2)+'" fill="#fff"/>';
+
+  /* 12サインの色帯（外周リング、パステル調） */
+  for (var s = 0; s < 12; s++) {
+    var lonStart = s*30, lonEnd = s*30+30;
+    var o1 = pt(lonStart, zodiacOuterR), o2 = pt(lonEnd, zodiacOuterR);
+    var i1 = pt(lonStart, zodiacInnerR), i2 = pt(lonEnd, zodiacInnerR);
+    var d = 'M '+i1.x+' '+i1.y+' L '+o1.x+' '+o1.y+' A '+zodiacOuterR+' '+zodiacOuterR+' 0 0 0 '+o2.x+' '+o2.y+' L '+i2.x+' '+i2.y+' A '+zodiacInnerR+' '+zodiacInnerR+' 0 0 1 '+i1.x+' '+i1.y+' Z';
+    svg += '<path d="'+d+'" fill="'+SIGN_INFO[s].color+'" opacity=".55" stroke="#fff" stroke-width="1"/>';
+    var pSym = pt(s*30+15, signR);
+    svg += '<text x="'+pSym.x+'" y="'+pSym.y+'" font-size="15" fill="#2a2a2a" text-anchor="middle" dominant-baseline="middle">'+ZODIAC_SYMS[s]+'</text>';
+  }
+  svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+zodiacOuterR+'" fill="none" stroke="#999" stroke-width="1"/>';
+  svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+zodiacInnerR+'" fill="none" stroke="#999" stroke-width="1"/>';
+  svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+aspectR+'" fill="none" stroke="#ddd" stroke-width="1"/>';
+
+  /* ハウスカスプ線（データがある場合のみ） */
+  if (cusps && cusps.length === 12) {
+    for (var hI = 0; hI < 12; hI++) {
+      var isAngle = (hI===0||hI===3||hI===6||hI===9); /* ASC/IC/DSC/MC */
+      var hp1 = pt(cusps[hI], 4), hp2 = pt(cusps[hI], zodiacInnerR);
+      svg += '<line x1="'+hp1.x+'" y1="'+hp1.y+'" x2="'+hp2.x+'" y2="'+hp2.y+'" stroke="'+(isAngle?'#555':'#bbb')+'" stroke-width="'+(isAngle?1.6:0.7)+'"/>';
+      var nextCusp = cusps[(hI+1)%12];
+      var midLon = cusps[hI] + (((nextCusp - cusps[hI]) % 360 + 360) % 360) / 2;
+      var hNumPt = pt(midLon, houseR);
+      svg += '<text x="'+hNumPt.x+'" y="'+hNumPt.y+'" font-size="10" font-weight="700" fill="#777" text-anchor="middle" dominant-baseline="middle">'+(hI+1)+'</text>';
+    }
+    var ascPt = pt(cusps[0], zodiacInnerR + 12);
+    svg += '<text x="'+ascPt.x+'" y="'+ascPt.y+'" font-size="10" fill="#333" font-weight="700" text-anchor="middle">ASC</text>';
+    var mcPt = pt(cusps[9], zodiacInnerR + 12);
+    svg += '<text x="'+mcPt.x+'" y="'+mcPt.y+'" font-size="10" fill="#333" font-weight="700" text-anchor="middle">MC</text>';
+  } else {
+    for (var s2 = 0; s2 < 12; s2++) {
+      var lp1 = pt(s2*30, 4), lp2 = pt(s2*30, zodiacInnerR);
+      svg += '<line x1="'+lp1.x+'" y1="'+lp1.y+'" x2="'+lp2.x+'" y2="'+lp2.y+'" stroke="#ddd" stroke-width="0.7"/>';
+    }
+  }
+
+  /* アスペクトライン（内側の円の中だけで結ぶ、赤=ハード/青=ソフト） */
+  aspects.forEach(function(asp) {
+    if (asp.a.lon===null || asp.b.lon===null) return;
+    var ia = bodies.indexOf(asp.a), ib = bodies.indexOf(asp.b);
+    var pa = pt(dispLon[ia]!==undefined?dispLon[ia]:asp.a.lon, aspectR);
+    var pb = pt(dispLon[ib]!==undefined?dispLon[ib]:asp.b.lon, aspectR);
+    svg += '<line x1="'+pa.x+'" y1="'+pa.y+'" x2="'+pb.x+'" y2="'+pb.y+'" stroke="'+asp.color+'" stroke-width="1.1" opacity=".75"/>';
+  });
+
+  /* 天体：実位置に短いtick、シンボルの真下に度数を配置（参考画像のスタイル） */
+  bodies.forEach(function(b, i) {
+    if (b.lon===null) return;
+    var trueLon = b.lon;
+    var showLon = dispLon[i]!==undefined ? dispLon[i] : trueLon;
+    var tickInner = pt(trueLon, zodiacInnerR - 2);
+    var tickOuter = pt(showLon, tickR);
+    svg += '<line x1="'+tickInner.x+'" y1="'+tickInner.y+'" x2="'+tickOuter.x+'" y2="'+tickOuter.y+'" stroke="#bbb" stroke-width="0.6"/>';
+
+    var sd = lonToSignDeg(trueLon);
+    var symPt = pt(showLon, labelR);
+    svg += '<text x="'+symPt.x+'" y="'+symPt.y+'" font-size="15" fill="#222" text-anchor="middle" dominant-baseline="middle">'+b.sym+'</text>';
+    var degPt = pt(showLon, labelR - 16);
+    svg += '<text x="'+degPt.x+'" y="'+degPt.y+'" font-size="8" fill="#666" text-anchor="middle">'+sd.deg+"°"+('0'+sd.min).slice(-2)+"'"+(b.retro?' R':'')+'</text>';
+  });
+
+  svg += '</svg></div>';
+  return svg;
+}
+
+/* 天体位置・ハウスカスプ・サイン区分の一覧テーブル */
+function buildHoroscopeDataTables(bodies, cusps) {
+  var h = '';
+  h += '<div style="font-size:11px;color:var(--muted);margin:14px 0 8px;">天体の位置</div>';
+  h += '<table style="width:100%;border-collapse:collapse;font-size:11px;color:var(--text);">';
+  bodies.forEach(function(b){
+    if (b.lon===null) { return; }
+    var sd = lonToSignDeg(b.lon);
+    var house = lonToHouse(b.lon, cusps);
+    h += '<tr style="border-bottom:1px solid rgba(255,255,255,.06);">';
+    h += '<td style="padding:4px 6px;">'+b.sym+' '+b.name+'</td>';
+    h += '<td style="padding:4px 6px;">'+sd.sign+'</td>';
+    h += '<td style="padding:4px 6px;">'+sd.deg+'°'+('0'+sd.min).slice(-2)+"'"+'</td>';
+    h += '<td style="padding:4px 6px;color:var(--muted);">'+(house?house+'ハウス':'')+'</td>';
+    h += '</tr>';
+  });
+  h += '</table>';
+
+  if (cusps && cusps.length===12) {
+    h += '<div style="font-size:11px;color:var(--muted);margin:14px 0 8px;">ハウスのカスプ</div>';
+    h += '<table style="width:100%;border-collapse:collapse;font-size:11px;color:var(--text);">';
+    for (var i=0;i<12;i++){
+      var sd2 = lonToSignDeg(cusps[i]);
+      h += '<tr style="border-bottom:1px solid rgba(255,255,255,.06);">';
+      h += '<td style="padding:4px 6px;">'+(i+1)+'ハウス</td>';
+      h += '<td style="padding:4px 6px;">'+sd2.sign+'</td>';
+      h += '<td style="padding:4px 6px;">'+sd2.deg+'°'+('0'+sd2.min).slice(-2)+"'"+'</td>';
+      h += '</tr>';
+    }
+    h += '</table>';
+  }
+
+  /* サイン区分（元素・区分・性質ごとにグルーピング） */
+  var groups = { '火':[], '土':[], '風':[], '水':[], '活動宮':[], '不動宮':[], '柔軟宮':[], '男性宮':[], '女性宮':[] };
+  bodies.forEach(function(b){
+    if (b.lon===null || b.name==='ASC' || b.name==='MC') return;
+    var sd = lonToSignDeg(b.lon);
+    var info = SIGN_INFO[sd.signIdx];
+    groups[info.el].push(b.name);
+    groups[info.mode].push(b.name);
+    groups[info.gender].push(b.name);
+  });
+  h += '<div style="font-size:11px;color:var(--muted);margin:14px 0 8px;">サイン区分</div>';
+  h += '<div style="font-size:11px;color:var(--text);line-height:2.0;">';
+  ['火','土','風','水'].forEach(function(el){
+    h += '<div><b style="color:var(--gold-light);">'+el+'：</b>'+(groups[el].join('　')||'―')+'</div>';
+  });
+  h += '<div style="height:6px;"></div>';
+  ['活動宮','不動宮','柔軟宮'].forEach(function(mo){
+    h += '<div><b style="color:var(--gold-light);">'+mo+'：</b>'+(groups[mo].join('　')||'―')+'</div>';
+  });
+  h += '<div style="height:6px;"></div>';
+  ['男性宮','女性宮'].forEach(function(ge){
+    h += '<div><b style="color:var(--gold-light);">'+ge+'：</b>'+(groups[ge].join('　')||'―')+'</div>';
+  });
+  h += '</div>';
+
+  return h;
+}
+
 function buildAspectHTML(p) {
   /* 天体黄経リスト */
   var _utH = p.hasTime ? (p.birthHour + (p.birthMin||0)/60 - 9) : 0;
@@ -972,12 +1169,12 @@ function buildAspectHTML(p) {
 
   /* アスペクト定義 [角度, 許容誤差, 名前, 記号, 色] */
   var ASPECTS = [
-    [0,   8, 'コンジャンクション', '☌', '#fbbf24'],
-    [60,  6, 'セクスタイル',       '⚹', '#34d399'],
-    [90,  7, 'スクエア',           '□', '#f87171'],
-    [120, 8, 'トライン',           '△', '#60a5fa'],
+    [0,   8, 'コンジャンクション', '☌', '#e8c96a'],
+    [60,  6, 'セクスタイル',       '⚹', '#4a95c9'],
+    [90,  7, 'スクエア',           '□', '#e8635a'],
+    [120, 8, 'トライン',           '△', '#4a95c9'],
     [150, 3, 'クインカンクス',     '⚻', '#a78bfa'],
-    [180, 8, 'オポジション',       '☍', '#fb7185'],
+    [180, 8, 'オポジション',       '☍', '#e8635a'],
   ];
 
   var found = [];
@@ -1001,7 +1198,11 @@ function buildAspectHTML(p) {
     }
   }
 
-  if (!found.length) return '';
+  if (!found.length && bodies.filter(function(b){return b.lon!==null;}).length === 0) return '';
+
+  var cusps = (p.ascmc && p.ascmc.cusps) ? p.ascmc.cusps.map(function(c){return c.lon;}) : null;
+  var wheelSVG = buildHoroscopeWheelSVG(bodies, found, cusps);
+  var dataTables = buildHoroscopeDataTables(bodies, cusps);
 
   /* アスペクトマップ生成（天体ペア → アスペクト） */
   var aspMap = {};
@@ -1011,7 +1212,8 @@ function buildAspectHTML(p) {
 
   var n = bodies.length;
   var cellSz = '28px';
-  var h = '<div style="padding:12px;border-radius:10px;background:rgba(255,255,255,.04);margin-top:8px;">';
+  var h = wheelSVG;
+  h += '<div style="padding:12px;border-radius:10px;background:rgba(255,255,255,.04);margin-top:8px;">';
   h += '<div style="font-size:11px;color:var(--muted);margin-bottom:10px;">アスペクト表</div>';
 
   /* グリッド表（三角形） */
@@ -1077,6 +1279,7 @@ function buildAspectHTML(p) {
   });
   h += '</div>';
   h += '</div>';
+  h += dataTables;
   return h;
 }
 
@@ -9820,42 +10023,22 @@ function lt_buildBadges(birthdate){
 
 function renderHonmeiNote(id){
   var h='';
-  h+='<span onclick="toggleCoreNum(\''+id+'\')" style="font-size:9px;color:#e8c97a;display:block;margin-top:2px;cursor:pointer;">\u203b\u672c\u547d\u5e74</span>';
-  h+='<div class="core-num-detail" id="'+id+'" style="position:relative;">';
-  h+='<div style="background:rgba(30,28,50,0.97);border:1px solid rgba(232,201,122,.3);border-radius:10px;padding:10px 12px;font-size:11px;line-height:1.6;color:var(--silver);max-width:220px;">';
-  h+='<div style="font-size:11px;font-weight:700;color:#e8c97a;margin-bottom:4px;">\u672c\u547d\u5e74</div>';
-  h+='\u81ea\u5206\u306e\u8ef8\u3084\u65b9\u5411\u6027\u3092\u518d\u78ba\u8a8d\u3059\u308b\u6642\u3002\u8ee2\u63db\u30fb\u7bc0\u76ee\u306e\u5e74\u3002';
-  h+='</div></div>';
+  h+='<span onclick="event.stopPropagation();showModal(\'<div style=&quot;font-size:11px;font-weight:700;color:#e8c97a;margin-bottom:8px;&quot;>\u672c\u547d\u5e74</div>\u81ea\u5206\u306e\u8ef8\u3084\u65b9\u5411\u6027\u3092\u518d\u78ba\u8a8d\u3059\u308b\u6642\u3002\u8ee2\u63db\u30fb\u7bc0\u76ee\u306e\u5e74\u3002\')" style="font-size:9px;color:#e8c97a;display:block;margin-top:2px;cursor:pointer;">\u203b\u672c\u547d\u5e74</span>';
   return h;
 }
 function renderTaichuNote(id){
   var h='';
-  h+='<span onclick="toggleCoreNum(\''+id+'\')" style="font-size:9px;color:#e08070;display:block;margin-top:2px;cursor:pointer;">\u203b\u5b9a\u4f4d\u5bfe\u5145</span>';
-  h+='<div class="core-num-detail" id="'+id+'">';
-  h+='<div style="background:rgba(30,28,50,0.97);border:1px solid rgba(224,128,112,.3);border-radius:10px;padding:10px 12px;font-size:11px;line-height:1.6;color:var(--silver);max-width:220px;">';
-  h+='<div style="font-size:11px;font-weight:700;color:#e08070;margin-bottom:4px;">\u5b9a\u4f4d\u5bfe\u5145</div>';
-  h+='\u81ea\u5206\u306e\u300c\u5bb6\u300d\u304b\u3089\u4e00\u756a\u9060\u3044\u5834\u6240\u306b\u3044\u308b\u5e74\u3002\u5f15\u3063\u8d8a\u3057\u30fb\u8ee2\u8077\u30fb\u4eba\u9593\u95a2\u4fc2\u306e\u898b\u76f4\u3057\u306a\u3069\u3001\u4eca\u307e\u3067\u306e\u5f53\u305f\u308a\u524d\u304c\u3072\u3063\u304f\u308a\u8fd4\u308b\u3088\u3046\u306a\u5909\u5316\u304c\u8d77\u3053\u308a\u3084\u3059\u3044\u5e74\u3067\u3059\u3002';
-  h+='</div></div>';
+  h+='<span onclick="event.stopPropagation();showModal(\'<div style=&quot;font-size:11px;font-weight:700;color:#e08070;margin-bottom:8px;&quot;>\u5b9a\u4f4d\u5bfe\u5145</div>\u81ea\u5206\u306e\u300c\u5bb6\u300d\u304b\u3089\u4e00\u756a\u9060\u3044\u5834\u6240\u306b\u3044\u308b\u5e74\u3002\u5f15\u3063\u8d8a\u3057\u30fb\u8ee2\u8077\u30fb\u4eba\u9593\u95a2\u4fc2\u306e\u898b\u76f4\u3057\u306a\u3069\u3001\u4eca\u307e\u3067\u306e\u5f53\u305f\u308a\u524d\u304c\u3072\u3063\u304f\u308a\u8fd4\u308b\u3088\u3046\u306a\u5909\u5316\u304c\u8d77\u3053\u308a\u3084\u3059\u3044\u5e74\u3067\u3059\u3002\')" style="font-size:9px;color:#e08070;display:block;margin-top:2px;cursor:pointer;">\u203b\u5b9a\u4f4d\u5bfe\u5145</span>';
   return h;
 }
 function renderAnkenNote(id){
   var h='';
-  h+='<span onclick="toggleCoreNum(\''+id+'\')" style="font-size:9px;color:#e08070;display:block;margin-top:2px;cursor:pointer;">\u203b\u6697\u5263\u6bba</span>';
-  h+='<div class="core-num-detail" id="'+id+'">';
-  h+='<div style="background:rgba(30,28,50,0.97);border:1px solid rgba(224,128,112,.3);border-radius:10px;padding:10px 12px;font-size:11px;line-height:1.6;color:var(--silver);max-width:220px;">';
-  h+='<div style="font-size:11px;font-weight:700;color:#e08070;margin-bottom:4px;">\u6697\u5263\u6bba</div>';
-  h+='\u5916\u5074\u304b\u3089\u964d\u3063\u3066\u304f\u308b\u554f\u984c\u30fb\u30c8\u30e9\u30d6\u30eb\u306b\u6ce8\u610f\u3002\u76f8\u624b\u3084\u74b0\u5883\u306e\u90fd\u5408\u306b\u5de6\u53f3\u3055\u308c\u3084\u3059\u3044\u5e74\u3002';
-  h+='</div></div>';
+  h+='<span onclick="event.stopPropagation();showModal(\'<div style=&quot;font-size:11px;font-weight:700;color:#e08070;margin-bottom:8px;&quot;>\u6697\u5263\u6bba</div>\u5916\u5074\u304b\u3089\u964d\u3063\u3066\u304f\u308b\u554f\u984c\u30fb\u30c8\u30e9\u30d6\u30eb\u306b\u6ce8\u610f\u3002\u76f8\u624b\u3084\u74b0\u5883\u306e\u90fd\u5408\u306b\u5de6\u53f3\u3055\u308c\u3084\u3059\u3044\u5e74\u3002\')" style="font-size:9px;color:#e08070;display:block;margin-top:2px;cursor:pointer;">\u203b\u6697\u5263\u6bba</span>';
   return h;
 }
 function renderGokusatsuNote(id){
   var h='';
-  h+='<span onclick="toggleCoreNum(\''+id+'\')" style="font-size:9px;color:#e08070;display:block;margin-top:2px;cursor:pointer;">\u203b\u4e94\u9ec4\u6bba</span>';
-  h+='<div class="core-num-detail" id="'+id+'">';
-  h+='<div style="background:rgba(30,28,50,0.97);border:1px solid rgba(224,128,112,.3);border-radius:10px;padding:10px 12px;font-size:11px;line-height:1.6;color:var(--silver);max-width:220px;">';
-  h+='<div style="font-size:11px;font-weight:700;color:#e08070;margin-bottom:4px;">\u4e94\u9ec4\u6bba</div>';
-  h+='\u81ea\u5206\u304b\u3089\u52d5\u3044\u3066\u8d77\u3053\u3059\u554f\u984c\u306b\u6ce8\u610f\u3002\u7126\u308a\u3084\u5f37\u5f15\u306a\u5224\u65ad\u3092\u907f\u3051\u3001\u614e\u91cd\u306a\u884c\u52d5\u3092\u5fc3\u304c\u3051\u307e\u3057\u3087\u3046\u3002';
-  h+='</div></div>';
+  h+='<span onclick="event.stopPropagation();showModal(\'<div style=&quot;font-size:11px;font-weight:700;color:#e08070;margin-bottom:8px;&quot;>\u4e94\u9ec4\u6bba</div>\u81ea\u5206\u304b\u3089\u52d5\u3044\u3066\u8d77\u3053\u3059\u554f\u984c\u306b\u6ce8\u610f\u3002\u7126\u308a\u3084\u5f37\u5f15\u306a\u5224\u65ad\u3092\u907f\u3051\u3001\u614e\u91cd\u306a\u884c\u52d5\u3092\u5fc3\u304c\u3051\u307e\u3057\u3087\u3046\u3002\')" style="font-size:9px;color:#e08070;display:block;margin-top:2px;cursor:pointer;">\u203b\u4e94\u9ec4\u6bba</span>';
   return h;
 }
 function renderBreakdown(bd){
