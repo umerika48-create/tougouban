@@ -1,0 +1,2369 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>四柱推命 命式鑑定</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400;500;700&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink: #0d0b08;
+    --gold: #b8962e;
+    --gold-light: #d4af5a;
+    --gold-dark: #8a6e1e;
+    --cream: #f5f0e8;
+    --cream-dark: #e8e0d0;
+    --indigo-deep: #0e1428;
+    --indigo: #1a2240;
+    --indigo-mid: #232e50;
+    --indigo-light: #2d3a62;
+    --indigo-pale: #3d4f80;
+    --silver: #c8ccd8;
+    --silver-dim: #888fa8;
+    --text-on-dark: #e8e4da;
+    --text-dim: #a0a4b8;
+    --red-eki: #c0392b;
+    --blue-suisei: #2980b9;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--indigo-deep);
+    color: var(--text-on-dark);
+    font-family: 'Noto Serif JP', serif;
+    min-height: 100vh;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 20%, rgba(184,150,46,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 80%, rgba(26,34,64,0.8) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* star bg */
+  .stars {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    z-index: 0;
+    overflow: hidden;
+  }
+  .stars span {
+    position: absolute;
+    width: 2px;
+    height: 2px;
+    background: rgba(200,200,220,0.5);
+    border-radius: 50%;
+    animation: twinkle 4s infinite alternate;
+  }
+
+  @keyframes twinkle {
+    0% { opacity: 0.2; }
+    100% { opacity: 0.9; }
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1.5rem 4rem;
+  }
+
+  /* HEADER */
+  header {
+    text-align: center;
+    padding: 3rem 0 2.5rem;
+    border-bottom: 1px solid rgba(184,150,46,0.25);
+    margin-bottom: 3rem;
+  }
+  .header-en {
+    font-family: 'Cormorant Garamond', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 0.85rem;
+    letter-spacing: 0.3em;
+    color: var(--gold-light);
+    margin-bottom: 0.6rem;
+    display: block;
+  }
+  header h1 {
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 300;
+    font-size: 2.4rem;
+    letter-spacing: 0.5em;
+    color: var(--gold-light);
+    text-shadow: 0 0 40px rgba(184,150,46,0.3);
+    margin-bottom: 0.4rem;
+  }
+  .header-sep {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 1.2rem;
+    color: var(--gold-dark);
+    font-size: 0.7rem;
+    letter-spacing: 0.4em;
+  }
+  .header-sep::before, .header-sep::after {
+    content: '';
+    flex: 1;
+    max-width: 120px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold-dark));
+  }
+  .header-sep::after { background: linear-gradient(90deg, var(--gold-dark), transparent); }
+
+  /* INPUT FORM */
+  .form-card {
+    background: rgba(26,34,64,0.7);
+    border: 1px solid rgba(184,150,46,0.2);
+    border-radius: 2px;
+    padding: 2.5rem;
+    margin-bottom: 2.5rem;
+    position: relative;
+  }
+  .form-card::before {
+    content: '◈';
+    position: absolute;
+    top: -0.65rem;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--indigo-deep);
+    padding: 0 0.8rem;
+    color: var(--gold);
+    font-size: 1rem;
+  }
+  .form-title {
+    text-align: center;
+    font-weight: 300;
+    font-size: 0.8rem;
+    letter-spacing: 0.4em;
+    color: var(--gold-light);
+    margin-bottom: 2rem;
+  }
+  .form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem 2rem;
+  }
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  label {
+    font-size: 0.72rem;
+    letter-spacing: 0.25em;
+    color: var(--gold-light);
+    font-weight: 400;
+  }
+  input[type="date"],
+  input[type="number"],
+  select {
+    background: rgba(13,11,8,0.5);
+    border: 1px solid rgba(184,150,46,0.3);
+    border-radius: 1px;
+    color: var(--text-on-dark);
+    padding: 0.6rem 0.8rem;
+    font-family: 'Noto Serif JP', serif;
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  input[type="date"]:focus,
+  input[type="number"]:focus,
+  select:focus {
+    outline: none;
+    border-color: var(--gold);
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8) sepia(0.3) hue-rotate(10deg);
+    cursor: pointer;
+  }
+  .time-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .time-row span { color: var(--gold-light); font-size: 0.85rem; }
+  .time-row input[type="number"] { width: 70px; text-align: center; }
+  .unknown-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-top: 0.4rem;
+  }
+  input[type="checkbox"] {
+    accent-color: var(--gold);
+    width: 14px;
+    height: 14px;
+    cursor: pointer;
+  }
+  .unknown-row label {
+    font-size: 0.78rem;
+    letter-spacing: 0.1em;
+    color: var(--silver-dim);
+    cursor: pointer;
+  }
+  .btn-calc {
+    display: block;
+    margin: 2rem auto 0;
+    background: linear-gradient(135deg, #8a6e1e, #b8962e, #d4af5a, #b8962e, #8a6e1e);
+    background-size: 200% 200%;
+    animation: goldShimmer 4s ease infinite;
+    color: var(--indigo-deep);
+    border: none;
+    padding: 0.9rem 3rem;
+    font-family: 'Noto Serif JP', serif;
+    font-weight: 500;
+    font-size: 0.95rem;
+    letter-spacing: 0.4em;
+    cursor: pointer;
+    border-radius: 1px;
+    transition: opacity 0.2s, transform 0.2s;
+  }
+  .btn-calc:hover { opacity: 0.9; transform: translateY(-1px); }
+  .btn-calc:active { transform: translateY(0); }
+  @keyframes goldShimmer {
+    0%,100% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+  }
+
+  /* RESULT */
+  #result { display: none; }
+  .result-title {
+    text-align: center;
+    margin: 3rem 0 2rem;
+    position: relative;
+  }
+  .result-title h2 {
+    font-weight: 300;
+    font-size: 1.3rem;
+    letter-spacing: 0.5em;
+    color: var(--gold-light);
+  }
+  .result-title .person-name {
+    font-size: 0.75rem;
+    letter-spacing: 0.3em;
+    color: var(--silver-dim);
+    margin-top: 0.4rem;
+  }
+
+  /* MEISHIKI TABLE */
+  .meishiki-wrapper {
+    overflow-x: auto;
+    margin-bottom: 3rem;
+  }
+  .meishiki-table {
+    width: 100%;
+    min-width: 560px;
+    border-collapse: collapse;
+    border: 1px solid rgba(184,150,46,0.25);
+    table-layout: fixed;
+  }
+  .meishiki-table th, .meishiki-table td {
+    border: 1px solid rgba(184,150,46,0.15);
+    padding: 0.7rem 0.5rem;
+    text-align: center;
+    vertical-align: middle;
+  }
+  .meishiki-table th {
+    background: rgba(184,150,46,0.08);
+    font-size: 0.72rem;
+    letter-spacing: 0.25em;
+    color: var(--gold-light);
+    font-weight: 400;
+    width: 25%;
+  }
+  .col-label {
+    background: rgba(184,150,46,0.05) !important;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    color: var(--silver-dim);
+    font-weight: 400;
+    width: 80px;
+  }
+
+  /* pillar cells */
+  .kan {
+    font-size: 2.2rem;
+    font-weight: 300;
+    line-height: 1.2;
+    padding: 0.8rem 0.4rem !important;
+  }
+  .kan.day { color: var(--gold-light); text-shadow: 0 0 20px rgba(184,150,46,0.4); }
+  .kan.year, .kan.month, .kan.hour { color: var(--text-on-dark); }
+
+  .shi { font-size: 2rem; font-weight: 300; padding: 0.7rem 0.4rem !important; }
+  .zougan-cell { font-size: 0.75rem; line-height: 1.8; color: var(--silver); padding: 0.5rem 0.3rem !important; }
+  .zougan-item { display: block; }
+  .zougan-item span { color: var(--silver-dim); font-size: 0.65rem; }
+
+  .hensei-cell { font-size: 0.75rem; padding: 0.4rem 0.3rem !important; line-height: 1.7; }
+  .hensei-item { display: block; }
+
+  .jyunsei-cell { font-size: 0.8rem; padding: 0.4rem 0.3rem !important; }
+
+  /* 十干 colors */
+  .kan-moku { color: #5db856; }
+  .kan-ka { color: #e05c40; }
+  .kan-do { color: #c8a840; }
+  .kan-kin { color: #b0c4de; }
+  .kan-sui { color: #4aa8d8; }
+
+  /* 十二運 accent */
+  .jyu12-taikyoku { color: var(--gold-light); font-weight: 500; }
+  .jyu12-keibo { color: #e05c40; }
+
+  /* day pillar highlight */
+  .day-pillar-col td {
+    background: rgba(184,150,46,0.06) !important;
+    position: relative;
+  }
+  .day-pillar-col td::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 2px; height: 100%;
+    background: linear-gradient(180deg, transparent, var(--gold), transparent);
+    opacity: 0.4;
+  }
+
+  /* no hour mode */
+  .no-hour .hour-col { display: none; }
+
+  /* INTERPRETATION SECTION */
+  .interp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 3rem;
+  }
+  /* 柱ヘッダー タップ展開 */
+  .pillar-th {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    transition: background 0.15s;
+  }
+  .pillar-th:hover { background: rgba(184,150,46,0.08); }
+  .pillar-th .pillar-label {
+    font-size: 0.82rem;
+    letter-spacing: 0.12em;
+    color: var(--silver);
+  }
+  .pillar-th .pillar-yomi {
+    display: block;
+    font-size: 0.6rem;
+    color: var(--silver-dim);
+    letter-spacing: 0.06em;
+    margin-top: 0.1rem;
+  }
+  .pillar-panel {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    min-width: 220px;
+    max-width: 270px;
+    background: var(--deep-navy, #0d1a2b);
+    border: 1px solid rgba(184,150,46,0.35);
+    border-radius: 4px;
+    padding: 0.9rem 1rem;
+    text-align: left;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    animation: fadeIn 0.18s ease;
+  }
+  .pillar-panel.open { display: block; }
+  .pillar-panel-title {
+    font-size: 0.85rem;
+    color: var(--gold-light);
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.08em;
+  }
+  .pillar-panel-age {
+    font-size: 0.72rem;
+    color: var(--gold-dark);
+    margin-bottom: 0.5rem;
+    padding: 0.2rem 0.5rem;
+    background: rgba(184,150,46,0.1);
+    border-radius: 2px;
+    display: inline-block;
+  }
+  .pillar-panel-row {
+    font-size: 0.76rem;
+    color: var(--silver);
+    line-height: 1.75;
+  }
+  .pillar-panel-row span {
+    color: var(--silver-dim);
+    font-size: 0.68rem;
+    margin-right: 0.3rem;
+  }
+  .pillar-panel-close {
+    position: absolute;
+    top: 0.4rem;
+    right: 0.5rem;
+    color: var(--silver-dim);
+    font-size: 0.8rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  /* 大運・年運カード */
+  .unsei-section {
+    margin-top: 1.2rem;
+  }
+  .unsei-section-title {
+    font-size: 0.72rem;
+    letter-spacing: 0.2em;
+    color: var(--silver-dim);
+    margin-bottom: 0.7rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid rgba(184,150,46,0.15);
+  }
+  .daun-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .daun-card {
+    background: rgba(0,0,0,0.18);
+    border: 1px solid rgba(184,150,46,0.12);
+    border-radius: 3px;
+    padding: 0.6rem 0.7rem;
+    transition: border-color 0.2s;
+  }
+  .daun-card.current {
+    border-color: rgba(184,150,46,0.5);
+    background: rgba(184,150,46,0.06);
+  }
+  .daun-card-label {
+    font-size: 0.62rem;
+    color: var(--silver-dim);
+    letter-spacing: 0.06em;
+    margin-bottom: 0.2rem;
+  }
+  .daun-card-kss {
+    font-size: 1.1rem;
+    color: var(--silver);
+    letter-spacing: 0.1em;
+    margin-bottom: 0.2rem;
+  }
+  .daun-card.current .daun-card-kss { color: var(--gold-light); }
+  .daun-card-hensei {
+    font-size: 0.68rem;
+    color: var(--silver-dim);
+    line-height: 1.6;
+  }
+  .daun-card-now {
+    font-size: 0.6rem;
+    color: var(--gold);
+    letter-spacing: 0.08em;
+    margin-bottom: 0.2rem;
+  }
+  .nenun-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+  .nenun-table th {
+    font-size: 0.62rem;
+    color: var(--silver-dim);
+    letter-spacing: 0.08em;
+    padding: 0.3rem 0.4rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(184,150,46,0.15);
+    font-weight: 400;
+  }
+  .nenun-table td {
+    padding: 0.45rem 0.4rem;
+    text-align: center;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--silver);
+    vertical-align: middle;
+  }
+  .nenun-table tr.this-year td {
+    background: rgba(184,150,46,0.07);
+    color: var(--gold-light);
+  }
+  .nenun-table tr.this-year td:first-child::after {
+    content: ' ◀';
+    font-size: 0.6rem;
+    color: var(--gold);
+  }
+
+  /* 空亡カード */
+  .kuubo-card {
+    margin: 1rem 0 0.5rem;
+    background: rgba(120,80,180,0.08);
+    border: 1px solid rgba(140,100,200,0.25);
+    border-radius: 3px;
+    padding: 0.9rem 1.1rem;
+  }
+  .kuubo-title {
+    font-size: 0.72rem;
+    color: rgba(180,140,220,0.8);
+    letter-spacing: 0.18em;
+    margin-bottom: 0.6rem;
+  }
+  .kuubo-content { display: flex; align-items: baseline; gap: 1rem; flex-wrap: wrap; }
+  .kuubo-shi { display: flex; align-items: center; gap: 0.3rem; }
+  .kuubo-badge {
+    font-size: 1.4rem;
+    color: rgba(200,160,240,0.95);
+    font-weight: 400;
+    letter-spacing: 0.05em;
+  }
+  .kuubo-sep { color: rgba(180,140,220,0.4); font-size: 1rem; }
+  .kuubo-note {
+    font-size: 0.75rem;
+    color: var(--silver-dim);
+    line-height: 1.7;
+    flex: 1;
+    min-width: 160px;
+  }
+
+  .interp-card {
+    background: rgba(26,34,64,0.6);
+    border: 1px solid rgba(184,150,46,0.15);
+    border-radius: 2px;
+    padding: 1.5rem;
+    position: relative;
+  }
+  .interp-card-title {
+    font-size: 0.68rem;
+    letter-spacing: 0.3em;
+    color: var(--gold-light);
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid rgba(184,150,46,0.15);
+  }
+  .nichikan-name {
+    font-size: 2rem;
+    font-weight: 300;
+    margin-bottom: 0.5rem;
+  }
+  .nichikan-desc {
+    font-size: 0.82rem;
+    line-height: 1.9;
+    color: var(--silver);
+    font-weight: 300;
+  }
+  .gogyo-bar {
+    margin: 0.4rem 0;
+    cursor: pointer;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    padding: 0.3rem 0.4rem;
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .gogyo-bar:hover { background: rgba(184,150,46,0.06); border-color: rgba(184,150,46,0.15); }
+  .gogyo-bar.open  { background: rgba(184,150,46,0.08); border-color: rgba(184,150,46,0.2); }
+  .gogyo-bar-main {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .gogyo-label {
+    font-size: 0.78rem;
+    font-weight: 500;
+    width: 2rem;
+    flex-shrink: 0;
+  }
+  .gogyo-arrow {
+    font-size: 0.6rem;
+    color: var(--silver-dim);
+    margin-left: auto;
+    transition: transform 0.25s;
+    flex-shrink: 0;
+  }
+  .gogyo-bar.open .gogyo-arrow { transform: rotate(180deg); }
+  .gogyo-track {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .gogyo-fill {
+    height: 100%;
+    border-radius: 2px;
+  }
+  .gogyo-detail {
+    display: none;
+    margin-top: 0.6rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid rgba(184,150,46,0.12);
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.4rem;
+    animation: fadeIn 0.2s ease;
+    display: none;
+  }
+  .gogyo-bar.open .gogyo-detail { display: grid; }
+  .gogyo-detail-item {
+    text-align: center;
+    padding: 0.4rem 0.2rem;
+    background: rgba(0,0,0,0.2);
+    border-radius: 2px;
+  }
+  .gogyo-detail-key {
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--silver-dim);
+    margin-bottom: 0.25rem;
+  }
+  .gogyo-detail-val {
+    font-size: 0.8rem;
+    color: var(--text-on-dark);
+    line-height: 1.5;
+  }
+  .tenkan-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.2rem;
+  }
+  .tenkan-pill {
+    background: rgba(184,150,46,0.08);
+    border: 1px solid rgba(184,150,46,0.2);
+    border-radius: 2px;
+    padding: 0.35rem 0.7rem;
+    font-size: 0.85rem;
+    color: var(--gold-light);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    user-select: none;
+  }
+  .tenkan-pill:hover { background: rgba(184,150,46,0.15); border-color: rgba(184,150,46,0.4); }
+  .tenkan-pill.active { background: rgba(184,150,46,0.18); border-color: var(--gold); }
+  /* 天干タップ */
+  .kan-pill {
+    display: inline-block;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.1rem 0.3rem;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .kan-pill:hover, .kan-pill:active {
+    background: rgba(184,150,46,0.15);
+    border-color: rgba(184,150,46,0.4);
+  }
+  .kan-yomi {
+    display: none;
+  }
+  .kan-detail-panel {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 110;
+    min-width: 220px;
+    max-width: 280px;
+    background: var(--deep-navy, #0d1a2b);
+    border: 1px solid rgba(184,150,46,0.35);
+    border-radius: 4px;
+    padding: 0.85rem 1rem;
+    text-align: left;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+    animation: fadeIn 0.18s ease;
+  }
+  .kan-detail-panel.open { display: block; }
+  .kan-panel-title {
+    font-size: 0.9rem;
+    color: var(--gold-light);
+    font-weight: 500;
+    margin-bottom: 0.35rem;
+    letter-spacing: 0.06em;
+  }
+  .kan-panel-badge {
+    font-size: 0.7rem;
+    color: var(--gold-dark);
+    background: rgba(184,150,46,0.1);
+    border-radius: 2px;
+    padding: 0.15rem 0.4rem;
+    display: inline-block;
+    margin-bottom: 0.5rem;
+  }
+  .kan-panel-desc {
+    font-size: 0.75rem;
+    color: var(--silver);
+    line-height: 1.75;
+  }
+
+  .shi-pill {
+    display: inline-block;
+    background: rgba(90,120,184,0.08);
+    border: 1px solid rgba(90,120,184,0.25);
+    border-radius: 2px;
+    padding: 0.25rem 0.5rem;
+    font-size: 1.05rem;
+    color: var(--silver);
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    user-select: none;
+    letter-spacing: 0.05em;
+  }
+  .shi-pill:hover { background: rgba(90,120,184,0.18); border-color: rgba(90,120,184,0.5); }
+  .shi-pill.active { background: rgba(90,120,184,0.22); border-color: #7a9bd4; }
+  .shi-detail-panel {
+    display: none;
+    margin-top: 0.6rem;
+    background: rgba(0,0,0,0.22);
+    border: 1px solid rgba(90,120,184,0.2);
+    border-radius: 2px;
+    padding: 0.85rem 1rem;
+    animation: fadeIn 0.2s ease;
+    font-size: 0.82rem;
+    line-height: 1.8;
+    color: var(--silver);
+  }
+  .shi-detail-panel.open { display: block; }
+
+  /* 通変星・十二運 タップパネル */
+  .hj-pill {
+    display: inline-block;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.1rem 0.35rem;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+    position: relative;
+  }
+  .hj-pill:hover { background: rgba(184,150,46,0.1); border-color: rgba(184,150,46,0.25); }
+  .hj-pill.active { background: rgba(184,150,46,0.15); border-color: rgba(184,150,46,0.4); }
+  .hj-panel {
+    display: none;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 200;
+    width: min(320px, 90vw);
+    background: #0d1a2b;
+    border: 1px solid rgba(184,150,46,0.4);
+    border-radius: 6px;
+    padding: 1.2rem 1.1rem 1rem;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.7);
+    animation: fadeIn 0.18s ease;
+  }
+  .hj-panel.open { display: block; }
+  .hj-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 199;
+    background: rgba(0,0,0,0.4);
+  }
+  .hj-overlay.open { display: block; }
+  .hj-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.7rem;
+  }
+  .hj-panel-title {
+    font-size: 1rem;
+    color: var(--gold-light);
+    font-weight: 500;
+    letter-spacing: 0.06em;
+  }
+  .hj-panel-yomi {
+    font-size: 0.68rem;
+    color: var(--silver-dim);
+    margin-left: 0.3rem;
+  }
+  .hj-panel-close {
+    color: var(--silver-dim);
+    font-size: 0.9rem;
+    cursor: pointer;
+    padding: 0.1rem 0.3rem;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+  .hj-panel-badge {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 10px;
+    background: rgba(184,150,46,0.12);
+    color: var(--gold-dark);
+    margin-bottom: 0.65rem;
+    letter-spacing: 0.04em;
+  }
+  .hj-panel-desc {
+    font-size: 0.77rem;
+    color: var(--silver);
+    line-height: 1.8;
+  }
+  .hj-panel-context {
+    margin-top: 0.65rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid rgba(184,150,46,0.15);
+    font-size: 0.7rem;
+    color: var(--silver-dim);
+    line-height: 1.7;
+  }
+  .shi-detail-name {
+    font-size: 1.1rem;
+    color: var(--gold-light);
+    font-weight: 500;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.4rem;
+  }
+  .shi-detail-row { margin-bottom: 0.15rem; }
+  .shi-detail-label { color: var(--silver-dim); font-size: 0.75rem; margin-right: 0.4rem; }
+  .tenkan-detail-panel {
+    display: none;
+    margin-top: 1rem;
+    background: rgba(0,0,0,0.25);
+    border: 1px solid rgba(184,150,46,0.2);
+    border-radius: 2px;
+    padding: 1rem;
+    animation: fadeIn 0.2s ease;
+  }
+  .tenkan-detail-panel.open { display: block; }
+  .tenkan-detail-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.6rem;
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid rgba(184,150,46,0.15);
+  }
+  .tenkan-detail-kanji { font-size: 2rem; font-weight: 300; }
+  .tenkan-detail-sub { font-size: 0.72rem; color: var(--gold-light); letter-spacing: 0.15em; }
+  .tenkan-kyoaku { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-bottom: 0.8rem; }
+  .tenkan-kyoaku-box { background: rgba(255,255,255,0.03); border-radius: 2px; padding: 0.6rem; }
+  .tenkan-kyoaku-title { font-size: 0.65rem; letter-spacing: 0.2em; margin-bottom: 0.4rem; }
+  .tenkan-kyoaku-item { font-size: 0.75rem; color: var(--silver); line-height: 1.9; }
+  .tenkan-gogyo-row { display: grid; grid-template-columns: repeat(2,1fr); gap: 0.5rem; margin-top: 0.6rem; }
+  .tenkan-gogyo-item { background: rgba(0,0,0,0.2); border-radius: 2px; padding: 0.5rem 0.6rem; font-size: 0.73rem; color: var(--silver); line-height: 1.7; }
+  .tenkan-gogyo-item .rel-label { font-size: 0.62rem; letter-spacing: 0.15em; display: block; margin-bottom: 0.2rem; }
+
+  /* FOOTER LINE */
+  .footer-line {
+    text-align: center;
+    font-size: 0.65rem;
+    letter-spacing: 0.3em;
+    color: var(--indigo-pale);
+    margin-top: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid rgba(184,150,46,0.1);
+  }
+
+  /* fade-in animation */
+  .fade-in {
+    animation: fadeIn 0.8s ease forwards;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  select option { background: #1a2240; }
+
+  @media (max-width: 600px) {
+    header h1 { font-size: 1.6rem; }
+    .form-card { padding: 1.5rem 1rem; }
+    .wrap { padding: 1rem 0.8rem 3rem; }
+    .kan { font-size: 1.6rem; }
+    .shi { font-size: 1.5rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="stars" id="starsContainer"></div>
+
+<div class="wrap">
+<header>
+  <span class="header-en">Four Pillars of Destiny</span>
+  <h1>四 柱 推 命</h1>
+  <div class="header-sep">命式鑑定</div>
+</header>
+
+<div class="form-card">
+  <div class="form-title">生年月日・出生情報を入力してください</div>
+  <div class="form-grid">
+    <div class="form-group" style="grid-column: span 2;">
+      <label>生 年 月 日　<span style="font-size:0.68rem;color:var(--silver-dim);letter-spacing:0.1em;">例：19860430</span></label>
+      <input type="text" id="birthDateStr" value="19860430" maxlength="8" placeholder="19860430" inputmode="numeric" style="letter-spacing:0.15em;">
+      <div id="datePreview" style="font-size:0.72rem;color:var(--gold-light);margin-top:0.3rem;min-height:1rem;"></div>
+    </div>
+    <div class="form-group">
+      <label>出 生 時 刻　<span style="font-size:0.68rem;color:var(--silver-dim);letter-spacing:0.1em;">例：1317</span></label>
+      <input type="text" id="birthTimeStr" value="1317" maxlength="4" placeholder="1317" inputmode="numeric" style="letter-spacing:0.15em;">
+      <div id="timePreview" style="font-size:0.72rem;color:var(--gold-light);margin-top:0.3rem;min-height:1rem;"></div>
+      <div style="font-size:0.68rem;color:var(--silver-dim);margin-top:0.3rem;line-height:1.6;">
+        ※ 1950〜1952年の5〜9月生まれは<br>日本夏令時（+1時間）の影響あり。<br>入力時刻から1時間引いた時刻でご入力ください。<br>※ 23:00以降生まれは翌日の日柱で計算します（夜子時）。
+      </div>
+      <div class="unknown-row" style="margin-top:0.5rem;">
+        <input type="checkbox" id="unknownTime">
+        <label for="unknownTime">出生時刻が不明（三柱で鑑定）</label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>性 別</label>
+      <div style="display:flex;gap:1.5rem;margin-top:0.3rem;">
+        <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.9rem;color:var(--silver);">
+          <input type="radio" name="gender" id="genderFemale" value="female" checked
+            style="accent-color:var(--gold);width:1rem;height:1rem;">
+          女性
+        </label>
+        <label style="display:flex;align-items:center;gap:0.4rem;cursor:pointer;font-size:0.9rem;color:var(--silver);">
+          <input type="radio" name="gender" id="genderMale" value="male"
+            style="accent-color:var(--gold);width:1rem;height:1rem;">
+          男性
+        </label>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>出 生 地</label>
+      <select id="birthPlace">
+        <option value="0">明石（標準時・補正なし）</option>
+        <option value="19">東京・関東（+19分）</option>
+        <option value="16">名古屋・東海（+16分）</option>
+        <option value="10">大阪・京都・近畿（+10分）</option>
+        <option value="-10">広島（-10分）</option>
+        <option value="-18" selected>福岡・九州北部（-18分）</option>
+        <option value="-25">鹿児島・九州南部（-25分）</option>
+        <option value="-30">那覇・沖縄（-30分）</option>
+        <option value="30">札幌・北海道（+30分）</option>
+        <option value="22">仙台・東北（+22分）</option>
+        <option value="34">釧路・根室（+34分）</option>
+      </select>
+    </div>
+  </div>
+  <button class="btn-calc" onclick="calculate()">命 式 を 算 出 す る</button>
+</div>
+
+<div id="result"></div>
+
+<footer class="footer-line">
+  四柱推命 命式鑑定システム ｜ 節入り厳密計算・地方時補正対応 ｜ 万年暦データ 1950–2030
+</footer>
+</div>
+
+<script>
+// ========================================================
+//  星空背景
+// ========================================================
+(function(){
+  const c = document.getElementById('starsContainer');
+  for(let i=0;i<120;i++){
+    const s=document.createElement('span');
+    s.style.left=Math.random()*100+'%';
+    s.style.top=Math.random()*100+'%';
+    s.style.animationDelay=(Math.random()*6)+'s';
+    s.style.animationDuration=(2+Math.random()*5)+'s';
+    s.style.opacity=Math.random()*0.6+0.1;
+    c.appendChild(s);
+  }
+})();
+
+// ========================================================
+//  節入りデータ（万年暦ベース）
+//  形式: SEKKI[year][月インデックス0-11] = [月,日,時,分]
+//  月インデックス: 0=小寒, 1=立春, 2=驚蟄, 3=清明,
+//                 4=立夏, 5=芒種, 6=小暑, 7=立秋,
+//                 8=白露, 9=寒露, 10=立冬, 11=大雪
+//  ※ 月柱の「節」は以下の順で割り当てる:
+//    寅月=立春, 卯月=驚蟄, 辰月=清明, 巳月=立夏,
+//    午月=芒種, 未月=小暑, 申月=立秋, 酉月=白露,
+//    戌月=寒露, 亥月=立冬, 子月=大雪, 丑月=小寒
+// ========================================================
+const SEKKI = {
+1950:[[1,6,6,29],[2,4,18,12],[3,6,12,26],[4,5,17,35],[5,6,11,15],[6,6,15,42],[7,8,2,4],[8,8,11,47],[9,8,14,25],[10,9,5,43],[11,8,8,35],[12,8,1,13]],
+1951:[[1,6,12,23],[2,5,0,6],[3,6,18,20],[4,5,23,25],[5,6,17,2],[6,6,21,25],[7,8,7,47],[8,8,17,31],[9,8,20,12],[10,9,11,30],[11,8,14,20],[12,8,6,56]],
+1952:[[1,6,18,4],[2,5,5,48],[3,6,0,2],[4,5,5,10],[5,5,22,48],[6,6,3,15],[7,7,13,40],[8,7,23,27],[9,8,2,9],[10,8,17,28],[11,7,20,17],[12,7,12,51]],
+1953:[[1,5,23,58],[2,4,11,43],[3,6,5,59],[4,5,11,9],[5,6,4,49],[6,6,9,13],[7,7,19,32],[8,8,5,12],[9,8,7,50],[10,8,23,7],[11,8,1,58],[12,7,18,34]],
+1954:[[1,6,5,43],[2,4,17,29],[3,6,11,46],[4,5,16,57],[5,6,10,36],[6,6,14,59],[7,8,1,17],[8,8,10,58],[9,8,13,36],[10,9,4,55],[11,8,7,48],[12,8,0,26]],
+1955:[[1,6,11,34],[2,4,23,16],[3,6,17,30],[4,5,22,37],[5,6,16,16],[6,6,20,41],[7,8,7,4],[8,8,16,49],[9,8,19,30],[10,9,10,50],[11,8,13,43],[12,8,6,20]],
+1956:[[1,6,17,28],[2,5,5,10],[3,5,23,23],[4,5,4,29],[5,5,22,7],[6,6,2,33],[7,7,12,56],[8,7,22,38],[9,8,1,17],[10,8,16,33],[11,7,19,23],[12,7,11,59]],
+1957:[[1,5,23,8],[2,4,10,52],[3,6,5,7],[4,5,10,15],[5,6,3,55],[6,6,8,21],[7,7,18,45],[8,8,4,29],[9,8,7,9],[10,8,22,26],[11,8,1,15],[12,7,17,51]],
+1958:[[1,6,5,0],[2,4,16,45],[3,6,11,0],[4,5,16,7],[5,6,9,44],[6,6,14,7],[7,8,0,28],[8,8,10,12],[9,8,12,53],[10,9,4,13],[11,8,7,5],[12,7,23,43]],
+1959:[[1,6,10,52],[2,4,22,36],[3,6,16,50],[4,5,21,56],[5,6,15,31],[6,6,19,52],[7,8,6,12],[8,8,15,57],[9,8,18,40],[10,9,10,1],[11,8,12,53],[12,8,5,28]],
+1960:[[1,6,16,34],[2,5,4,15],[3,5,22,27],[4,5,3,34],[5,5,21,12],[6,6,1,38],[7,7,12,3],[8,7,21,50],[9,8,0,35],[10,8,15,58],[11,7,18,51],[12,7,11,27]],
+1961:[[1,5,22,32],[2,4,10,12],[3,6,4,23],[4,5,9,30],[5,6,3,9],[6,6,7,33],[7,7,17,54],[8,8,3,36],[9,8,6,17],[10,8,21,38],[11,8,0,33],[12,7,17,13]],
+1962:[[1,6,4,22],[2,4,16,5],[3,6,10,16],[4,5,15,20],[5,6,8,55],[6,6,13,17],[7,7,23,37],[8,8,9,20],[9,8,12,1],[10,9,3,23],[11,8,6,20],[12,7,23,2]],
+1963:[[1,6,10,12],[2,4,21,54],[3,6,16,3],[4,5,21,3],[5,6,14,36],[6,6,18,58],[7,8,5,22],[8,8,15,10],[9,8,17,56],[10,9,9,20],[11,8,12,16],[12,8,4,57]],
+1964:[[1,6,16,7],[2,5,3,50],[3,5,22,1],[4,5,3,2],[5,5,20,35],[6,6,0,55],[7,7,11,16],[8,7,21,1],[9,7,23,44],[10,8,15,5],[11,7,17,59],[12,7,10,37]],
+1965:[[1,5,21,47],[2,4,9,31],[3,6,3,45],[4,5,8,51],[5,6,2,25],[6,6,6,46],[7,7,17,6],[8,8,2,49],[9,8,5,33],[10,8,20,56],[11,7,23,51],[12,7,16,30]],
+1966:[[1,6,3,40],[2,4,15,24],[3,6,9,37],[4,5,14,42],[5,6,8,15],[6,6,12,35],[7,7,22,53],[8,8,8,35],[9,8,11,18],[10,9,2,43],[11,8,5,41],[12,7,22,24]],
+1967:[[1,6,9,35],[2,4,21,18],[3,6,15,29],[4,5,20,32],[5,6,14,4],[6,6,18,23],[7,8,4,41],[8,8,14,23],[9,8,17,6],[10,9,8,29],[11,8,11,25],[12,8,4,6]],
+1968:[[1,6,15,15],[2,5,2,57],[3,5,21,7],[4,5,2,10],[5,5,19,44],[6,6,0,8],[7,7,10,31],[8,7,20,17],[9,7,23,2],[10,8,14,24],[11,7,17,19],[12,7,9,59]],
+1969:[[1,5,21,8],[2,4,8,50],[3,6,3,2],[4,5,8,6],[5,6,1,41],[6,6,6,3],[7,7,16,23],[8,8,2,7],[9,8,4,48],[10,8,20,9],[11,7,23,3],[12,7,15,44]],
+1970:[[1,6,2,55],[2,4,14,40],[3,6,8,52],[4,5,13,55],[5,6,7,27],[6,6,11,46],[7,7,22,5],[8,8,7,49],[9,8,10,32],[10,9,1,56],[11,8,4,52],[12,7,21,32]],
+1971:[[1,6,8,40],[2,4,20,21],[3,6,14,30],[4,5,19,31],[5,6,13,3],[6,6,17,24],[7,8,3,47],[8,8,13,37],[9,8,16,27],[10,9,7,55],[11,8,10,53],[12,8,3,32]],
+1972:[[1,6,14,39],[2,5,2,18],[3,5,20,25],[4,5,1,26],[5,5,18,58],[6,5,23,19],[7,7,9,40],[8,7,19,27],[9,7,22,13],[10,8,13,39],[11,7,16,36],[12,7,9,16]],
+1973:[[1,5,20,23],[2,4,8,3],[3,6,2,11],[4,5,7,12],[5,6,0,44],[6,6,5,5],[7,7,15,26],[8,8,1,11],[9,8,3,58],[10,8,19,25],[11,7,22,25],[12,7,15,8]],
+1974:[[1,6,2,18],[2,4,13,59],[3,6,8,6],[4,5,13,3],[5,6,6,31],[6,6,10,50],[7,7,21,10],[8,8,6,56],[9,8,9,43],[10,9,1,12],[11,8,4,15],[12,7,21,2]],
+1975:[[1,6,8,15],[2,4,19,57],[3,6,14,4],[4,5,18,59],[5,6,12,24],[6,6,16,39],[7,8,2,57],[8,8,12,43],[9,8,15,30],[10,9,6,59],[11,8,9,59],[12,8,2,43]],
+1976:[[1,6,13,54],[2,5,1,36],[3,5,19,45],[4,5,0,42],[5,5,18,10],[6,5,22,27],[7,7,8,47],[8,7,18,34],[9,7,21,24],[10,8,12,53],[11,7,15,53],[12,7,8,36]],
+1977:[[1,5,19,46],[2,4,7,29],[3,6,1,39],[4,5,6,40],[5,6,0,9],[6,6,4,26],[7,7,14,42],[8,8,0,24],[9,8,3,9],[10,8,18,37],[11,7,21,38],[12,7,14,23]],
+1978:[[1,6,1,36],[2,4,13,20],[3,6,7,31],[4,5,12,31],[5,6,6,0],[6,6,10,14],[7,7,20,28],[8,8,6,9],[9,8,8,53],[10,9,0,21],[11,8,3,24],[12,7,20,10]],
+1979:[[1,6,7,22],[2,4,19,3],[3,6,13,10],[4,5,18,7],[5,6,11,36],[6,6,15,54],[7,8,2,14],[8,8,12,0],[9,8,14,48],[10,9,6,18],[11,8,9,21],[12,8,2,6]],
+1980:[[1,6,13,17],[2,5,0,58],[3,5,19,4],[4,5,0,2],[5,5,17,31],[6,5,21,50],[7,7,8,11],[8,7,17,55],[9,7,20,40],[10,8,12,5],[11,7,15,4],[12,7,7,47]],
+1981:[[1,5,18,59],[2,4,6,42],[3,6,0,51],[4,5,5,50],[5,5,23,20],[6,6,3,38],[7,7,13,57],[8,7,23,42],[9,8,2,28],[10,8,17,54],[11,7,20,53],[12,7,13,36]],
+1982:[[1,6,0,48],[2,4,12,31],[3,6,6,40],[4,5,11,37],[5,6,5,4],[6,6,9,20],[7,7,19,39],[8,8,5,26],[9,8,8,16],[10,8,23,46],[11,8,2,48],[12,7,19,32]],
+1983:[[1,6,6,44],[2,4,18,25],[3,6,12,32],[4,5,17,28],[5,6,10,54],[6,6,15,9],[7,8,1,27],[8,8,11,14],[9,8,14,4],[10,9,5,35],[11,8,8,36],[12,8,1,18]],
+1984:[[1,6,12,26],[2,5,0,4],[3,5,18,10],[4,4,23,7],[5,5,16,35],[6,5,20,53],[7,7,7,14],[8,7,17,3],[9,7,19,55],[10,8,11,28],[11,7,14,30],[12,7,7,13]],
+1985:[[1,5,18,21],[2,4,5,58],[3,6,0,3],[4,5,4,59],[5,5,22,28],[6,6,2,46],[7,7,13,5],[8,7,22,51],[9,8,1,40],[10,8,17,11],[11,7,20,16],[12,7,13,3]],
+1986:[[1,6,0,16],[2,4,11,56],[3,6,6,0],[4,5,10,54],[5,6,4,18],[6,6,8,32],[7,7,18,49],[8,8,4,34],[9,8,7,23],[10,8,22,55],[11,8,2,1],[12,7,18,50]],
+1987:[[1,6,6,3],[2,4,17,42],[3,6,11,44],[4,5,16,34],[5,6,9,55],[6,6,14,9],[7,8,0,29],[8,8,10,20],[9,8,13,15],[10,9,4,50],[11,8,7,56],[12,8,0,43]],
+1988:[[1,6,11,56],[2,4,23,35],[3,5,17,39],[4,4,22,31],[5,5,15,53],[6,5,20,7],[7,7,6,26],[8,7,16,14],[9,7,19,5],[10,8,10,37],[11,7,13,42],[12,7,6,28]],
+1989:[[1,5,17,40],[2,4,5,22],[3,5,23,29],[4,5,4,24],[5,5,21,48],[6,6,2,0],[7,7,12,15],[8,7,21,59],[9,8,0,49],[10,8,16,22],[11,7,19,28],[12,7,12,16]],
+1990:[[1,5,23,29],[2,4,11,10],[3,6,5,16],[4,5,10,9],[5,6,3,31],[6,6,7,42],[7,7,17,57],[8,8,3,43],[9,8,6,34],[10,8,22,10],[11,8,1,20],[12,7,18,11]],
+1991:[[1,6,5,26],[2,4,17,6],[3,6,11,10],[4,5,16,2],[5,6,9,24],[6,6,13,36],[7,7,23,51],[8,8,9,36],[9,8,12,26],[10,9,3,59],[11,8,7,5],[12,7,23,54]],
+1992:[[1,6,11,7],[2,4,22,47],[3,5,16,51],[4,4,21,43],[5,5,15,6],[6,5,19,20],[7,7,5,39],[8,7,15,26],[9,7,18,17],[10,8,9,49],[11,7,12,54],[12,7,5,42]],
+1993:[[1,5,16,55],[2,4,4,36],[3,5,22,41],[4,5,3,35],[5,5,20,59],[6,6,1,13],[7,7,11,30],[8,7,21,16],[9,8,0,6],[10,8,15,37],[11,7,18,43],[12,7,11,31]],
+1994:[[1,5,22,46],[2,4,10,29],[3,6,4,35],[4,5,9,29],[5,6,2,51],[6,6,7,1],[7,7,17,16],[8,8,3,2],[9,8,5,52],[10,8,21,25],[11,8,0,31],[12,7,17,19]],
+1995:[[1,6,4,30],[2,4,16,9],[3,6,10,12],[4,5,15,3],[5,6,8,25],[6,6,12,37],[7,7,22,56],[8,8,8,47],[9,8,11,43],[10,9,3,21],[11,8,6,29],[12,7,23,16]],
+1996:[[1,6,10,26],[2,4,22,2],[3,5,16,4],[4,4,20,55],[5,5,14,19],[6,5,18,33],[7,7,4,53],[8,7,14,42],[9,7,17,35],[10,8,9,11],[11,7,12,18],[12,7,5,5]],
+1997:[[1,5,16,16],[2,4,3,54],[3,5,21,56],[4,5,2,47],[5,5,20,10],[6,6,0,23],[7,7,10,40],[8,7,20,27],[9,7,23,19],[10,8,14,55],[11,7,18,4],[12,7,10,54]],
+1998:[[1,5,22,8],[2,4,9,47],[3,6,3,46],[4,5,8,33],[5,6,1,51],[6,6,6,1],[7,7,16,18],[8,8,2,8],[9,8,5,4],[10,8,20,43],[11,7,23,55],[12,7,16,49]],
+1999:[[1,6,4,5],[2,4,15,45],[3,6,9,45],[4,5,14,31],[5,6,7,47],[6,6,11,55],[7,7,22,11],[8,8,8,0],[9,8,10,56],[10,9,2,34],[11,8,5,43],[12,7,22,33]],
+2000:[[1,6,9,47],[2,4,21,27],[3,5,15,28],[4,4,20,17],[5,5,13,34],[6,5,17,43],[7,7,3,59],[8,7,13,48],[9,7,16,44],[10,8,8,23],[11,7,11,32],[12,7,4,21]],
+2001:[[1,5,15,34],[2,4,3,14],[3,5,21,17],[4,5,2,9],[5,5,19,28],[6,5,23,37],[7,7,9,51],[8,7,19,37],[9,7,22,30],[10,8,14,9],[11,7,17,21],[12,7,10,13]],
+2002:[[1,5,21,28],[2,4,9,9],[3,6,3,12],[4,5,8,2],[5,6,1,21],[6,6,5,29],[7,7,15,40],[8,8,1,24],[9,8,4,16],[10,8,19,54],[11,7,23,6],[12,7,15,59]],
+2003:[[1,6,3,13],[2,4,14,51],[3,6,8,50],[4,5,13,37],[5,6,6,55],[6,6,11,5],[7,7,21,21],[8,8,7,10],[9,8,10,6],[10,9,1,46],[11,8,4,59],[12,7,21,51]],
+2004:[[1,6,9,5],[2,4,20,43],[3,5,14,43],[4,4,19,30],[5,5,12,48],[6,5,17,0],[7,7,3,18],[8,7,13,7],[9,7,16,0],[10,8,7,37],[11,7,10,46],[12,7,3,37]],
+2005:[[1,5,14,51],[2,4,2,32],[3,5,20,34],[4,5,1,23],[5,5,18,41],[6,5,22,50],[7,7,9,6],[8,7,18,53],[9,7,21,46],[10,8,13,22],[11,7,16,32],[12,7,9,23]],
+2006:[[1,5,20,38],[2,4,8,18],[3,6,2,19],[4,5,7,6],[5,6,0,21],[6,6,4,28],[7,7,14,43],[8,8,0,33],[9,8,3,31],[10,8,19,13],[11,7,22,26],[12,7,15,19]],
+2007:[[1,6,2,33],[2,4,14,12],[3,6,8,11],[4,5,12,57],[5,6,6,13],[6,6,10,20],[7,7,20,35],[8,8,6,25],[9,8,9,24],[10,9,1,5],[11,8,4,18],[12,7,21,8]],
+2008:[[1,6,8,20],[2,4,19,56],[3,5,13,54],[4,4,18,41],[5,5,11,58],[6,5,16,7],[7,7,2,23],[8,7,12,12],[9,7,15,10],[10,8,6,52],[11,7,10,6],[12,7,2,58]],
+2009:[[1,5,14,11],[2,4,1,47],[3,5,19,44],[4,5,0,30],[5,5,17,47],[6,5,21,56],[7,7,8,11],[8,7,17,59],[9,7,20,55],[10,8,12,37],[11,7,15,53],[12,7,8,50]],
+2010:[[1,5,20,7],[2,4,7,46],[3,6,1,44],[4,5,6,28],[5,5,23,42],[6,6,3,47],[7,7,14,1],[8,7,23,48],[9,8,2,43],[10,8,18,24],[11,7,21,40],[12,7,14,36]],
+2011:[[1,6,1,53],[2,4,13,32],[3,6,7,28],[4,5,12,10],[5,6,5,21],[6,6,9,25],[7,7,19,40],[8,8,5,32],[9,8,8,33],[10,9,0,17],[11,8,3,32],[12,7,20,26]],
+2012:[[1,6,7,42],[2,4,19,21],[3,5,13,19],[4,4,18,3],[5,5,11,17],[6,5,15,23],[7,7,1,39],[8,7,11,28],[9,7,14,26],[10,8,6,9],[11,7,9,22],[12,7,2,16]],
+2013:[[1,5,13,31],[2,4,1,11],[3,5,19,12],[4,4,23,59],[5,5,17,14],[6,5,21,19],[7,7,7,31],[8,7,17,17],[9,7,20,12],[10,8,11,54],[11,7,15,9],[12,7,8,4]],
+2014:[[1,5,19,20],[2,4,6,59],[3,6,0,57],[4,5,5,41],[5,5,22,53],[6,6,2,57],[7,7,13,9],[8,7,22,57],[9,8,1,55],[10,8,17,41],[11,7,20,59],[12,7,13,57]],
+2015:[[1,6,1,14],[2,4,12,52],[3,6,6,49],[4,5,11,31],[5,6,4,44],[6,6,8,50],[7,7,19,4],[8,8,4,53],[9,8,7,51],[10,8,23,34],[11,8,2,49],[12,7,19,44]],
+2016:[[1,6,6,59],[2,4,18,37],[3,5,12,34],[4,4,17,17],[5,5,10,31],[6,5,14,38],[7,7,0,53],[8,7,10,43],[9,7,13,40],[10,8,5,22],[11,7,8,36],[12,7,1,30]],
+2017:[[1,5,12,44],[2,4,0,23],[3,5,18,21],[4,4,23,5],[5,5,16,18],[6,5,20,24],[7,7,6,38],[8,7,16,27],[9,7,19,26],[10,8,11,8],[11,7,14,24],[12,7,7,19]],
+2018:[[1,5,18,36],[2,4,6,16],[3,6,0,15],[4,5,4,58],[5,5,22,11],[6,6,2,14],[7,7,12,27],[8,7,22,16],[9,8,1,15],[10,8,17,0],[11,7,20,16],[12,7,13,11]],
+2019:[[1,6,0,25],[2,4,12,0],[3,6,5,55],[4,5,10,36],[5,6,3,47],[6,6,7,50],[7,7,18,5],[8,8,3,58],[9,8,7,1],[10,8,22,50],[11,8,2,8],[12,7,19,3]],
+2020:[[1,6,6,15],[2,4,17,48],[3,5,11,42],[4,4,16,22],[5,5,9,35],[6,5,13,42],[7,6,23,59],[8,7,9,51],[9,7,12,52],[10,8,4,39],[11,7,7,58],[12,7,0,54]],
+2021:[[1,5,12,8],[2,3,23,44],[3,5,17,39],[4,4,22,19],[5,5,15,31],[6,5,19,36],[7,7,5,50],[8,7,15,39],[9,7,18,38],[10,8,10,24],[11,7,13,43],[12,7,6,42]],
+2022:[[1,5,18,0],[2,4,5,37],[3,5,23,30],[4,5,4,5],[5,5,21,11],[6,6,1,11],[7,7,11,24],[8,7,21,15],[9,8,0,19],[10,8,16,9],[11,7,19,31],[12,7,12,33]],
+2023:[[1,5,23,52],[2,4,11,30],[3,6,5,24],[4,5,10,0],[5,6,3,5],[6,6,7,5],[7,7,17,18],[8,8,3,11],[9,8,6,15],[10,8,22,4],[11,8,1,24],[12,7,18,21]],
+2024:[[1,6,5,38],[2,4,17,17],[3,5,11,12],[4,4,15,51],[5,5,8,59],[6,5,12,59],[7,6,23,10],[8,7,9,0],[9,7,12,2],[10,8,3,50],[11,7,7,10],[12,7,0,8]],
+2025:[[1,5,11,24],[2,3,23,2],[3,5,16,59],[4,4,21,40],[5,5,14,49],[6,5,18,48],[7,7,4,57],[8,7,14,44],[9,7,17,45],[10,8,9,33],[11,7,12,56],[12,7,5,57]],
+2026:[[1,5,17,17],[2,4,4,56],[3,5,22,53],[4,5,3,33],[5,5,20,42],[6,6,0,42],[7,7,10,51],[8,7,20,38],[9,7,23,36],[10,8,15,24],[11,7,18,46],[12,7,11,47]],
+2027:[[1,5,23,5],[2,4,10,42],[3,6,4,35],[4,5,9,13],[5,6,2,20],[6,6,6,22],[7,7,16,34],[8,8,2,23],[9,8,5,25],[10,8,21,13],[11,8,0,35],[12,7,17,34]],
+2028:[[1,6,4,52],[2,4,16,28],[3,5,10,22],[4,4,15,0],[5,5,8,9],[6,5,12,13],[7,6,22,28],[8,7,8,19],[9,7,11,20],[10,8,3,6],[11,7,6,24],[12,6,23,22]],
+2029:[[1,5,10,40],[2,3,22,19],[3,5,16,16],[4,4,20,56],[5,5,14,5],[6,5,18,8],[7,7,4,21],[8,7,14,10],[9,7,17,10],[10,8,8,56],[11,7,12,14],[12,7,5,11]],
+2030:[[1,5,16,29],[2,4,4,7],[3,5,22,2],[4,5,2,39],[5,5,19,44],[6,5,23,42],[7,7,9,54],[8,7,19,46],[9,7,22,51],[10,8,14,43],[11,7,18,6],[12,7,11,5]],
+};
+
+// 十干・十二支
+const KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+const SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+
+// 地支詳細データ
+const SHI12_DETAIL = {
+  '子': { yomi:'ね', gogyo:'水', inyo:'陽', season:'冬・11月', image:'知恵・生命の始まり', desc:'新しいいのちの芽吹きを象徴する地支。水のエネルギーを持ち、知恵と洞察力に恵まれています。物事の本質を見抜く力があり、静かな中に大きな可能性を秘めています。' },
+  '丑': { yomi:'うし', gogyo:'土', inyo:'陰', season:'冬・12月', image:'忍耐・蓄積', desc:'着実に積み上げる力を象徴する地支。土のエネルギーを持ち、粘り強さと忍耐力が特徴。じっくりと時間をかけて成果を積み上げていくタイプです。' },
+  '寅': { yomi:'とら', gogyo:'木', inyo:'陽', season:'春・1月', image:'行動・勇気', desc:'力強く前に進む行動力を象徴する地支。木のエネルギーを持ち、勇気と推進力があります。困難にひるまず、自ら道を切り開いていく力があります。' },
+  '卯': { yomi:'う', gogyo:'木', inyo:'陰', season:'春・2月', image:'温和・繁栄', desc:'穏やかに広がる繁栄を象徴する地支。木のエネルギーを持ち、柔らかさと協調性が特徴。周囲と調和しながら着実に成長していく力があります。' },
+  '辰': { yomi:'たつ', gogyo:'土', inyo:'陽', season:'春・3月', image:'変化・神秘', desc:'神秘的な変化と変容を象徴する地支。土のエネルギーを持ちながら変化を好み、大きな夢と理想を持ちます。スケールの大きな発想と行動力が特徴です。' },
+  '巳': { yomi:'み', gogyo:'火', inyo:'陰', season:'夏・4月', image:'直感・変革', desc:'鋭い直感と内なる炎を象徴する地支。火のエネルギーを持ち、深い洞察と変革の力があります。表面の静けさの裏に強い意志と集中力を秘めています。' },
+  '午': { yomi:'うま', gogyo:'火', inyo:'陽', season:'夏・5月', image:'情熱・自由', desc:'燃え盛る情熱と自由を象徴する地支。火のエネルギーを持ち、明るく積極的で行動力があります。自分の感情に正直で、周囲を惹きつける魅力があります。' },
+  '未': { yomi:'ひつじ', gogyo:'土', inyo:'陰', season:'夏・6月', image:'優しさ・芸術', desc:'豊かな感受性と芸術性を象徴する地支。土のエネルギーを持ち、温かさと包容力が特徴。美的センスに優れ、人の気持ちに寄り添う優しさがあります。' },
+  '申': { yomi:'さる', gogyo:'金', inyo:'陽', season:'秋・7月', image:'機転・行動力', desc:'素早い判断と行動力を象徴する地支。金のエネルギーを持ち、機転が利いて柔軟な対応が得意。変化への適応力が高く、さまざまな状況でその力を発揮します。' },
+  '酉': { yomi:'とり', gogyo:'金', inyo:'陰', season:'秋・8月', image:'美意識・完璧主義', desc:'高い美意識と完璧を追求する力を象徴する地支。金のエネルギーを持ち、細部へのこだわりと審美眼が特徴。磨かれることで輝く、研ぎ澄まされた感性があります。' },
+  '戌': { yomi:'いぬ', gogyo:'土', inyo:'陽', season:'秋・9月', image:'誠実・忠義', desc:'揺るぎない誠実さと忠義を象徴する地支。土のエネルギーを持ち、信頼と安定感が特徴。一度決めた信念を貫く強さと、人への深い思いやりがあります。' },
+  '亥': { yomi:'い', gogyo:'水', inyo:'陰', season:'冬・10月', image:'強さ・粘り強さ', desc:'深い強さと粘り強さを象徴する地支。水のエネルギーを持ち、静かな中に底知れぬ力があります。困難に負けず、最後まで諦めない精神力が特徴です。' },
+};
+
+// 五行
+const KAN_GOGYO = ['木','木','火','火','土','土','金','金','水','水'];
+const KAN_INYO  = ['陽','陰','陽','陰','陽','陰','陽','陰','陽','陰'];
+const SHI_GOGYO = ['水','土','木','木','土','火','火','土','金','金','土','水'];
+
+// 通変星テーブル: [自分の五行インデックス][相手の五行インデックス] での名称
+// 同じ五行 → 比肩/劫財、生む → 食神/傷官、剋する → 偏財/正財、剋される → 偏官/正官、生まれる → 偏印/印綬
+const GOGYO_IDX = {'木':0,'火':1,'土':2,'金':3,'水':4};
+// 五行の関係: 相生: 木→火→土→金→水→木, 相剋: 木剋土, 火剋金, 土剋水, 金剋木, 水剋火
+function getHensei(nichikan_idx, tenkan_idx){
+  const nG = KAN_GOGYO[nichikan_idx];
+  const tG = KAN_GOGYO[tenkan_idx];
+  const nY = KAN_INYO[nichikan_idx];
+  const tY = KAN_INYO[tenkan_idx];
+  const same = nY === tY;
+
+  if(nG === tG) return same ? '比肩' : '劫財';
+
+  // 五行相生相剋
+  const seisho = {'木':'火','火':'土','土':'金','金':'水','水':'木'};
+  const seikoku = {'木':'土','火':'金','土':'水','金':'木','水':'火'};
+  const hisho   = {'火':'木','土':'火','金':'土','水':'金','木':'水'};// nGを生む
+  const hisha   = {'土':'木','金':'火','水':'土','木':'金','火':'水'};// nGに剋される
+
+  if(seisho[nG] === tG) return same ? '食神' : '傷官';// nGがtGを生む
+  if(seikoku[nG] === tG) return same ? '偏財' : '正財';// nGがtGを剋す
+  if(hisha[nG] === tG) return same ? '偏官' : '正官';// tGがnGを剋す
+  if(hisho[nG] === tG) return same ? '偏印' : '印綬';// tGがnGを生む
+  return '—';
+}
+
+// 十二運星テーブル: 日干(十干index) × 十二支(index) → 十二運
+// 甲から順に、子から始まる十二運
+const JYU12_TABLE = [
+  // 甲:  子  丑  寅  卯  辰  巳  午  未  申  酉  戌  亥
+       ['沐浴','冠帯','建禄','帝旺','衰','病','死','墓','絶','胎','養','長生'],
+  // 乙
+       ['病','衰','帝旺','建禄','冠帯','沐浴','長生','養','胎','絶','墓','死'],
+  // 丙
+       ['胎','養','長生','沐浴','冠帯','建禄','帝旺','衰','病','死','墓','絶'],
+  // 丁
+       ['絶','墓','死','病','衰','帝旺','建禄','冠帯','沐浴','長生','養','胎'],
+  // 戊
+       ['胎','養','長生','沐浴','冠帯','建禄','帝旺','衰','病','死','墓','絶'],
+  // 己
+       ['絶','墓','死','病','衰','帝旺','建禄','冠帯','沐浴','長生','養','胎'],
+  // 庚
+       ['死','墓','絶','胎','養','長生','沐浴','冠帯','建禄','帝旺','衰','病'],
+  // 辛
+       ['長生','養','胎','絶','墓','死','病','衰','帝旺','建禄','冠帯','沐浴'],
+  // 壬
+       ['帝旺','衰','病','死','墓','絶','胎','養','長生','沐浴','冠帯','建禄'],
+  // 癸
+       ['建禄','冠帯','沐浴','長生','養','胎','絶','墓','死','病','衰','帝旺'],
+];
+
+// 蔵干テーブル: 十二支 → [余気, 中気, 正気] (干のindex)
+// 余気・中気は場合によりnull
+const ZOUGAN = [
+  // 子: 壬(8)のみ
+  [null,null,8],
+  // 丑: 癸(9)余気, 辛(7)中気, 己(5)正気
+  [9,7,5],
+  // 寅: 戊(4)余気, 丙(2)中気, 甲(0)正気
+  [4,2,0],
+  // 卯: 甲(0)余気, 乙(1)正気 → 中気なし
+  [null,null,1],
+  // 辰: 乙(1)余気, 癸(9)中気, 戊(4)正気
+  [1,9,4],
+  // 巳: 戊(4)余気, 庚(6)中気, 丙(2)正気
+  [4,6,2],
+  // 午: 丙(2)余気, 己(5)中気, 丁(3)正気
+  [2,5,3],
+  // 未: 丁(3)余気, 乙(1)中気, 己(5)正気
+  [3,1,5],
+  // 申: 戊(4)余気, 壬(8)中気, 庚(6)正気
+  [4,8,6],
+  // 酉: 庚(6)余気, 辛(7)正気 → 中気なし
+  [null,null,7],
+  // 戌: 辛(7)余気, 丁(3)中気, 戊(4)正気
+  [7,3,4],
+  // 亥: 戊(4)余気, 甲(0)中気, 壬(8)正気
+  [4,0,8],
+];
+
+// 日干の解説
+// ========================================================
+//  通変星 解説データ
+// ========================================================
+const HENSEI_DESC = {
+  '比肩': { yomi:'ひけん', image:'🌳', keyword:'自立・競争・独立心',
+    desc:'日干と同じ五行・同じ陰陽。自分と同じエネルギーを持つ星。独立心が強く、自分のペースで動きたいタイプ。競争心も高く、人に頼らず自力で道を切り拓きます。友人・兄弟・同僚を表すこともあります。' },
+  '劫財': { yomi:'ごうざい', image:'⚡', keyword:'行動力・強引さ・義侠心',
+    desc:'日干と同じ五行・異なる陰陽。比肩に似た独立心を持ちながら、より積極的で行動力があります。義侠心が強く仲間を大切にします。お金の出入りが激しくなる傾向も。' },
+  '食神': { yomi:'しょくじん', image:'🎨', keyword:'自由・才能・楽しむ力',
+    desc:'日干が生む五行・同じ陰陽。自分のエネルギーを自然に表現できる星。芸術・食・趣味など「楽しむ」分野で才能が開花します。おおらかでマイペース、人を和ませる力があります。' },
+  '傷官': { yomi:'しょうかん', image:'🌟', keyword:'才気・反骨精神・革新',
+    desc:'日干が生む五行・異なる陰陽。鋭い感性と才気を持つ星。既存のルールにとらわれない革新的な発想が持ち味。言葉や表現の才能に優れますが、強い個性が摩擦を生むこともあります。' },
+  '偏財': { yomi:'へんざい', image:'💰', keyword:'社交・お金・行動力',
+    desc:'日干が剋す五行・同じ陰陽。行動的でお金を動かす星。社交的で人脈が広く、ビジネスチャンスをつかむ嗅覚に優れます。父親・お金・社交関係を表すこともあります。' },
+  '正財': { yomi:'せいざい', image:'🏦', keyword:'堅実・貯蓄・誠実',
+    desc:'日干が剋す五行・異なる陰陽。コツコツと積み上げる堅実な星。計画的にお金を管理し、信頼関係を大切にします。誠実で約束を守り、長期的な安定を築く力があります。' },
+  '偏官': { yomi:'へんかん', image:'⚔️', keyword:'行動・競争・突破力',
+    desc:'日干を剋す五行・同じ陰陽。強いプレッシャーの中で力を発揮する星。スピード感と突破力があり、リスクを恐れない行動派。武官的な強さを持ち、困難な状況ほど輝きます。' },
+  '正官': { yomi:'せいかん', image:'👑', keyword:'責任感・品格・社会的評価',
+    desc:'日干を剋す五行・異なる陰陽。社会的な評価と名誉を表す星。責任感が強く、ルールや礼節を重んじます。品格と信頼性があり、組織の中で高い評価を得やすい星です。' },
+  '偏印': { yomi:'へんいん', image:'🔮', keyword:'直感・学び・独創性',
+    desc:'日干を生む五行・同じ陰陽。直感と独創的な発想を育てる星。学ぶことが好きで、独特の視点を持ちます。精神世界・スピリチュアル・研究分野への親和性があります。' },
+  '印綬': { yomi:'いんじゅ', image:'📚', keyword:'知性・包容力・母の愛',
+    desc:'日干を生む五行・異なる陰陽。知性と包容力を育てる星。学問・資格・教育と縁があります。母親的な温かさで周囲を包み込み、信頼と尊敬を集めます。精神的な豊かさを表します。' },
+};
+
+// ========================================================
+//  十二運 解説データ
+// ========================================================
+const JYU12_DESC = {
+  '長生': { yomi:'ちょうせい', power:'強', image:'🌱', keyword:'誕生・純粋・可能性',
+    desc:'生まれたての赤ちゃんのようなエネルギー。純粋で可能性に満ち、物事の始まりと縁が深い。新しいことへの適応力が高く、長く愛される力があります。' },
+  '沐浴': { yomi:'もくよく', power:'中', image:'💧', keyword:'感受性・魅力・不安定',
+    desc:'産湯につかる幼児のエネルギー。感受性が豊かで魅力的ですが、気まぐれな面も。恋愛や芸術の才能に恵まれ、異性を引き付ける力があります。' },
+  '冠帯': { yomi:'かんたい', power:'強', image:'🎓', keyword:'成長・自信・積極性',
+    desc:'元服（成人式）を迎えたエネルギー。自信と積極性が高まり、社会に出て力を発揮し始める段階。向上心が強く、自己表現が豊かです。' },
+  '建禄': { yomi:'けんろく', power:'最強', image:'⭐', keyword:'実力・独立・充実',
+    desc:'働き盛りの壮年期のエネルギー。自分の力が最も充実し、独立心と実力が際立つ星。自分のやり方で道を切り拓く力があります。十二運の中でも特に強い運勢。' },
+  '帝旺': { yomi:'ていおう', power:'最強', image:'👑', keyword:'頂点・カリスマ・支配力',
+    desc:'人生の絶頂期のエネルギー。強烈なカリスマ性と支配力を持ち、周囲を動かす力があります。建禄と並ぶ最強の運勢。自己主張が強く、リーダー的存在になります。' },
+  '衰': { yomi:'すい', power:'中', image:'🍂', keyword:'安定・落ち着き・知恵',
+    desc:'壮年期を過ぎた円熟のエネルギー。勢いは落ちますが、経験と知恵が身につく段階。堅実で安定した行動ができ、派手さはなくても着実に結果を出します。' },
+  '病': { yomi:'びょう', power:'弱', image:'🌙', keyword:'繊細・感受性・内省',
+    desc:'体が弱まるエネルギー。体力的には落ちますが、精神的・芸術的な感受性が高まります。内省的で繊細な感性を持ち、クリエイティブな才能が開花しやすい面も。' },
+  '死': { yomi:'し', power:'弱', image:'🕯️', keyword:'集中・完成・一途',
+    desc:'一つの周期の終わりのエネルギー。一点集中の力があり、好きなことへの没頭力は抜群。変化を嫌う面がありますが、深く極める専門家的才能を持ちます。' },
+  '墓': { yomi:'ぼ', power:'中', image:'🗺️', keyword:'蓄積・執着・財運',
+    desc:'倉庫に納めるエネルギー。財を蓄える力があり、コレクター的な傾向も。表に出ないところで力を蓄え、じっくりと資産や実力を積み上げます。' },
+  '絶': { yomi:'ぜつ', power:'弱', image:'🌌', keyword:'変化・解放・新しい始まり',
+    desc:'ゼロに戻るエネルギー。既存のものが終わり、次の始まりへの移行期。環境の変化や転換点と縁が深く、変化の多い人生になりやすいですが、そこに活路があります。' },
+  '胎': { yomi:'たい', power:'中', image:'🥚', keyword:'準備・可能性・秘める力',
+    desc:'母の胎内にいる段階のエネルギー。まだ表には出ていませんが、大きな可能性を内に秘めています。準備期間として充実した内面を育てている段階。' },
+  '養': { yomi:'よう', power:'中', image:'🌿', keyword:'育まれる・守られる・素直',
+    desc:'大切に育てられる段階のエネルギー。人から助けてもらえる素直さと、周囲を和ませる温かさがあります。良い人間関係に恵まれ、サポートを受けながら成長します。' },
+};
+
+const NICHIKAN_DESC = {
+  '甲':{ yomi:'きのえ', image:'大樹', gogyo:'木', inyo:'陽', title:'甲 — 大樹', gogyoFull:'木（陽）', desc:'天に向かって真っ直ぐに伸びる大木。意志が強く、向上心旺盛。リーダーシップを発揮し、周囲を引っ張る力があります。一度決めた方向に粘り強く進む反面、融通が利かない頑固さも。正義感が強く、誠実な人柄が信頼を集めます。' },
+  '乙':{ yomi:'きのと', image:'草花', gogyo:'木', inyo:'陰', title:'乙 — 草花', gogyoFull:'木（陰）', desc:'しなやかに風に揺れる草花。外見は柔らかく見えますが、その根は深く、どんな環境にも適応する強さを持ちます。情が深く、人の感情を読む感受性に優れています。美的センスと繊細さで周囲を和ませる存在。' },
+  '丙':{ yomi:'ひのえ', image:'太陽', gogyo:'火', inyo:'陽', title:'丙 — 太陽', gogyoFull:'火（陽）', desc:'天に燦然と輝く太陽。明るく積極的で、周囲に活力を与える存在感があります。社交的でオープン、隠し事が苦手なほど裏表のない性格。情熱的で行動力があり、注目を集める華やかさを持ちます。' },
+  '丁':{ yomi:'ひのと', image:'ともしび', gogyo:'火', inyo:'陰', title:'丁 — ともしび', gogyoFull:'火（陰）', desc:'夜を静かに照らすろうそくの灯火。温かく包み込む優しさと、深い知性が特徴。表面は穏やかですが、内側には強い情熱と信念を持っています。細やかな気配りで人の心を癒す、奥深い魅力があります。' },
+  '戊':{ yomi:'つちのえ', image:'大山', gogyo:'土', inyo:'陽', title:'戊 — 大山', gogyoFull:'土（陽）', desc:'どっしりとそびえる大きな山。安定感と包容力があり、周囲から頼りにされます。堅実で誠実、自分のペースを守りながら着実に積み上げていく力があります。感情を表に出さない分、信頼性は抜群です。' },
+  '己':{ yomi:'つちのと', image:'田畑', gogyo:'土', inyo:'陰', title:'己 — 田畑', gogyoFull:'土（陰）', desc:'生命を育む肥沃な大地。細やかな観察力と気配りで周囲をサポートする力があります。柔軟に人の意見を受け入れ、じっくりと物事を育てていく忍耐力の持ち主。実務能力が高く、縁の下の力持ち的存在。' },
+  '庚':{ yomi:'かのえ', image:'剣', gogyo:'金', inyo:'陽', title:'庚 — 剣', gogyoFull:'金（陽）', desc:'磨き上げられた鋭い刀剣。意志が固く、白黒はっきりとした判断を好みます。正義感が強く、曲がったことを嫌う清廉さが特徴。行動力と決断力に優れ、困難な状況でも突き進む強さを持っています。' },
+  '辛':{ yomi:'かのと', image:'宝石', gogyo:'金', inyo:'陰', title:'辛 — 宝石', gogyoFull:'金（陰）', desc:'磨かれることで輝きを増す宝石。美意識が高く、細部へのこだわりと完璧主義が特徴。繊細な感性を持ち、審美眼に優れています。表面の上品さの裏に意外な強さと執念があり、目標に向かって粘り強く努力します。' },
+  '壬':{ yomi:'みずのえ', image:'大海', gogyo:'水', inyo:'陽', title:'壬 — 大海', gogyoFull:'水（陽）', desc:'すべてを受け入れ包み込む広大な海。スケールの大きな発想と行動力が特徴。知的好奇心が旺盛で、どんな情報も取り込み活用できます。自由を愛し、枠にとらわれない発想で周囲を驚かせることも。' },
+  '癸':{ yomi:'みずのと', image:'雨露', gogyo:'水', inyo:'陰', title:'癸 — 雨露', gogyoFull:'水（陰）', desc:'静かに大地を潤す雨や霧。繊細な感受性と深い洞察力を持ちます。表面は穏やかですが、内面は豊かな感情と鋭い直感に満ちています。縁の下からそっと支える優しさと、独特の美意識を兼ね備えています。' },
+};
+
+// ========================================================
+//  ユリウス日計算
+// ========================================================
+function toJD(year,month,day,hour,min){
+  // hour,minはJST（UTC+9）と仮定
+  const h = hour + min/60 - 9; // UTC
+  let y=year, m=month, d=day + h/24;
+  if(m<=2){ y--; m+=12; }
+  const A=Math.floor(y/100);
+  const B=2-A+Math.floor(A/4);
+  return Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+d+B-1524.5;
+}
+
+// ========================================================
+//  節入り日時をDate(UTC ms)に変換
+// ========================================================
+function sekkiDate(year, sekkiIdx){
+  const data = SEKKI[year];
+  if(!data) return null;
+  // 一部の年でidx=1(立春)が重複してidx=2に入っている(13エントリ)
+  // その場合idx>=2は実際のインデックス+1にずらす
+  const actualIdx = (data.length === 13 && sekkiIdx >= 2) ? sekkiIdx + 1 : sekkiIdx;
+  const d = data[actualIdx];
+  if(!d) return null;
+  // JSTで格納 → UTC
+  return new Date(Date.UTC(year, d[0]-1, d[1], d[2]-9, d[3]));
+}
+
+// ========================================================
+//  年柱の算出
+//  節入りインデックス 1 = 立春
+// ========================================================
+function calcNenchu(birth){
+  let y = birth.getFullYear();
+  const risshunn = sekkiDate(y, 1);
+  if(risshunn && birth < risshunn) y--;
+  // 1864年(甲子年)を基準
+  const offset = ((y - 1864) % 60 + 60) % 60;
+  return { kan: offset % 10, shi: offset % 12, offset }; // offset=空亡計算用
+}
+
+// ========================================================
+//  月柱の算出
+//  月の節インデックス（0-based年内）:
+//  1月=0(小寒), 2月=1(立春), 3月=2(驚蟄), 4月=3(清明),
+//  5月=4(立夏), 6月=5(芒種), 7月=6(小暑), 8月=7(立秋),
+//  9月=8(白露), 10月=9(寒露), 11月=10(立冬), 12月=11(大雪)
+// ========================================================
+function calcGetschu(birth, nenchu_kan){
+  const m = birth.getMonth(); // 0-11
+  const y = birth.getFullYear();
+
+  // まず当月の節入り日時を取得
+  let sekkiIdx = m; // SEKKI配列インデックスは月-1
+  let sekkiY = y;
+  const sDate = sekkiDate(sekkiY, sekkiIdx);
+
+  // 節入り前なら前の月
+  let monthIdx; // 0=寅月, 1=卯月, ... 月柱用インデックス
+  if(sDate && birth < sDate){
+    // 前の節
+    if(m === 0){
+      sekkiY = y - 1;
+      sekkiIdx = 11;
+    } else {
+      sekkiIdx = m - 1;
+    }
+    monthIdx = sekkiIdx; // 前の節のインデックス
+  } else {
+    monthIdx = m;
+  }
+
+  // 月柱の干支：寅月(立春後)を基準
+  // 月支: 寅=0,卯=1,...丑=11 → SHI12インデックスに変換
+  // 寅=2(SHI12), 月インデックス0→寅2, 1→卯3, ..., 11→丑1
+  const shi_offset = [1,2,3,4,5,6,7,8,9,10,11,0];
+  const shi = shi_offset[monthIdx];
+
+  // 月干: 五虎遁年法（寅月基準）
+  // 寅月の月干: 甲己年=丙,乙庚年=戊,丙辛年=庚,丁壬年=壬,戊癸年=甲
+  const base_kan = [2,4,6,8,0]; // 寅月基準: 甲己=丙(2),乙庚=戊(4),丙辛=庚(6),丁壬=壬(8),戊癸=甲(0)
+  const nk = nenchu_kan % 5;
+  // monthIdx: 0=丑,1=寅,...,11=子 → 寅基準オフセット: (monthIdx-1+12)%12
+  const kan = (base_kan[nk] + (monthIdx - 1 + 12) % 12) % 10;
+  return { kan, shi };
+}
+
+// ========================================================
+//  日柱の算出
+//  基準: 2000年1月7日 = 甲子日 (JD = 2451551.5)
+// ========================================================
+function calcNicchu(birth){
+  const jd = toJD(birth.getFullYear(), birth.getMonth()+1, birth.getDate(), 0, 0);
+  const baseJD = toJD(2000,1,7,0,0);
+  const diff = Math.floor(jd - baseJD);
+  const offset = ((diff % 60) + 60) % 60;
+  return { kan: offset % 10, shi: offset % 12, offset }; // offset=空亡計算用
+}
+
+// ========================================================
+//  時柱の算出
+// ========================================================
+function calcJicchu(hour, min, nicchu_kan){
+  const totalMin = hour*60 + min;
+  // 子時: 23:00-0:59, 丑時: 1:00-2:59 ...
+  // 23時台も子 → (totalMin + 60) / 120 でインデックス
+  let shi;
+  if(totalMin >= 23*60 || totalMin < 1*60) shi = 0;  // 子
+  else shi = Math.floor((totalMin + 60) / 120) % 12;
+
+  // 時干: 日干から起算
+  // 甲己日→子時=甲子, 乙庚日→子時=丙子, 丙辛日→子時=戊子, 丁壬日→子時=庚子, 戊癸日→子時=壬子
+  const base_kan = [0,2,4,6,8];
+  const nk = nicchu_kan % 5;
+  const kan = (base_kan[nk] + shi) % 10;
+  return { kan, shi };
+}
+
+// ========================================================
+//  通変星（天干）
+// ========================================================
+function calcHensei(nichikan_idx, tenkan_idx){
+  return getHensei(nichikan_idx, tenkan_idx);
+}
+
+// ========================================================
+//  十二運星
+// ========================================================
+function calcJyu12(nichikan_idx, shi_idx){
+  return JYU12_TABLE[nichikan_idx][shi_idx];
+}
+
+// ========================================================
+//  蔵干通変星
+// ========================================================
+function calcZouganHensei(nichikan_idx, zougan_kan_idx){
+  if(zougan_kan_idx === null) return '—';
+  return getHensei(nichikan_idx, zougan_kan_idx);
+}
+
+// ========================================================
+//  空亡（天中殺）計算
+//  日柱のoffset（0-59）が属する旬から、対応する空亡地支2つを返す
+// ========================================================
+const KUUBO_TABLE = [
+  [10,11], // 甲子旬(offset  0- 9): 空亡=戌・亥
+  [ 8, 9], // 甲戌旬(offset 10-19): 空亡=申・酉
+  [ 6, 7], // 甲申旬(offset 20-29): 空亡=午・未
+  [ 4, 5], // 甲午旬(offset 30-39): 空亡=辰・巳
+  [ 2, 3], // 甲辰旬(offset 40-49): 空亡=寅・卯
+  [ 0, 1], // 甲寅旬(offset 50-59): 空亡=子・丑
+];
+function calcKuubo(nicchu_offset){ // nicchu_offset = 日柱の六十甲子番号(0-59)
+  return KUUBO_TABLE[Math.floor(nicchu_offset / 10)];
+}
+
+// ========================================================
+//  大運・年運 計算
+// ========================================================
+function calcDaun(birth, nenchu_kan, nenchu_shi, month_kan, month_shi, isFemale){
+  // 順行: 陽年男 or 陰年女 / 逆行: 陽年女 or 陰年男
+  const nenYo = (nenchu_kan % 2 === 0); // 陽年=true(甲丙戊庚壬=0,2,4,6,8)
+  const junko = (nenYo && !isFemale) || (!nenYo && isFemale); // 順行か
+
+  // 起運日数を計算（前後の節気との差）
+  const y = birth.getFullYear();
+  let targetDate;
+  if(junko){
+    // 順行: 次の節気（生まれ月の翌月節）
+    const nextIdx = birth.getMonth() + 1; // getMonth()は0-11
+    const nextYear = nextIdx >= 12 ? y + 1 : y;
+    const nextIdxMod = nextIdx % 12;
+    targetDate = sekkiDate(nextYear, nextIdxMod);
+    if(!targetDate) return null;
+  } else {
+    // 逆行: 前の節気（生まれ月の節）
+    const prevIdx = birth.getMonth();
+    targetDate = sekkiDate(y, prevIdx);
+    if(!targetDate) return null;
+  }
+
+  const diffMs = Math.abs(targetDate - birth);
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  const startAge = Math.floor(diffDays / 3);
+  const remainMonths = Math.round((diffDays / 3 - startAge) * 12);
+
+  // 大運干支を生成
+  const list = [];
+  for(let i = 0; i < 9; i++){
+    let kan, shi;
+    if(junko){
+      kan = (month_kan + 1 + i) % 10;
+      shi = (month_shi + 1 + i) % 12;
+    } else {
+      kan = ((month_kan - 1 - i) % 10 + 10) % 10;
+      shi = ((month_shi - 1 - i) % 12 + 12) % 12;
+    }
+    list.push({ age: startAge + i * 10, kan, shi });
+  }
+  return { startAge, remainMonths, list, junko };
+}
+
+function calcNenun(year){
+  // その年の干支
+  const offset = ((year - 1864) % 60 + 60) % 60;
+  return { kan: offset % 10, shi: offset % 12 };
+}
+
+// ========================================================
+//  大運・年運 HTML生成
+// ========================================================
+function buildUnseiHTML(dauResult, birthYear, nik){
+  if(!dauResult) return '';
+
+  const KAN10_ = KAN10, SHI12_ = SHI12;
+  const currentYear = new Date().getFullYear();
+
+  // ---- 大運カード ----
+  let daunHTML = '';
+  dauResult.list.forEach(function(d){
+    const currentAge = currentYear - birthYear;
+    const isCurrent  = currentAge >= d.age && currentAge < d.age + 10;
+    const startYr    = birthYear + d.age;
+    const endYr      = startYr + 9;
+    const h_kan      = calcHensei(nik, d.kan);
+    const j_shi      = calcJyu12(nik, d.shi);
+    const nowBadge   = isCurrent ? '<div class="daun-card-now">▶ 現在の大運</div>' : '';
+    const cls        = isCurrent ? ' current' : '';
+    const kanStr     = KAN10_[d.kan];
+    const shiStr     = SHI12_[d.shi];
+    const ageLabel   = d.age + '〜' + (d.age+9) + '歳';
+    daunHTML +=
+      '<div class="daun-card' + cls + '">'
+      + nowBadge
+      + '<div class="daun-card-label">' + ageLabel + '（' + startYr + '〜' + endYr + '）</div>'
+      + '<div class="daun-card-kss" style="cursor:pointer;" onclick="openDaunKssPanel(\'' + kanStr + '\',\'' + shiStr + '\',' + nik + ')">'
+        + '<span style="text-decoration:underline dotted 1px rgba(184,150,46,0.4);">' + kanStr + shiStr + '</span>'
+      + '</div>'
+      + '<div class="daun-card-hensei">'
+        + '<span style="cursor:pointer;" onclick="openHenseiPanel(\'' + h_kan + '\',\'' + ageLabel + 'の大運\')">' + h_kan + '</span>'
+        + '・'
+        + '<span style="cursor:pointer;" onclick="openJyu12Panel(\'' + j_shi + '\',\'' + ageLabel + 'の大運\')">' + j_shi + '</span>'
+      + '</div>'
+      + '</div>';
+  });
+
+  // ---- 年運テーブル ----
+  let nenunRows = '';
+  for(let yr = currentYear - 3; yr <= currentYear + 5; yr++){
+    const nu     = calcNenun(yr);
+    const age    = yr - birthYear;
+    const h_kan  = calcHensei(nik, nu.kan);
+    const j_shi  = calcJyu12(nik, nu.shi);
+    const kanStr = KAN10_[nu.kan];
+    const shiStr = SHI12_[nu.shi];
+    const yrLabel = yr + '年';
+    const rowCls = yr === currentYear ? ' class="this-year"' : '';
+    nenunRows +=
+      '<tr' + rowCls + '>'
+      + '<td>' + yrLabel + '</td>'
+      + '<td>' + age + '歳</td>'
+      + '<td style="cursor:pointer;" onclick="openDaunKssPanel(\'' + kanStr + '\',\'' + shiStr + '\',' + nik + ')">'
+        + '<span style="text-decoration:underline dotted 1px rgba(184,150,46,0.4);">' + kanStr + shiStr + '</span>'
+      + '</td>'
+      + '<td style="cursor:pointer;" onclick="openHenseiPanel(\'' + h_kan + '\',\'' + yrLabel + 'の年運\')">'
+        + '<span style="text-decoration:underline dotted 1px rgba(255,255,255,0.2);">' + h_kan + '</span>'
+      + '</td>'
+      + '<td style="cursor:pointer;" onclick="openJyu12Panel(\'' + j_shi + '\',\'' + yrLabel + 'の年運\')">'
+        + '<span style="text-decoration:underline dotted 1px rgba(255,255,255,0.2);">' + j_shi + '</span>'
+      + '</td>'
+      + '</tr>';
+  }
+
+  const junkoLabel  = dauResult.junko ? '順行（じゅんこう）' : '逆行（ぎゃっこう）';
+  const remainLabel = dauResult.remainMonths > 0 ? dauResult.remainMonths + 'ヶ月' : '';
+
+  return '<div class="unsei-section fade-in">'
+    + '<div class="unsei-section-title" style="cursor:pointer;" onclick="openRowLabelPanel(\'大運\')">'
+    + '大 運（だいうん）— 10年ごとの流れ　<span style="font-size:0.6rem;opacity:0.5;">ⓘ</span></div>'
+    + '<div style="font-size:0.72rem;color:var(--silver-dim);margin-bottom:0.7rem;">起運: '
+    + dauResult.startAge + '歳' + remainLabel + '　' + junkoLabel + '</div>'
+    + '<div class="daun-grid">' + daunHTML + '</div>'
+    + '<div class="unsei-section-title" style="margin-top:1rem;cursor:pointer;" onclick="openRowLabelPanel(\'年運\')">'
+    + '年 運（ねんうん）— その年の運気　<span style="font-size:0.6rem;opacity:0.5;">ⓘ</span></div>'
+    + '<table class="nenun-table">'
+    + '<tr><th>年</th><th>年齢</th><th>干支</th><th>天干の星</th><th>十二運</th></tr>'
+    + nenunRows
+    + '</table>'
+    + '</div>';
+}
+
+
+
+// ========================================================
+//  行ラベル（天干・地支など）の説明データ
+// ========================================================
+const ROW_LABEL_DESC = {
+  '天干': {
+    yomi: 'てんかん',
+    desc: '各柱の上の文字。「天のエネルギー」を表します。表に出る性格・意識・行動パターンのこと。日柱の天干（甲・乙・丙…）が命式全体の主役「日干（にっかん）」になります。',
+    point: '天干は「外に見える自分」。人から見てわかりやすい部分です。'
+  },
+  '地支': {
+    yomi: 'ちし',
+    desc: '各柱の下の文字。「地のエネルギー」を表します。内面・本能・環境など、表には出にくい深い部分のこと。12種類（子・丑・寅…）あります。',
+    point: '地支は「内に秘めた自分」。本人も気づきにくい根っこの部分です。'
+  },
+  '蔵干': {
+    yomi: 'ぞうかん',
+    desc: '地支の中に隠れている天干のこと。例えば「辰」の中には乙・癸・戊が隠れています。表には出ていませんが、深いところで影響を与えます。',
+    point: '蔵干は「地支の中身」。命式を詳しく読むときに重要です。'
+  },
+  '通変星': {
+    yomi: 'つうへんせい',
+    desc: '日干（自分）から見て、他の天干がどんな関係にあるかを10種類の星で表したもの。比肩・劫財・食神・傷官・偏財・正財・偏官・正官・偏印・印綬の10種類があります。',
+    point: '通変星は「日干とのエネルギーの関係性」を示す星。性格や才能を読む手がかりになります。'
+  },
+  '蔵干星': {
+    yomi: 'ぞうかんせい',
+    desc: '蔵干（地支の中に隠れた天干）と日干との通変星関係のこと。表面には出ていませんが、深いところで働く隠れた才能や環境を表します。',
+    point: '蔵干星は「隠れた才能・環境」。運が動くタイミングで表面に出てきます。'
+  },
+  '大運': {
+    yomi: 'だいうん',
+    desc: '10年ごとに切り替わる大きな運気の流れ。生まれた日から次（または前）の節気までの日数を「3日＝1年」に換算して起運年齢を出し、月柱から順番に干支を並べて読みます。',
+    point: '大運は「人生のステージ」。その10年のテーマを表します。命式とのぶつかり方で良し悪しが変わります。'
+  },
+  '年運': {
+    yomi: 'ねんうん',
+    desc: 'その年の干支（例：2025年＝乙巳）が自分の命式にどう影響するかを読む運勢。天干が日干とどんな通変星になるか、地支が十二運のどの状態かで読みます。',
+    point: '年運は「その年のテーマ・追い風・注意点」を示します。大運と組み合わせるとより詳しく読めます。'
+  },
+  '十二運': {
+    yomi: 'じゅうにうん',
+    desc: '日干のエネルギーが地支によってどの状態にあるかを、人の一生（誕生〜死〜再生）にたとえて12段階で表したもの。長生・沐浴・冠帯・建禄・帝旺・衰・病・死・墓・絶・胎・養の12種類。',
+    point: '十二運は「そのエネルギーの強さ・状態」を表します。建禄・帝旺が最も強い状態です。'
+  },
+};
+
+// ========================================================
+//  柱の意味データ（グローバル）
+// ========================================================
+const PILLAR_INFO = [
+  {
+    label:'年柱', yomi:'ねんちゅう',
+    age:'0〜15歳ごろ',
+    rows:[
+      ['表すもの','先祖・両親・幼少期'],
+      ['環境','生まれ持った家庭環境'],
+      ['読み方','「年（ねん）」+「柱（ちゅう）」'],
+      ['ポイント','自分では選べなかった「出発点」の柱'],
+    ]
+  },
+  {
+    label:'月柱', yomi:'げっちゅう',
+    age:'15〜30歳ごろ',
+    rows:[
+      ['表すもの','仕事・社会・青年期'],
+      ['環境','才能が開花する場所・スタイル'],
+      ['読み方','「月（げつ）」+「柱（ちゅう）」'],
+      ['ポイント','社会でどう動くか、仕事の才能が出る柱'],
+    ]
+  },
+  {
+    label:'日柱', yomi:'にっちゅう',
+    age:'30〜50歳ごろ',
+    rows:[
+      ['表すもの','自分自身・配偶者'],
+      ['環境','本来の性格・本質'],
+      ['読み方','「日（にっ）」+「柱（ちゅう）」'],
+      ['ポイント','命式の主役。天干が「日干（にっかん）」で、すべての基準になる'],
+    ]
+  },
+  {
+    label:'時柱', yomi:'じちゅう',
+    age:'50歳以降',
+    rows:[
+      ['表すもの','子ども・晩年・老後'],
+      ['環境','自分が育て残すもの'],
+      ['読み方','「時（じ）」+「柱（ちゅう）」'],
+      ['ポイント','晩年の運気と、自分が世に残す影響を表す柱'],
+    ]
+  },
+];
+
+// ========================================================
+//  五行バランス計算
+// ========================================================
+function calcBalance(pillars){
+  const cnt = {木:0,火:0,土:0,金:0,水:0};
+  for(const p of pillars){
+    if(p){
+      cnt[KAN_GOGYO[p.kan]]++;
+      cnt[SHI_GOGYO[p.shi]]++;
+    }
+  }
+  return cnt;
+}
+
+// ========================================================
+//  HTML描画
+// ========================================================
+function kanClass(kan_idx){
+  const g = KAN_GOGYO[kan_idx];
+  return {木:'kan-moku',火:'kan-ka',土:'kan-do',金:'kan-kin',水:'kan-sui'}[g] || '';
+}
+
+function jyu12Class(name){
+  if(['帝旺','建禄'].includes(name)) return 'jyu12-taikyoku';
+  if(['衰','病','死','墓','絶'].includes(name)) return 'jyu12-keibo';
+  return '';
+}
+
+function buildPillarCell(pillar, colClass, nichikan_idx, label){
+  if(!pillar) return `<td class="${colClass} kan" style="color:var(--indigo-pale);font-size:1rem;">—</td>`;
+  const kc = kanClass(pillar.kan);
+  const dayHighlight = colClass.includes('day') ? ' day' : '';
+  return `<td class="${colClass} kan ${dayHighlight} ${kc}">${KAN10[pillar.kan]}</td>`;
+}
+
+function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime){
+  const nik = day_p.kan; // 日干インデックス
+  const pillars = [year_p, month_p, day_p, hour_p];
+  const labels = ['年柱','月柱','日柱','時柱'];
+  const cols = ['year','month','day-pillar-col','hour'];
+
+  // 五行バランス
+  const balance = calcBalance(unknownTime ? [year_p,month_p,day_p] : pillars);
+  const balTotal = Object.values(balance).reduce((a,b)=>a+b,0);
+
+  // 通変星・十二運（天干）
+  const hensei = pillars.map((p,i)=> p ? calcHensei(nik, p.kan) : '—');
+  const jyu12  = pillars.map((p,i)=> p ? calcJyu12(nik, p.shi) : '—');
+
+  // 蔵干
+  const zg = pillars.map((p,i)=>{
+    if(!p) return null;
+    return ZOUGAN[p.shi];
+  });
+
+  // 蔵干通変星
+  const zgHensei = zg.map((z,i)=>{
+    if(!z) return null;
+    return z.map(k => k!==null ? `${KAN10[k]}(${calcZouganHensei(nik, k)})` : null).filter(Boolean);
+  });
+
+  const noHourClass = unknownTime ? 'no-hour' : '';
+
+  let tableRows = '';
+
+  // 1行目: ラベル（タップで解説パネル）
+  // PILLAR_INFO はグローバルで定義
+
+  tableRows += `<tr>
+    <th class="col-label"></th>
+    ${labels.map((l,i)=>{
+      const info = PILLAR_INFO[i];
+      const colCls = cols[i] === 'day-pillar-col' ? 'day-pillar-col' : cols[i];
+      return `<th class="${colCls}" style="cursor:pointer;" onclick="openPillarPanel(${i})">
+        <span style="display:block;letter-spacing:0.1em;">${info.label}</span>
+        <span style="display:block;font-size:0.62rem;color:var(--silver-dim);letter-spacing:0.04em;">（${info.yomi}）</span>
+      </th>`;
+    }).join('')}
+  </tr>`;
+
+  // 2行目: 天干（タップで中央ポップアップ）
+  tableRows += `<tr>
+    <td class="col-label" style="cursor:pointer;" onclick="openRowLabelPanel('天干')">天干<br><span style="font-size:0.65rem;color:var(--silver-dim);">（てんかん）</span></td>
+    ${pillars.map((p,i)=>{
+      if(!p) return `<td class="${cols[i]} hour-col" style="color:var(--silver-dim);font-size:0.8rem;">不明</td>`;
+      const kc = kanClass(p.kan);
+      const dayEx = i===2 ? ' day' : '';
+      const kanName = KAN10[p.kan];
+      return `<td class="${cols[i]} kan${dayEx} ${kc}">
+        <span class="kan-pill" onclick="openKanPanel('${kanName}',${i})">${kanName}</span>
+      </td>`;
+    }).join('')}
+  </tr>`;
+
+  // 3行目: 地支（タップで中央ポップアップ）
+  tableRows += `<tr>
+    <td class="col-label" style="cursor:pointer;" onclick="openRowLabelPanel('地支')">地支<br><span style="font-size:0.65rem;color:var(--silver-dim);">（ちし）</span></td>
+    ${pillars.map((p,i)=>{
+      if(!p) return `<td class="${cols[i]} hour-col shi" style="color:var(--silver-dim);">—</td>`;
+      const shiName = SHI12[p.shi];
+      return `<td class="${cols[i]} shi">
+        <span class="shi-pill" onclick="openShiPanel('${shiName}')">${shiName}</span>
+      </td>`;
+    }).join('')}
+  </tr>`;
+
+  // 4行目: 蔵干
+  tableRows += `<tr>
+    <td class="col-label" style="cursor:pointer;" onclick="openRowLabelPanel('蔵干')">蔵干<br><span style="font-size:0.65rem;color:var(--silver-dim);">（ぞうかん）</span></td>
+    ${zg.map((z,i)=>{
+      if(!z) return `<td class="${cols[i]} zougan-cell hour-col">—</td>`;
+      const items = [z[2],z[1],z[0]].filter(k=>k!==null)
+        .map((k,j)=>{
+          const role = j===0?'正気':j===1?'中気':'余気';
+          return `<span class="zougan-item">${KAN10[k]}<span>（${role}）</span></span>`;
+        }).join('');
+      return `<td class="${cols[i]} zougan-cell">${items}</td>`;
+    }).join('')}
+  </tr>`;
+
+  // 5行目: 通変星（天干）
+  const pillarLabels = ['年柱','月柱','日柱','時柱'];
+  tableRows += `<tr>
+    <td class="col-label" style="cursor:pointer;" onclick="openRowLabelPanel('通変星')">通変星<br><span style="font-size:0.65rem;color:var(--silver-dim);">（つうへんせい）</span></td>
+    ${hensei.map((h,i)=>{
+      if(!pillars[i]) return `<td class="${cols[i]} hensei-cell hour-col">—</td>`;
+      const dayStyle = i===2 ? 'color:var(--gold-light);font-weight:500;' : '';
+      const ctx = pillarLabels[i] + 'の通変星';
+      if(i===2) return `<td class="${cols[i]} hensei-cell" style="${dayStyle}"><span style="font-size:0.65rem;color:var(--gold-dark);display:block;">日 主</span></td>`;
+      return `<td class="${cols[i]} hensei-cell">
+        <span class="hj-pill" onclick="openHenseiPanel('${h}','${ctx}')">${h}</span>
+      </td>`;
+    }).join('')}
+  </tr>`;
+
+  // 6行目: 蔵干通変星
+  tableRows += `<tr>
+    <td class="col-label" style="cursor:pointer;" onclick="openRowLabelPanel('蔵干星')">蔵干星<br><span style="font-size:0.65rem;color:var(--silver-dim);">（ぞうかんせい）</span></td>
+    ${zgHensei.map((z,i)=>{
+      if(!z) return `<td class="${cols[i]} zougan-cell hour-col">—</td>`;
+      return `<td class="${cols[i]} zougan-cell">${z.map(s=>`<span class="zougan-item">${s}</span>`).join('')}</td>`;
+    }).join('')}
+  </tr>`;
+
+  // 7行目: 十二運
+  tableRows += `<tr>
+    <td class="col-label" style="cursor:pointer;" onclick="openRowLabelPanel('十二運')">十二運<br><span style="font-size:0.65rem;color:var(--silver-dim);">（じゅうにうん）</span></td>
+    ${jyu12.map((j,i)=>{
+      if(!pillars[i]) return `<td class="${cols[i]} jyunsei-cell hour-col">—</td>`;
+      const jc = jyu12Class(j);
+      const ctx = pillarLabels[i] + 'の十二運';
+      return `<td class="${cols[i]} jyunsei-cell ${jc}">
+        <span class="hj-pill" onclick="openJyu12Panel('${j}','${ctx}')">${j}</span>
+      </td>`;
+    }).join('')}
+  </tr>`;
+
+  // 蔵干通変星詳細（天干のみではなく地支蔵干全体も）
+  // 空亡（天中殺）
+  const kuuboShis = calcKuubo(day_p.offset);
+  const kuuboNames = kuuboShis.map(s => SHI12[s]);
+  // 命式の各柱に空亡地支が含まれるか判定
+  const kuuboInPillars = pillars.filter(Boolean).filter(p => kuuboShis.includes(p.shi));
+
+  const nichikan = KAN10[nik];
+  const ndesc = NICHIKAN_DESC[nichikan];
+
+  // 五行バランスHTML（アコーディオン付き）
+  const gogyoNames = ['木','火','土','金','水'];
+  const gogyoColors = ['#5db856','#e05c40','#c8a840','#b0c4de','#4aa8d8'];
+  const maxVal = Math.max(...Object.values(balance), 1);
+  const gogyoDetail = {
+    '木': { image:'樹木・成長・上昇', season:'春', direction:'東', organ:'肝・胆', emotion:'怒り・慈悲', trait:'柔軟・向上心・創造性',
+            uму:'水', umu_reason:'水が木を育てる', umu_verb:'育てられる',
+            uмu2:'火', umu2_reason:'木が燃えて火を生む', umu2_verb:'生む',
+            koku:'金', koku_reason:'金属（斧）が木を切る', koku_verb:'剋される',
+            koku2:'土', koku2_reason:'木が土の養分を吸う', koku2_verb:'剋す' },
+    '火': { image:'太陽・情熱・拡散', season:'夏', direction:'南', organ:'心・小腸', emotion:'喜び・興奮', trait:'明朗・積極性・直感力',
+            uму:'木', umu_reason:'木が燃えて火を生む', umu_verb:'育てられる',
+            uмu2:'土', umu2_reason:'火が燃えて灰（土）になる', umu2_verb:'生む',
+            koku:'水', koku_reason:'水が火を消す', koku_verb:'剋される',
+            koku2:'金', koku2_reason:'火が金属を溶かす', koku2_verb:'剋す' },
+    '土': { image:'大地・安定・中心', season:'土用', direction:'中央', organ:'脾・胃', emotion:'思慮・憂い', trait:'誠実・包容力・堅実さ',
+            uму:'火', umu_reason:'火が燃えて灰（土）になる', umu_verb:'育てられる',
+            uмu2:'金', umu2_reason:'土から金属が採れる', umu2_verb:'生む',
+            koku:'木', koku_reason:'木が土の養分を吸う', koku_verb:'剋される',
+            koku2:'水', koku2_reason:'土が水をせき止める', koku2_verb:'剋す' },
+    '金': { image:'鉱石・収縮・鋭さ', season:'秋', direction:'西', organ:'肺・大腸', emotion:'悲しみ・義', trait:'正義感・決断力・几帳面',
+            uму:'土', umu_reason:'土から金属が採れる', umu_verb:'育てられる',
+            uмu2:'水', umu2_reason:'金属が冷えて水を生む', umu2_verb:'生む',
+            koku:'火', koku_reason:'火が金属を溶かす', koku_verb:'剋される',
+            koku2:'木', koku2_reason:'金属（斧）が木を切る', koku2_verb:'剋す' },
+    '水': { image:'流れ・知恵・浸透', season:'冬', direction:'北', organ:'腎・膀胱', emotion:'恐れ・意志', trait:'知性・忍耐力・神秘性',
+            uму:'金', umu_reason:'金属が冷えて水を生む', umu_verb:'育てられる',
+            uмu2:'木', umu2_reason:'水が木を育てる', umu2_verb:'生む',
+            koku:'土', koku_reason:'土が水をせき止める', koku_verb:'剋される',
+            koku2:'火', koku2_reason:'水が火を消す', koku2_verb:'剋す' },
+  };
+  const gogyoColorMap = {'木':'#5db856','火':'#e05c40','土':'#c8a840','金':'#b0c4de','水':'#4aa8d8'};
+  const balHtml = gogyoNames.map((g,i)=>{
+    const d = gogyoDetail[g];
+    const pct = Math.round(balance[g]/maxVal*100);
+    return `
+    <div class="gogyo-bar" onclick="this.classList.toggle('open')">
+      <div class="gogyo-bar-main">
+        <span class="gogyo-label" style="color:${gogyoColors[i]}">${g}</span>
+        <div class="gogyo-track">
+          <div class="gogyo-fill" style="width:${pct}%;background:${gogyoColors[i]}"></div>
+        </div>
+        <span style="font-size:0.72rem;color:var(--silver-dim);min-width:1.5rem;text-align:right">${balance[g]}</span>
+        <span class="gogyo-arrow">▼</span>
+      </div>
+      <div class="gogyo-detail">
+        <div class="gogyo-detail-item">
+          <div class="gogyo-detail-key">イメージ</div>
+          <div class="gogyo-detail-val" style="color:${gogyoColors[i]}">${d.image}</div>
+        </div>
+        <div class="gogyo-detail-item">
+          <div class="gogyo-detail-key">季 節</div>
+          <div class="gogyo-detail-val">${d.season}</div>
+        </div>
+        <div class="gogyo-detail-item">
+          <div class="gogyo-detail-key">方 角</div>
+          <div class="gogyo-detail-val">${d.direction}</div>
+        </div>
+        <div class="gogyo-detail-item">
+          <div class="gogyo-detail-key">臓 器</div>
+          <div class="gogyo-detail-val">${d.organ}</div>
+        </div>
+        <div class="gogyo-detail-item">
+          <div class="gogyo-detail-key">感 情</div>
+          <div class="gogyo-detail-val">${d.emotion}</div>
+        </div>
+        <div class="gogyo-detail-item">
+          <div class="gogyo-detail-key">特 性</div>
+          <div class="gogyo-detail-val">${d.trait}</div>
+        </div>
+        <div class="gogyo-detail-item" style="grid-column:1/-1;background:rgba(100,200,100,0.06);border:1px solid rgba(100,200,100,0.15);">
+          <div class="gogyo-detail-key" style="color:#5db856;">🌿 相生（そうせい）― 助け合う</div>
+          <div class="gogyo-detail-val" style="display:flex;justify-content:center;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-top:0.3rem;">
+            <span style="color:${gogyoColorMap[d.uму]};font-size:0.9rem;font-weight:500;">${d.uму}</span>
+            <span style="color:var(--silver-dim);font-size:0.7rem;">→${d.umu_verb}→</span>
+            <span style="color:${gogyoColors[i]};font-size:0.9rem;font-weight:500;">${g}</span>
+            <span style="color:var(--silver-dim);font-size:0.7rem;">→生む→</span>
+            <span style="color:${gogyoColorMap[d.uмu2]};font-size:0.9rem;font-weight:500;">${d.uмu2}</span>
+          </div>
+          <div style="font-size:0.68rem;color:var(--silver-dim);margin-top:0.3rem;line-height:1.6;">
+            ◂ ${d.uму}から：${d.umu_reason}<br>▸ ${d.uмu2}へ：${d.umu2_reason}
+          </div>
+        </div>
+        <div class="gogyo-detail-item" style="grid-column:1/-1;background:rgba(200,80,60,0.06);border:1px solid rgba(200,80,60,0.15);">
+          <div class="gogyo-detail-key" style="color:#e05c40;">⚔ 相剋（そうこく）― 打ち消し合う</div>
+          <div class="gogyo-detail-val" style="display:flex;justify-content:center;align-items:center;gap:0.5rem;flex-wrap:wrap;margin-top:0.3rem;">
+            <span style="color:${gogyoColorMap[d.koku]};font-size:0.9rem;font-weight:500;">${d.koku}</span>
+            <span style="color:#e05c40;font-size:0.7rem;">→${d.koku_verb}→</span>
+            <span style="color:${gogyoColors[i]};font-size:0.9rem;font-weight:500;">${g}</span>
+            <span style="color:#e05c40;font-size:0.7rem;">→剋す→</span>
+            <span style="color:${gogyoColorMap[d.koku2]};font-size:0.9rem;font-weight:500;">${d.koku2}</span>
+          </div>
+          <div style="font-size:0.68rem;color:var(--silver-dim);margin-top:0.3rem;line-height:1.6;">
+            ◂ ${d.koku}から：${d.koku_reason}<br>▸ ${d.koku2}へ：${d.koku2_reason}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+
+  // 十干詳細データ
+  const TENKAN_DETAIL = {
+    '甲':{ yomi:'きのえ', image:'大樹', gogyo:'木', inyo:'陽', rank:'十干の1番目・リーダーの星',
+      strengths:['天に向かってまっすぐ伸びる大木のように、目標に向かってブレない','正義感が強く、人の上に立つことへの適性がある','開拓者精神、新しいものを切り拓く力がある'],
+      weaknesses:['大木は風に揺れない分、強い風には折れやすい → 頑固・融通が利かない面も','曲がることが苦手なので、プライドが高く見られることがある'],
+      gogyo_rel:['水（壬・癸）に育てられる → 水の人にサポートされやすい','火（丙・丁）を生む → 周囲に情熱や明るさを与える存在','金（庚・辛）に剋される → 金の人からプレッシャーを受けやすい','土（戊・己）を剋す → 土の人の上に立ちやすい関係'] },
+    '乙':{ yomi:'きのと', image:'草花', gogyo:'木', inyo:'陰', rank:'十干の2番目・適応の星',
+      strengths:['しなやかに環境に適応する柔軟性と粘り強さがある','感受性が豊かで、人の気持ちを敏感に察知できる','美的センスが高く、芸術・デザイン・表現に才能を発揮'],
+      weaknesses:['表面は穏やかでも内側に強い執念を持ち、根に絡みつくような粘着質な面も','依存心が出やすく、誰かの支えを求める傾向がある'],
+      gogyo_rel:['水（壬・癸）に育てられる → 水の人に潤してもらえる','火（丙・丁）を生む → 周囲を温め明るくする','金（庚・辛）に剋される → 金の人に圧迫されやすい','土（戊・己）を剋す → 土の安定を崩してでも成長する'] },
+    '丙':{ yomi:'ひのえ', image:'太陽', gogyo:'火', inyo:'陽', rank:'十干の3番目・輝きの星',
+      strengths:['明るく積極的で、いるだけで場の雰囲気を明るくする','社交的でオープン、裏表がなく誰からも信頼される','情熱的で行動力があり、注目を集める存在感がある'],
+      weaknesses:['感情の起伏が激しく、喜怒哀楽がそのまま顔に出やすい','飽きっぽい面があり、長期的な継続が苦手なことも'],
+      gogyo_rel:['木（甲・乙）に育てられる → 木の人に応援され輝く','土（戊・己）を生む → 周囲に安定・信頼をもたらす','水（壬・癸）に剋される → 水の人に勢いを消されやすい','金（庚・辛）を剋す → 金の人の堅さを溶かす力がある'] },
+    '丁':{ yomi:'ひのと', image:'ともしび', gogyo:'火', inyo:'陰', rank:'十干の4番目・深化の星',
+      strengths:['温かく包み込む優しさで、人の心を癒す力がある','表面は穏やかでも内側に強い情熱と信念を持つ','細やかな気配りと深い知性で、人の本質を見抜く'],
+      weaknesses:['感情が繊細すぎて、ちょっとしたことで傷ついてしまう','外には出さないが、内心でぐるぐる抱え込みやすい'],
+      gogyo_rel:['木（甲・乙）に育てられる → 木の人の支えで輝きを増す','土（戊・己）を生む → 静かな情熱で周囲を育む','水（壬・癸）に剋される → 水の人の論理に押されやすい','金（庚・辛）を剋す → 粘り強い情熱で金の頑固さを溶かす'] },
+    '戊':{ yomi:'つちのえ', image:'大山', gogyo:'土', inyo:'陽', rank:'十干の5番目・安定の星',
+      strengths:['どっしりとした包容力で、周囲から絶大な信頼を得る','堅実で誠実、自分のペースで着実に積み上げていく','感情を表に出さない分、冷静な判断力が光る'],
+      weaknesses:['頑固で変化を嫌い、柔軟に動くことが苦手な面も','動き出すまでが遅く、フットワークが重いことがある'],
+      gogyo_rel:['火（丙・丁）に育てられる → 火の人の情熱に支えられる','金（庚・辛）を生む → 揺るぎない土台で周囲を支える','木（甲・乙）に剋される → 木の人の行動力に揺さぶられやすい','水（壬・癸）を剋す → 水の流れを受け止め方向を定める'] },
+    '己':{ yomi:'つちのと', image:'田畑', gogyo:'土', inyo:'陰', rank:'十干の6番目・育成の星',
+      strengths:['細やかな観察力で周囲の変化を敏感に察知しサポートする','柔軟に人の意見を受け入れ、関係をうまく調整できる','コツコツと物事を育てていく忍耐力と実務能力が高い'],
+      weaknesses:['優柔不断になりやすく、自分の意見を主張するのが苦手','人に合わせすぎて、自分を見失うことがある'],
+      gogyo_rel:['火（丙・丁）に育てられる → 火の人の熱意に潤される','金（庚・辛）を生む → 地道な努力で周囲に実りをもたらす','木（甲・乙）に剋される → 木の人の強引さに振り回されやすい','水（壬・癸）を剋す → 感情の流れを受け止め安定させる'] },
+    '庚':{ yomi:'かのえ', image:'剣', gogyo:'金', inyo:'陽', rank:'十干の7番目・決断の星',
+      strengths:['意志が固く、白黒はっきりとした決断力がある','正義感が強く、曲がったことを嫌う清廉な人柄','困難な状況でも突き進む強さと行動力を持つ'],
+      weaknesses:['融通が利かず、頑固に見られることがある','感情表現が不器用で、冷たい印象を与えてしまうことも'],
+      gogyo_rel:['土（戊・己）に育てられる → 土の人の安定に支えられる','水（壬・癸）を生む → 鋭い知性で周囲に知恵を与える','火（丙・丁）に剋される → 火の人の情熱に押し負けることも','木（甲・乙）を剋す → 木の人の方向性をカットして整える'] },
+    '辛':{ yomi:'かのと', image:'宝石', gogyo:'金', inyo:'陰', rank:'十干の8番目・洗練の星',
+      strengths:['高い美意識と完璧主義で、細部まで丁寧に仕上げる','繊細な感性と審美眼で、美しいものを見極める力がある','表面の上品さの裏に意外な強さと執念がある'],
+      weaknesses:['プライドが高く、傷つきやすい繊細な一面がある','こだわりが強すぎて、妥協できず消耗することも'],
+      gogyo_rel:['土（戊・己）に育てられる → 土の人に磨かれて輝く','水（壬・癸）を生む → 磨かれた知性で周囲に潤いをもたらす','火（丙・丁）に剋される → 火の情熱に自分の鋭さが溶かされやすい','木（甲・乙）を剋す → 繊細さで木の荒削りな部分を整える'] },
+    '壬':{ yomi:'みずのえ', image:'大海', gogyo:'水', inyo:'陽', rank:'十干の9番目・広大の星',
+      strengths:['スケールの大きな発想と行動力で周囲を引っ張る','どんな情報も取り込み活用できる高い知的好奇心','枠にとらわれない自由な発想で新しい道を切り拓く'],
+      weaknesses:['自由を愛しすぎて、ルールや枠組みに縛られると爆発する','大きすぎる器ゆえ、細かい部分が雑になりやすい'],
+      gogyo_rel:['金（庚・辛）に育てられる → 金の人の知性に磨かれる','木（甲・乙）を生む → 広い視野で周囲の成長を後押しする','土（戊・己）に剋される → 土の人の保守性に流れを止められやすい','火（丙・丁）を剋す → 冷静な視点で感情的な火を制する'] },
+    '癸':{ yomi:'みずのと', image:'雨露', gogyo:'水', inyo:'陰', rank:'十干の10番目・洞察の星',
+      strengths:['繊細な感受性と鋭い直感で本質を見抜く','静かに大地を潤すように、縁の下でそっと周囲を支える','独特の美意識と豊かな感情世界を持つ'],
+      weaknesses:['繊細すぎて傷つきやすく、内にこもりがちな面がある','直感が強すぎて、論理的な説明が苦手なことも'],
+      gogyo_rel:['金（庚・辛）に育てられる → 金の人の洗練さに育まれる','木（甲・乙）を生む → 静かな知恵で周囲の成長を支える','土（戊・己）に剋される → 土の人の重さに流れを止められやすい','火（丙・丁）を剋す → 冷静な感性で熱くなりすぎる火を鎮める'] },
+  };
+
+  // 天干一覧（タップで展開）
+  const usedKan = [...new Set(pillars.filter(Boolean).map(p=>KAN10[p.kan]))];
+  const tenkanList = usedKan.map(k=>{
+    const d = TENKAN_DETAIL[k];
+    const gc = kanClass(KAN10.indexOf(k));
+    return `<span class="tenkan-pill ${gc}" onclick="toggleTenkan('td_${k}', this)">${k} ${d.gogyo}${d.inyo}</span>`;
+  });
+
+  const html = `
+  <div class="result-title fade-in">
+    <h2>命 式 表</h2>
+    <div class="person-name">${birthStr}生</div>
+  </div>
+
+  <div class="meishiki-wrapper fade-in">
+    <table class="meishiki-table ${noHourClass}">
+      ${tableRows}
+    </table>
+  </div>
+
+  <div class="kuubo-card fade-in">
+    <div class="kuubo-title">空 亡（天 中 殺）</div>
+    <div class="kuubo-content">
+      <div class="kuubo-shi">
+        ${kuuboNames.map(s=>`<span class="kuubo-badge">${s}</span>`).join('<span class="kuubo-sep">・</span>')}
+      </div>
+      <div class="kuubo-note">
+        日柱「${KAN10[day_p.kan]}${SHI12[day_p.shi]}」が属する旬の空亡地支です。
+        ${kuuboInPillars.length > 0
+          ? `命式中に空亡地支（${kuuboInPillars.map(p=>SHI12[p.shi]).join('・')}）が含まれています。`
+          : '命式中に空亡地支は含まれていません。'}
+      </div>
+    </div>
+  </div>
+
+  <div class="interp-grid fade-in">
+    <div class="interp-card">
+      <div class="interp-card-title">日 干 — 命 の 主 星</div>
+      <div class="nichikan-name ${kanClass(nik)}">${nichikan}</div>
+      <div style="font-size:0.72rem;color:var(--gold-light);margin-bottom:0.6rem;">${ndesc.title}／${ndesc.gogyoFull}</div>
+      <div class="nichikan-desc">${ndesc.desc}</div>
+    </div>
+
+    <div class="interp-card">
+      <div class="interp-card-title">五 行 バ ラ ン ス</div>
+      ${balHtml}
+      <div style="margin-top:1rem;">
+        <div class="interp-card-title" style="margin-bottom:0.5rem;">天 干 一 覧</div>
+        <div style="font-size:0.68rem;color:var(--silver-dim);margin-bottom:0.5rem;">タップで詳細を展開</div>
+        <div class="tenkan-list">${tenkanList.join('')}</div>
+        ${usedKan.map(k=>{
+          const d = TENKAN_DETAIL[k];
+          const gc = kanClass(KAN10.indexOf(k));
+          const gogyoColorMap2 = {'木':'#5db856','火':'#e05c40','土':'#c8a840','金':'#b0c4de','水':'#4aa8d8'};
+          const col = gogyoColorMap2[d.gogyo];
+          return `<div class="tenkan-detail-panel" id="td_${k}">
+            <div class="tenkan-detail-header">
+              <span class="tenkan-detail-kanji ${gc}">${k}</span>
+              <div>
+                <div style="font-size:0.8rem;color:var(--gold-light);">${d.yomi}　${d.image}</div>
+                <div class="tenkan-detail-sub">${d.gogyo}（${d.inyo}）　${d.rank}</div>
+              </div>
+            </div>
+            <div class="tenkan-kyoaku">
+              <div class="tenkan-kyoaku-box" style="border-left:2px solid #5db856;">
+                <div class="tenkan-kyoaku-title" style="color:#5db856;">✦ 強み</div>
+                <div class="tenkan-kyoaku-item">${d.strengths.map(s=>`・${s}`).join('<br>')}</div>
+              </div>
+              <div class="tenkan-kyoaku-box" style="border-left:2px solid #e05c40;">
+                <div class="tenkan-kyoaku-title" style="color:#e05c40;">✦ 弱み</div>
+                <div class="tenkan-kyoaku-item">${d.weaknesses.map(s=>`・${s}`).join('<br>')}</div>
+              </div>
+            </div>
+            <div style="font-size:0.65rem;letter-spacing:0.2em;color:var(--silver-dim);margin-bottom:0.4rem;">五行から見た関係性</div>
+            <div class="tenkan-gogyo-row">
+              ${d.gogyo_rel.map(r=>`<div class="tenkan-gogyo-item">${r}</div>`).join('')}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="interp-card" style="grid-column: 1 / -1;">
+      <div class="interp-card-title">十 二 運 の 解 説</div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.8rem;margin-top:0.3rem;">
+        ${pillars.map((p,i)=>{
+          if(!p) return '';
+          const j = jyu12[i];
+          const jc = jyu12Class(j);
+          const descs = {
+            '長生':'生まれたばかりの旺盛な生命力。新しいことへの適応力が高い。',
+            '沐浴':'入浴のように心身をリセット。変化に富み、行動力があるが移り気な面も。',
+            '冠帯':'成長著しい時期を象徴。向上心と野心が強く、積極的に自己を磨く。',
+            '建禄':'活動の絶頂期。自立心と実行力が強く、仕事への誠実さが光る。',
+            '帝旺':'最大の力と権力を象徴。強い意志と支配力。リーダーとして輝く星。',
+            '衰':'緩やかな衰退期。落ち着きと安定感が増し、経験と知恵で補う。',
+            '病':'心身の疲弊を示す。繊細で感受性が高く、芸術的才能が開花しやすい。',
+            '死':'一つの終わりと変化。深い内省と精神性。静かな強さを秘める。',
+            '墓':'蓄積と保管を象徴。堅実で保守的。財を守り積み上げる力がある。',
+            '絶':'完全な消滅と再生の前段階。霊感や直感が鋭く、神秘的な力を持つ。',
+            '胎':'新たな生命の宿り。可能性に満ちた種子。物事の始まりを示す。',
+            '養':'大切に育てられる段階。温かい人間関係と恵まれた環境に縁がある。',
+          };
+          return `<div style="background:rgba(0,0,0,0.2);border:1px solid rgba(184,150,46,0.1);padding:0.8rem;border-radius:2px;">
+            <div style="font-size:0.65rem;letter-spacing:0.2em;color:var(--silver-dim);margin-bottom:0.2rem;">${labels[i]}</div>
+            <div class="jyunsei-cell ${jc}" style="font-size:1rem;margin-bottom:0.3rem;">${j}</div>
+            <div style="font-size:0.72rem;color:var(--silver);line-height:1.7;">${descs[j]||''}</div>
+          </div>`;
+        }).filter(Boolean).join('')}
+      </div>
+    </div>
+  </div>`;
+
+  // ========================================================
+
+  return html;
+}
+
+// ========================================================
+//  メイン計算関数
+// ========================================================
+function calculate(){
+  const dateStr = (document.getElementById('birthDateStr').value||'').replace(/\D/g,'');
+  if(dateStr.length !== 8){ alert('生年月日を8桁で入力してください（例：19860430）'); return; }
+  const yr = parseInt(dateStr.slice(0,4));
+  const mo = parseInt(dateStr.slice(4,6));
+  const da = parseInt(dateStr.slice(6,8));
+  if(yr < 1950 || yr > 2030){ alert('1950〜2030年の範囲で入力してください'); return; }
+  if(mo < 1 || mo > 12){ alert('月は1〜12で入力してください'); return; }
+  if(da < 1 || da > 31){ alert('日は1〜31で入力してください'); return; }
+
+  const unknownTime = document.getElementById('unknownTime').checked;
+  let hourVal = 0, minVal = 0;
+  if(!unknownTime){
+    const timeStr = (document.getElementById('birthTimeStr').value||'').replace(/\D/g,'');
+    if(timeStr.length !== 4){ alert('時刻を4桁で入力してください（例：1317）'); return; }
+    hourVal = parseInt(timeStr.slice(0,2));
+    minVal  = parseInt(timeStr.slice(2,4));
+    if(hourVal > 23 || minVal > 59){ alert('正しい時刻を入力してください'); return; }
+  }
+  const offsetMin = parseInt(document.getElementById('birthPlace').value)||0;
+
+  // 補正後の時刻（ローカルからJSTに変換して計算）
+  // birth DateTime for sekki comparison (use adjusted time, local noon if unknown)
+  let birthDT;
+  if(unknownTime){
+    birthDT = new Date(yr, mo-1, da, 12, 0, 0, 0);
+  } else {
+    birthDT = new Date(yr, mo-1, da, hourVal, minVal - offsetMin, 0, 0);
+  }
+
+  // 夜子時対応: 23:00以降は翌日の日柱で計算（伝統的中国式）
+  // 年柱・月柱は当日の時刻で判定、日柱のみ翌日を使用
+  let nicchiDate = birthDT;
+  if(!unknownTime && birthDT.getHours() >= 23){
+    nicchiDate = new Date(birthDT.getTime() + 24 * 60 * 60 * 1000);
+  }
+
+  // 年柱
+  const year_p = calcNenchu(birthDT);
+  // 月柱
+  const month_p = calcGetschu(birthDT, year_p.kan);
+  // 日柱（夜子時は翌日の日柱）
+  const day_p = calcNicchu(nicchiDate);
+  // 時柱
+  let hour_p = null;
+  if(!unknownTime){
+    // 補正後時刻
+    const adjDate = new Date(yr, mo-1, da, hourVal, minVal - offsetMin, 0, 0);
+    hour_p = calcJicchu(adjDate.getHours(), adjDate.getMinutes(), day_p.kan);
+  }
+
+
+  const birthStr = `${yr}年${mo}月${da}日${unknownTime?'':'　'+String(hourVal).padStart(2,'0')+':'+String(minVal).padStart(2,'0')}`;
+  const isFemale = document.getElementById('genderFemale').checked;
+  const birthForDaun = new Date(yr, mo-1, da, 12, 0);
+  const dauResult = calcDaun(birthForDaun, year_p.kan, year_p.shi, month_p.kan, month_p.shi, isFemale);
+  if(dauResult) dauResult.birthYear = yr;
+
+  const html = renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime);
+  const resultDiv = document.getElementById('result');
+  resultDiv.innerHTML = html + buildUnseiHTML(dauResult, yr, day_p ? day_p.kan : 0);
+  resultDiv.style.display = 'block';
+  resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// 十干アコーディオン
+function toggleTenkan(id, pill){
+  const panel = document.getElementById(id);
+  if(!panel) return;
+  const isOpen = panel.classList.contains('open');
+  // 全部閉じる
+  document.querySelectorAll('.tenkan-detail-panel').forEach(p=>p.classList.remove('open'));
+  document.querySelectorAll('.tenkan-pill').forEach(p=>p.classList.remove('active'));
+  // 開いていなかったら開く
+  if(!isOpen){
+    panel.classList.add('open');
+    pill.classList.add('active');
+    panel.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+}
+
+// 柱ヘッダー → 中央ポップアップ方式
+function togglePillarPanel(id, event){
+  event.stopPropagation();
+  // idから柱番号取得（id = 'ph_0'〜'ph_3'）
+  const colIdx = parseInt(id.split('_')[1]);
+  const info = PILLAR_INFO[colIdx];
+  if(!info) return;
+
+  document.getElementById('hjTitle').textContent = info.label + '（' + info.yomi + '）';
+  document.getElementById('hjYomi').textContent = '';
+  document.getElementById('hjBadge').textContent = '⏱ ' + info.age;
+  // rows を整形して表示
+  const descHTML = info.rows.map(r =>
+    '<span style="color:var(--silver-dim);font-size:0.7rem;margin-right:0.3rem;">' + r[0] + '</span>' + r[1]
+  ).join('<br>');
+  document.getElementById('hjDesc').innerHTML = descHTML;
+  document.getElementById('hjContext').textContent = '';
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
+// 外クリックで閉じる（地支パネルのみ）
+document.addEventListener('click', ()=>{
+  document.querySelectorAll('.shi-detail-panel').forEach(p=>p.classList.remove('open'));
+  document.querySelectorAll('.shi-pill').forEach(p=>p.classList.remove('active'));
+});
+
+// 通変星パネル
+function openHenseiPanel(name, context){
+  const d = HENSEI_DESC[name];
+  if(!d) return;
+  document.getElementById('hjTitle').textContent = name + '（' + d.image + '）';
+  document.getElementById('hjYomi').textContent = '（' + d.yomi + '）';
+  document.getElementById('hjBadge').textContent = d.keyword;
+  document.getElementById('hjDesc').textContent = d.desc;
+  document.getElementById('hjContext').textContent = context;
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
+
+// 十二運パネル
+function openJyu12Panel(name, context){
+  const d = JYU12_DESC[name];
+  if(!d) return;
+  document.getElementById('hjTitle').textContent = name + '　' + d.image;
+  document.getElementById('hjYomi').textContent = '（' + d.yomi + '）';
+  document.getElementById('hjBadge').textContent = '運勢の強さ: ' + d.power + '　／　' + d.keyword;
+  document.getElementById('hjDesc').textContent = d.desc;
+  document.getElementById('hjContext').textContent = context;
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
+
+function closeHjPanel(){
+  document.getElementById('hjPanel').classList.remove('open');
+  document.getElementById('hjOverlay').classList.remove('open');
+  document.querySelectorAll('.shi-detail-panel').forEach(p=>p.classList.remove('open'));
+  document.querySelectorAll('.shi-pill').forEach(p=>p.classList.remove('active'));
+}
+
+// 天干タップ → 中央ポップアップ
+function openKanPanel(kanName, colIdx){
+  const nd = NICHIKAN_DESC[kanName];
+  if(!nd) return;
+  const colLabels = ['年柱の天干','月柱の天干','日柱の天干（日干・命式の主役）','時柱の天干'];
+  const colMeanings = [
+    '先祖・両親・幼少期の環境に宿るエネルギー。生まれ持った気質の源。',
+    '仕事・才能・社会での動き方を表すエネルギー。',
+    'あなた自身そのものを表す最も重要な干。通変星・十二運の基準になります。',
+    '子ども・晩年に現れるエネルギー。自分が世に残すもの。',
+  ];
+  const gogyoYomi = {木:'もく',火:'か',土:'ど',金:'こん',水:'すい'};
+  document.getElementById('hjTitle').textContent = kanName + '（' + nd.yomi + '）';
+  document.getElementById('hjYomi').textContent = nd.image;
+  document.getElementById('hjBadge').textContent = nd.gogyo + '（' + (gogyoYomi[nd.gogyo]||'') + '）・' + nd.inyo;
+  document.getElementById('hjDesc').textContent = nd.desc;
+  document.getElementById('hjContext').innerHTML = '<b>' + colLabels[colIdx] + '</b><br>' + colMeanings[colIdx];
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
+// 旧関数（互換）
+function toggleKan(id, event){ event.stopPropagation(); }
+
+// 柱ヘッダー（年柱・月柱など）タップ
+function openPillarPanel(colIdx){
+  const info = PILLAR_INFO[colIdx];
+  if(!info) return;
+  document.getElementById('hjTitle').textContent = info.label + '（' + info.yomi + '）';
+  document.getElementById('hjYomi').textContent = '';
+  document.getElementById('hjBadge').textContent = '⏱ ' + info.age;
+  const descHTML = info.rows.map(r =>
+    '<span style="color:var(--silver-dim);font-size:0.7rem;margin-right:0.4rem;">' + r[0] + '</span>' + r[1]
+  ).join('<br>');
+  document.getElementById('hjDesc').innerHTML = descHTML;
+  document.getElementById('hjContext').textContent = '';
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
+
+// 大運・年運の干支タップ（天干＋地支の複合解説）
+function openDaunKssPanel(kanName, shiName, nik){
+  const nd = NICHIKAN_DESC[kanName];
+  const sd = SHI12_DETAIL[shiName];
+  const h  = calcHensei(nik, KAN10.indexOf(kanName));
+  const jy = calcJyu12(nik, SHI12.indexOf(shiName));
+  const hd = HENSEI_DESC[h];
+  const jd = JYU12_DESC[jy];
+  const gogyoYomi = {木:'もく',火:'か',土:'ど',金:'こん',水:'すい'};
+
+  let desc = '';
+  if(nd) desc += '【' + kanName + '（' + nd.yomi + '）】 ' + nd.gogyo + '・' + nd.inyo + '\n' + nd.desc + '\n\n';
+  if(sd) desc += '【' + shiName + '（' + sd.yomi + '）】 ' + sd.gogyo + ' ' + sd.inyo + '　' + sd.season + '\n' + sd.desc;
+
+  let ctx = '';
+  if(hd) ctx += '日干から見ると「' + h + '（' + hd.yomi + '）」— ' + hd.keyword + '\n' + hd.desc;
+  if(jd) ctx += '\n\n十二運「' + jy + '（' + jd.yomi + '）」— ' + jd.keyword + '\n' + jd.desc;
+
+  document.getElementById('hjTitle').textContent = kanName + shiName;
+  document.getElementById('hjYomi').textContent = nd ? '（' + nd.yomi + '・' + (sd?sd.yomi:'') + '）' : '';
+  document.getElementById('hjBadge').textContent = (nd?nd.gogyo:'') + (sd?' × ' + sd.gogyo + sd.inyo:'');
+  document.getElementById('hjDesc').style.whiteSpace = 'pre-wrap';
+  document.getElementById('hjDesc').textContent = desc;
+  document.getElementById('hjContext').style.whiteSpace = 'pre-wrap';
+  document.getElementById('hjContext').textContent = ctx;
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
+
+// 行ラベル（天干・地支など）タップ
+function openRowLabelPanel(name){
+  const d = ROW_LABEL_DESC[name];
+  if(!d) return;
+  document.getElementById('hjTitle').textContent = name + '（' + d.yomi + '）';
+  document.getElementById('hjYomi').textContent = '';
+  document.getElementById('hjBadge').textContent = d.point;
+  document.getElementById('hjDesc').textContent = d.desc;
+  document.getElementById('hjContext').textContent = '';
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
+
+// 地支タップ → 中央ポップアップ
+function openShiPanel(shiName){
+  const d = SHI12_DETAIL[shiName];
+  if(!d) return;
+  document.getElementById('hjTitle').textContent = shiName + '（' + d.yomi + '）';
+  document.getElementById('hjYomi').textContent = '';
+  document.getElementById('hjBadge').textContent = d.gogyo + ' ' + d.inyo + '　／　' + d.season + '　／　' + d.image;
+  document.getElementById('hjDesc').textContent = d.desc;
+  document.getElementById('hjContext').textContent = '';
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
+
+// 地支アコーディオン（旧・互換用）
+function toggleShi(id, pill){
+  const panel = document.getElementById(id);
+  if(!panel) return;
+  const isOpen = panel.classList.contains('open');
+  // 全部閉じる（中央ポップアップも）
+  document.getElementById('hjPanel').classList.remove('open');
+  document.getElementById('hjOverlay').classList.remove('open');
+  document.querySelectorAll('.shi-detail-panel').forEach(p=>p.classList.remove('open'));
+  document.querySelectorAll('.shi-pill').forEach(p=>p.classList.remove('active'));
+  if(!isOpen){
+    panel.classList.add('open');
+    pill.classList.add('active');
+  }
+}
+
+// リアルタイムプレビュー（生年月日）
+document.getElementById('birthDateStr').addEventListener('input', function(){
+  const s = this.value.replace(/\D/g,'');
+  const el = document.getElementById('datePreview');
+  if(s.length === 8){
+    const y=s.slice(0,4), m=s.slice(4,6), d=s.slice(6,8);
+    el.textContent = `${y}年 ${parseInt(m)}月 ${parseInt(d)}日`;
+  } else {
+    el.textContent = s.length > 0 ? `あと${8-s.length}桁` : '';
+  }
+});
+
+// リアルタイムプレビュー（時刻）
+document.getElementById('birthTimeStr').addEventListener('input', function(){
+  const s = this.value.replace(/\D/g,'');
+  const el = document.getElementById('timePreview');
+  if(s.length === 4){
+    el.textContent = `${parseInt(s.slice(0,2))}時 ${parseInt(s.slice(2,4))}分`;
+  } else {
+    el.textContent = s.length > 0 ? `あと${4-s.length}桁` : '';
+  }
+});
+
+// 初期プレビュー表示
+document.getElementById('birthDateStr').dispatchEvent(new Event('input'));
+document.getElementById('birthTimeStr').dispatchEvent(new Event('input'));
+
+// unknown時刻チェックボックス
+document.getElementById('unknownTime').addEventListener('change', function(){
+  document.getElementById('birthTimeStr').disabled = this.checked;
+  document.getElementById('timePreview').textContent = this.checked ? '' : '';
+});
+</script>
+<div class="hj-overlay" id="hjOverlay" onclick="closeHjPanel()"></div>
+<div class="hj-panel" id="hjPanel">
+  <div class="hj-panel-header">
+    <div>
+      <span class="hj-panel-title" id="hjTitle"></span>
+      <span class="hj-panel-yomi" id="hjYomi"></span>
+    </div>
+    <span class="hj-panel-close" onclick="closeHjPanel()">✕</span>
+  </div>
+  <div class="hj-panel-badge" id="hjBadge"></div>
+  <div class="hj-panel-desc" id="hjDesc"></div>
+  <div class="hj-panel-context" id="hjContext"></div>
+</div>
+</body>
+</html>

@@ -3912,41 +3912,16 @@ function toggleShichuuDetail(id) {
 }
 
 function runShichuu() {
-  syncBirthdate();
-  var bd = document.getElementById('birthdate').value;
-  var err = document.getElementById('bd-error');
-  if (!bd) { err.textContent = '生年月日を入力してください'; return; }
-
-  /* 前回の九星気学カード（年運×月運重ね読み・なぜこの運気か・方位ガイド・今日の日運など）が
-     残らないよう、別枠のenhanced-wrapもクリアする */
+  /* さくらこ四柱推命アプリをiframeで表示 */
   var ew = document.getElementById('enhanced-wrap');
   if (ew) ew.innerHTML = '';
 
-  var timeVal = document.getElementById('birth-time').value.trim();
-  var placeVal = document.getElementById('birth-place').value.trim();
-  var tm4 = timeVal.match(/^(\d{1,2}):(\d{2})$/);
-  var tmC = timeVal.match(/^(\d{1,2})(\d{2})$/);
-  var timeStr = null;
-  if (tm4) timeStr = ('0'+tm4[1]).slice(-2)+':'+tm4[2];
-  else if (tmC) timeStr = ('0'+tmC[1]).slice(-2)+':'+tmC[2];
-
-  var cityData = placeVal ? lookupCity(placeVal) : null;
-  var placeResult = document.getElementById('birth-place-result');
-  if (placeVal && !cityData) {
-    placeResult.textContent = '⚠ 都市が見つかりません（都道府県名や主要都市、海外の主要都市に対応）';
-  } else {
-    placeResult.textContent = '';
-  }
-
-  var compatBd = document.getElementById('compat-birthdate') ? document.getElementById('compat-birthdate').value : '';
-
-  var html = buildShichuuHTML(bd, timeStr, cityData, compatBd ? 'あなた' : '');
-  if (compatBd) {
-    html += buildShichuuHTML(compatBd, null, null, '相手');
-    html += buildShichuuAishoHTML(bd, compatBd);
-  }
   var rd = document.getElementById('result');
-  rd.innerHTML = html;
+  rd.innerHTML = '<div style="margin-top:1rem;">'
+    + '<iframe src="./さくらこ四柱推命.html" '
+    + 'style="width:100%;height:90vh;border:none;border-radius:8px;background:#0a1628;" '
+    + 'title="さくらこ四柱推命"></iframe>'
+    + '</div>';
   rd.style.display = 'block';
   rd.scrollIntoView({behavior:'smooth', block:'start'});
 }
