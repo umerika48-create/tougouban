@@ -12250,6 +12250,130 @@ const JYU12_DESC = {
 };
 
 
+
+/* ======= 友達データ（友達データ帳より） ======= */
+const FRIEND_DATA = [
+  {name:'うさみくん', date:'1993-03-28', time:'', place:''},
+  {name:'きゃん', date:'1986-05-19', time:'13:57', place:'福岡'},
+  {name:'やぁちゃん', date:'1987-03-23', time:'01:30', place:'福岡'},
+  {name:'あやこ', date:'1987-01-27', time:'19:59', place:'福島'},
+  {name:'あっちゃん', date:'1986-06-06', time:'08:21', place:'福岡'},
+  {name:'りいちゃん', date:'1997-02-27', time:'17:41', place:'福岡'},
+  {name:'まゆこりん', date:'1986-08-08', time:'23:59', place:'福岡'},
+  {name:'そらちゃん', date:'1986-11-17', time:'01:44', place:'福岡'},
+  {name:'まきのっち', date:'1986-12-15', time:'23:56', place:'宮崎'},
+  {name:'まどかちゃん', date:'1989-02-07', time:'16:27', place:'福岡'},
+  {name:'さわちゃん', date:'1991-12-06', time:'16:48', place:'福岡'},
+  {name:'牡丹先生', date:'1980-05-09', time:'16:00', place:'福岡'},
+  {name:'光架先生', date:'1986-02-01', time:'12:58', place:'福岡'},
+  {name:'英恵先生', date:'1968-10-09', time:'10:00', place:'福岡'},
+  {name:'みどりさん', date:'1971-03-21', time:'', place:''},
+  {name:'金山さん', date:'1974-05-01', time:'', place:''},
+  {name:'井上一也', date:'1957-03-14', time:'', place:''},
+  {name:'井上由香', date:'1958-11-05', time:'', place:''},
+  {name:'井上領', date:'1990-09-08', time:'16:52', place:'福岡'},
+  {name:'ひろき君', date:'1990-09-08', time:'07:00', place:''}
+];
+
+/* 友達の命式を計算してキャッシュ */
+var FRIEND_MEISHIKI_CACHE = null;
+
+function getFriendMeishiki() {
+  if(FRIEND_MEISHIKI_CACHE) return FRIEND_MEISHIKI_CACHE;
+  FRIEND_MEISHIKI_CACHE = [];
+  for(var i=0; i<FRIEND_DATA.length; i++) {
+    var f = FRIEND_DATA[i];
+    try {
+      var parts = f.date.split('-');
+      var yr = parseInt(parts[0]), mo = parseInt(parts[1]), da = parseInt(parts[2]);
+      var timeStr4 = f.time ? f.time.replace(':','') : '';
+      var unknownTime = !timeStr4;
+      var hourVal=0, minVal=0;
+      if(!unknownTime && timeStr4.length===4){
+        hourVal=parseInt(timeStr4.slice(0,2));
+        minVal=parseInt(timeStr4.slice(2,4));
+      }
+      var placeOffset=0;
+      if(f.place && typeof lookupCity === 'function'){
+        var cd = lookupCity(f.place);
+        if(cd && cd.lon) placeOffset = Math.round((cd.lon-135)*4);
+      }
+      var adjMin = unknownTime?0:minVal-placeOffset;
+      var birthDT = new Date(yr,mo-1,da,unknownTime?12:hourVal,adjMin);
+      var nicchiDate = (!unknownTime&&birthDT.getHours()>=23)
+        ?new Date(birthDT.getTime()+86400000):birthDT;
+      var year_p  = calcNenchu(birthDT);
+      var month_p = calcGetschu(birthDT,year_p.kan);
+      var day_p   = calcNicchu(nicchiDate);
+      var hour_p  = null;
+      if(!unknownTime){
+        var adjDate=new Date(yr,mo-1,da,hourVal,adjMin);
+        hour_p=calcJicchu(adjDate.getHours(),adjDate.getMinutes(),day_p.kan);
+      }
+      FRIEND_MEISHIKI_CACHE.push({
+        name: f.name,
+        year_p: year_p, month_p: month_p, day_p: day_p, hour_p: hour_p
+      });
+    } catch(e) {
+      FRIEND_MEISHIKI_CACHE.push({name:f.name, year_p:null, month_p:null, day_p:null, hour_p:null});
+    }
+  }
+  return FRIEND_MEISHIKI_CACHE;
+}
+
+/* 特定の柱×干に一致する友達を返す */
+function getFriendsWithKan(kanIdx, colIdx) {
+  var meishikis = getFriendMeishiki();
+  var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  var result = [];
+  for(var i=0; i<meishikis.length; i++) {
+    var m = meishikis[i];
+    var pillars = [m.year_p, m.month_p, m.day_p, m.hour_p];
+    var p = pillars[colIdx];
+    if(p && p.kan === kanIdx) result.push(m.name);
+  }
+  return result;
+}
+
+/* 特定の柱×地支に一致する友達を返す */
+function getFriendsWithShi(shiIdx, colIdx) {
+  var meishikis = getFriendMeishiki();
+  var result = [];
+  for(var i=0; i<meishikis.length; i++) {
+    var m = meishikis[i];
+    var pillars = [m.year_p, m.month_p, m.day_p, m.hour_p];
+    var p = pillars[colIdx];
+    if(p && p.shi === shiIdx) result.push(m.name);
+  }
+  return result;
+}
+
+/* 特定の柱×通変星に一致する友達を返す */
+function getFriendsWithHensei(henseiName, colIdx) {
+  var meishikis = getFriendMeishiki();
+  var result = [];
+  for(var i=0; i<meishikis.length; i++) {
+    var m = meishikis[i];
+    var pillars = [m.year_p, m.month_p, m.day_p, m.hour_p];
+    var nik = m.day_p ? m.day_p.kan : 0;
+    var p = pillars[colIdx];
+    if(p) {
+      var h = calcHensei(nik, p.kan);
+      if(h === henseiName) result.push(m.name);
+    }
+  }
+  return result;
+}
+
+/* Friend表示用HTML生成 */
+function buildFriendBadgeHTML(names) {
+  if(!names || names.length === 0) return '<span style="font-size:11px;color:var(--sk-silver-dim);">なし</span>';
+  return names.map(function(n){
+    return '<span style="display:inline-block;background:rgba(168,154,255,0.15);color:#b8a8ff;font-size:11px;padding:2px 8px;border-radius:10px;margin:2px;">' + n + '</span>';
+  }).join('');
+}
+/* ======= 友達データ END ======= */
+
 /* ======= 柱×干の説明データ（さくらこ専用） ======= */
 const PILLAR_KAN_DESC = {
   '甲': {
@@ -12343,6 +12467,8 @@ const PILLAR_KAN_DESC = {
     ]
   }
 };
+
+
 /* ======= 柱×干の説明データ END ======= */
 
 const NICHIKAN_DESC = {
@@ -12705,40 +12831,36 @@ const PILLAR_INFO = [
     label:'年柱', yomi:'ねんちゅう',
     age:'0〜15歳ごろ',
     rows:[
-      ['表すもの','先祖・両親・幼少期'],
-      ['環境','生まれ持った家庭環境'],
-      ['読み方','「年（ねん）」+「柱（ちゅう）」'],
-      ['ポイント','自分では選べなかった「出発点」の柱'],
+      ['【年干】','先祖・両親から受け継いだエネルギー'],
+      ['【年支】','幼少期の環境を、どんなエネルギーで受け取ったか'],
+      ['【ポイント】','自分では選べなかった「出発点」の柱'],
     ]
   },
   {
     label:'月柱', yomi:'げっちゅう',
     age:'15〜30歳ごろ',
     rows:[
-      ['表すもの','仕事・社会・青年期'],
-      ['環境','才能が開花する場所・スタイル'],
-      ['読み方','「月（げつ）」+「柱（ちゅう）」'],
-      ['ポイント','社会でどう動くか、仕事の才能が出る柱'],
+      ['【月干】','外で装備する武器・才能・社会や人間関係での表現方法'],
+      ['【月支】','生まれた季節・日干への影響'],
+      ['【ポイント】','社会・仕事で一番強く出る柱。外の世界でどう輝くかがわかる'],
     ]
   },
   {
     label:'日柱', yomi:'にっちゅう',
     age:'30〜50歳ごろ',
     rows:[
-      ['表すもの','自分自身・配偶者'],
-      ['環境','本来の性格・本質'],
-      ['読み方','「日（にっ）」+「柱（ちゅう）」'],
-      ['ポイント','命式の主役。天干が「日干（にっかん）」で、すべての基準になる'],
+      ['【日干】','誰に対しても共通して出る本質・生き方・ベース（魂）'],
+      ['【日支】','パートナーに見せる素顔・本音'],
+      ['【ポイント】','命式の主役。すべての基準になる柱'],
     ]
   },
   {
     label:'時柱', yomi:'じちゅう',
     age:'50歳以降',
     rows:[
-      ['表すもの','子ども・晩年・老後'],
-      ['環境','自分が育て残すもの'],
-      ['読み方','「時（じ）」+「柱（ちゅう）」'],
-      ['ポイント','晩年の運気と、自分が世に残す影響を表す柱'],
+      ['【時干】','晩年の才能・エネルギーの出し方'],
+      ['【時支】','晩年に深まる縁・子供や後継者との関係・自分の後に続く人やもの'],
+      ['【ポイント】','50歳以降に強くなるエネルギー・晩年に残していくものがわかる柱'],
     ]
   },
 ];
@@ -12848,7 +12970,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime){
       if(!p) return `<td class="${cols[i]} hour-col shi" style="color:var(--sk-silver-dim);">—</td>`;
       const shiName = SHI12[p.shi];
       return `<td class="${cols[i]} shi">
-        <span class="shi-pill" onclick="openShiPanel('${shiName}')">${shiName}</span>
+        <span class="shi-pill" onclick="openShiPanel('${shiName}',${i})">${shiName}</span>
       </td>`;
     }).join('')}
   </tr>`;
@@ -13103,6 +13225,11 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime){
       <div style="font-size:0.72rem;color:var(--sk-gold-light);margin-bottom:0.6rem;">${ndesc.title}／${ndesc.gogyoFull}</div>
       <div class="nichikan-desc">${getNikkanMessage(nichikan, month_shi_name, day_shi_name)||ndesc.desc}</div>
       ${month_shi_name?'<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:6px;">'+nichikan+'（'+month_shi_name+'月・'+day_shi_name+'日支）</div>':''}
+      ${(function(){
+        var nikFriends = getFriendsWithKan(['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'].indexOf(nichikan), 2);
+        if(!nikFriends||nikFriends.length===0) return '';
+        return '<div style="margin-top:8px;padding:6px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);"><div style="font-size:10px;color:#b8a8ff;margin-bottom:4px;">\u{1F465} 同じ日干の友達</div><div>'+buildFriendBadgeHTML(nikFriends)+'</div></div>';
+      })()}
     </div>
 
     <div class="interp-card">
@@ -13371,7 +13498,24 @@ function openHenseiPanel(name, context){
       +'<p style="font-size:12px;line-height:1.7;color:var(--text);">'+d.work+'</p></div>';
   }
   document.getElementById('hjDesc').innerHTML = html;
-  document.getElementById('hjContext').textContent = context;
+  // Friend表示
+  var colIdxH = -1;
+  if(context){
+    if(context.indexOf('年柱')!==-1) colIdxH=0;
+    else if(context.indexOf('月柱')!==-1) colIdxH=1;
+    else if(context.indexOf('日柱')!==-1) colIdxH=2;
+    else if(context.indexOf('時柱')!==-1) colIdxH=3;
+  }
+  var hFriendHTML = '';
+  if(colIdxH !== -1){
+    var hFriends = getFriendsWithHensei(name, colIdxH);
+    if(hFriends.length > 0){
+      hFriendHTML = '<div style="margin-top:8px;padding:8px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);">' +
+        '<div style="font-size:10px;color:#b8a8ff;margin-bottom:6px;">👥 この通変星を持つ友達</div>' +
+        '<div>' + buildFriendBadgeHTML(hFriends) + '</div></div>';
+    }
+  }
+  document.getElementById('hjContext').innerHTML = '<span style="font-size:12px;color:var(--sk-silver-dim);">' + context + '</span>' + hFriendHTML;
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
 }
@@ -13461,12 +13605,15 @@ function openKanPanel(kanName, colIdx){
   document.getElementById('hjDesc').innerHTML =
     '<p style="font-size:12px;line-height:1.8;color:var(--text);">' + mainDesc + '</p>';
 
+  // 友達データから自動取得
+  var kanIdx = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'].indexOf(kanName);
+  var autoFriends = (kanIdx !== -1) ? getFriendsWithKan(kanIdx, colIdx) : [];
+  var autoHTML = buildFriendBadgeHTML(autoFriends);
+
   document.getElementById('hjContext').innerHTML =
-    '<div style="margin-top:10px;padding:8px 10px;background:rgba(184,150,46,0.06);border-radius:8px;">' +
-    '<div style="font-size:10px;color:var(--sk-gold-light);margin-bottom:4px;">\u{1F465} この干支を持つ人</div>' +
-    '<input id="friend-kan-input" type="text" value="' + friendVal.replace(/"/g,'') + '" ' +
-    'placeholder="例：きゃんちゃん、まゆこりん" ' +
-    'style="width:100%;padding:6px 8px;background:rgba(255,255,255,.05);border:1px solid rgba(184,150,46,.3);border-radius:6px;color:var(--text);font-size:12px;box-sizing:border-box;">' +
+    '<div style="margin-top:10px;padding:8px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);">' +
+    '<div style="font-size:10px;color:#b8a8ff;margin-bottom:6px;">👥 この干を持つ友達</div>' +
+    '<div>' + autoHTML + '</div>' +
     '</div>';
 
   // Friendメモの保存ボタン
@@ -13548,14 +13695,26 @@ function openRowLabelPanel(name){
 }
 
 // 地支タップ → 中央ポップアップ
-function openShiPanel(shiName){
+function openShiPanel(shiName, colIdx){
   const d = SHI12_DETAIL[shiName];
   if(!d) return;
   document.getElementById('hjTitle').textContent = shiName + '（' + d.yomi + '）';
   document.getElementById('hjYomi').textContent = '';
   document.getElementById('hjBadge').textContent = d.gogyo + ' ' + d.inyo + '　／　' + d.season + '　／　' + d.image;
   document.getElementById('hjDesc').textContent = d.desc;
-  document.getElementById('hjContext').textContent = '';
+  // Friend表示
+  var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  var shiIdx = SHI12.indexOf(shiName);
+  var shiFriendHTML = '';
+  if(shiIdx !== -1 && colIdx !== undefined){
+    var shiFriends = getFriendsWithShi(shiIdx, colIdx);
+    if(shiFriends.length > 0){
+      shiFriendHTML = '<div style="margin-top:8px;padding:8px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);">' +
+        '<div style="font-size:10px;color:#b8a8ff;margin-bottom:6px;">👥 この地支を持つ友達</div>' +
+        '<div>' + buildFriendBadgeHTML(shiFriends) + '</div></div>';
+    }
+  }
+  document.getElementById('hjContext').innerHTML = shiFriendHTML || '';
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
 }
