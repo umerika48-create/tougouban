@@ -102,6 +102,8 @@ input[type="text"], input[type="number"], select {
   width:100%; background:rgba(255,255,255,.06);
   border:1px solid rgba(168,180,200,.25); border-radius:10px;
   padding:13px 15px; color:var(--text);
+  -webkit-user-select: text;
+  user-select: text;
   font-family:\'Shippori Mincho\',serif; font-size:15px;
   margin-bottom:16px; outline:none;
   -webkit-appearance:none; appearance:none;
@@ -929,6 +931,13 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     color: var(--sk-gold-light);
     font-weight: 400;
   }
+  input[type="text"],
+  input[type="date"],
+  input[type="number"],
+  select {
+    -webkit-user-select: text;
+    user-select: text;
+  }
   input[type="date"],
   input[type="number"],
   select {
@@ -1529,6 +1538,8 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     box-shadow: 0 12px 40px rgba(0,0,0,0.7);
     animation: fadeIn 0.18s ease;
   }
+  .hj-panel input, .hj-panel textarea { -webkit-user-select: text !important; user-select: text !important; }
+
   .hj-panel.open { display: block; }
   .hj-overlay {
     display: none;
@@ -1654,6 +1665,18 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   }
 
 /* ======= さくらこ四柱推命 CSS END ======= */
+
+  /* iOS Safari入力修正: user-select:noneが親要素にある場合の対策 */
+  input, textarea, select, [contenteditable] {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+  }
+  #friend-kan-input {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+  }
+
 </style>
 </head>
 <body>
@@ -1713,6 +1736,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     <div id="area-compat" style="margin-top:10px;">
       <label style="font-size:12px;color:var(--muted);letter-spacing:.05em;">相手の生年月日 <span style="font-size:11px;">（入力なしで個人鑑定）</span></label>
       <input type="text" id="compat-bd-text" placeholder="例: 19950820 または 1995/8/20 または 199508201430福岡"
+        inputmode="text"
         style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);color:var(--text);font-size:15px;margin-bottom:4px;"
         oninput="syncCompatBirthdate()">
       <!-- 相手用RESET（相手の入力欄のすぐ下） -->
