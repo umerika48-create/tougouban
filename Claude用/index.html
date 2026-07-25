@@ -1706,17 +1706,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   <!-- 入力フォーム -->
   <div class="card">
     <!-- ALL（Date of Birthラベルのすぐ上） -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:-16px;">
-      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);">
-        <span>夜子時</span>
-        <label style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;">
-          <input type="checkbox" id="yakodoki-toggle" checked onchange="setYakodoki(this.checked)" style="opacity:0;width:0;height:0;">
-          <span id="yakodoki-slider" style="position:absolute;top:0;left:0;right:0;bottom:0;background:var(--accent);border-radius:20px;transition:.3s;">
-            <span id="yakodoki-thumb" style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s;transform:translateX(16px);"></span>
-          </span>
-        </label>
-        <span id="yakodoki-label" style="color:var(--accent);font-weight:700;">23時</span>
-      </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:-16px;">
       <button type="button" onclick="resetAllBirthdates()" style="padding:3px 14px;border-radius:12px;border:1px solid #f87171;background:rgba(248,113,113,.12);color:#f87171;font-size:10px;font-weight:700;letter-spacing:.1em;cursor:pointer;">ALL</button>
     </div>
     <label style="margin-bottom:4px;">Date of Birth</label>
@@ -4859,6 +4849,9 @@ function runShichuu() {
   rd.appendChild(sr);
   calculateShichuu({dateStr:dateStr, timeStr4:timeStr4, placeOffset:placeOffset, isFemale:true});
   rd.scrollIntoView({behavior:'smooth', block:'start'});
+  if(typeof showYakodokiToggle === 'function') showYakodokiToggle();
+  var _unknownTime4 = !timeStr4 || timeStr4.length < 4;
+  if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(timeStr4, _unknownTime4);
 }
 
 /* 生年月日から算命学エネルギー値（総エネルギー値・五本能）を算出 */
@@ -6810,6 +6803,16 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData) {
       hourVal=parseInt(timeStr4.slice(0,2));
       minVal=parseInt(timeStr4.slice(2,4));
     }
+    // 時刻不明のとき
+    if(unknownTime){
+      if(window._yakodoki === true){
+        // 23時タブ → 23:30として計算
+        hourVal=23; minVal=30; unknownTime=false;
+      } else {
+        // 0時タブ（デフォルト）→ 12:00として計算
+        hourVal=12; minVal=0; unknownTime=false;
+      }
+    }
     var placeOffset=0;
     var _cityData=optCityData!==undefined?optCityData:window._normalCityData;
     if(_cityData&&_cityData.lon)
@@ -7185,7 +7188,8 @@ function calculateCompat() {
   window._nyHonmeiMeFixed      = _honmeiA;
   window._nyBirthdateMeFixed   = bdA;
   window._nyHonmeiPartnerFixed = getHonmeiStar(bdB);
-
+  // 夜子時トグルを表示
+  if(typeof showYakodokiToggle === 'function') showYakodokiToggle();
 }
 
 
@@ -7651,8 +7655,8 @@ function switchShichuuCard(view) {
   var bM = document.getElementById('sc-btn-me');
   var bP = document.getElementById('sc-btn-partner');
   if(!bM||!bP) return;
-  var _smAct   = 'background:var(--accent);color:#fff;border-color:var(--accent);font-weight:700;';
-  var _smInact = 'background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);font-weight:600;';
+  var _smAct   = 'padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--accent);background:var(--accent);color:#fff;';
+  var _smInact = 'padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(168,154,255,.3);background:transparent;color:rgba(168,154,255,.4);';
   bM.style.cssText = (isPartner ? _smInact : _smAct);
   bP.style.cssText = (isPartner ? _smAct : _smInact);
   var bd = isPartner ? window._compatBdB : window._nyBirthdateMe;
@@ -7661,6 +7665,10 @@ function switchShichuuCard(view) {
   if(!container) return;
   var _t = isPartner ? window._compatBirthTime : window._normalBirthTime;
   var _cd = isPartner ? window._compatCityData : window._normalCityData;
+  // 切り替え先の人の時刻に合わせてデフォルトタブを更新
+  var _timeStr4 = (_t || '').replace(':','').replace(/[^0-9]/g,'');
+  var _unknownTime = !_timeStr4 || _timeStr4.length < 4;
+  if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(_timeStr4, _unknownTime);
   container.innerHTML = buildShichuuCardHTML(bd, _t, _cd);
 }
 
@@ -9478,7 +9486,7 @@ function calculate() {
         '<button id="sc-btn-partner" onclick="switchShichuuCard(\'partner\')" style="'+_smInact+'">相手</button>'+
         '</div>';
     }
-    return '<div class="accordion-wrap">'+
+    return  '<div class="accordion-wrap">'+
       '<button class="accordion-btn" id="abtn-shichuu-card" onclick="toggleAccordion(\'shichuu-card\')">'+
         '<span style="display:flex;align-items:center;justify-content:space-between;width:100%;">'+
           '<span>☯ 四柱推命</span>'+_scBtnHTML+
@@ -9790,6 +9798,8 @@ function calculate() {
     if(mb) mb.style.width=toWidth(md.score);
     resultEl.scrollIntoView({behavior:'smooth',block:'start'});
     KyuseiEnhanced.renderAll('enhanced-wrap', honmei, kYear, kMonth);
+    // 夜子時トグルを表示
+    if(typeof showYakodokiToggle === 'function') showYakodokiToggle();
   }, 80);
 }
 
@@ -12304,6 +12314,16 @@ function getFriendMeishiki() {
         hourVal=parseInt(timeStr4.slice(0,2));
         minVal=parseInt(timeStr4.slice(2,4));
       }
+      // 時刻不明のとき
+      if(unknownTime){
+        if(window._yakodoki === true){
+          // 23時タブ → 23:30として計算
+          hourVal=23; minVal=30; unknownTime=false;
+        } else {
+          // 0時タブ → 12:00（正午）として計算
+          hourVal=12; minVal=0; unknownTime=false;
+        }
+      }
       var placeOffset=0;
       if(f.place && typeof lookupCity === 'function'){
         var cd = lookupCity(f.place);
@@ -13312,7 +13332,13 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime){
     return `<span class="tenkan-pill ${gc}" onclick="toggleTenkan('td_${k}', this)">${k} ${d.gogyo}${d.inyo}</span>`;
   });
 
-  const html = `
+  const _toggleHTML = '<div style="margin-bottom:8px;padding:6px 10px;background:rgba(184,150,46,0.08);border-radius:8px;display:flex;align-items:center;justify-content:space-between;">' +
+    '<div style="display:flex;align-items:center;gap:6px;">' +
+      '<button onclick="setYakodoki(true)" id="yak-btn-23" style="padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (window._yakodoki === true ? 'var(--sk-gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (window._yakodoki === true ? 'var(--sk-gold)' : 'transparent') + ';color:' + (window._yakodoki === true ? '#000' : 'var(--sk-silver-dim)') + ';font-weight:' + (window._yakodoki === true ? '700' : '400') + ';">23時</button>' +
+      '<button onclick="setYakodoki(false)" id="yak-btn-0" style="padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (window._yakodoki === false ? 'var(--sk-gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (window._yakodoki === false ? 'var(--sk-gold)' : 'transparent') + ';color:' + (window._yakodoki === false ? '#000' : 'var(--sk-silver-dim)') + ';font-weight:' + (window._yakodoki === false ? '700' : '400') + ';">0時</button>' +
+    '</div>' +
+  '</div>';
+  const html = _toggleHTML + `
   <div class="result-title fade-in">
     <h2>命 式 表</h2>
     <div class="person-name">${birthStr}生</div>
@@ -13499,6 +13525,9 @@ function calculateShichuu(opts){
   resultDiv.innerHTML = html + buildUnseiHTML(dauResult, yr, day_p ? day_p.kan : 0);
   resultDiv.style.display = 'block';
   resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // 夜子時トグルを表示＆デフォルト状態を時刻に合わせる
+  if(typeof showYakodokiToggle === 'function') showYakodokiToggle();
+  if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(_ts4, unknownTime);
 }
 
 // 十干アコーディオン
@@ -13867,6 +13896,83 @@ function toggleShi(id, pill){
 // (さくらこフォーム専用イベントリスナーは統合アプリでは省略)
 
 /* ======= さくらこ四柱推命 JS END ======= */
+
+/* ======= 夜子時（23時切り替え）設定 ======= */
+window._yakodoki = false; // デフォルト0時
+
+function setYakodoki(enabled) {
+  window._yakodoki = enabled;
+  // ボタン方式のスタイル更新（全ボタン）
+  document.querySelectorAll('#yak-btn-23').forEach(function(btn){
+    btn.style.background = enabled ? 'var(--gold)' : 'transparent';
+    btn.style.color = enabled ? '#000' : 'var(--muted)';
+    btn.style.borderColor = enabled ? 'var(--gold)' : 'rgba(184,150,46,0.3)';
+    btn.style.fontWeight = enabled ? '700' : '400';
+  });
+  document.querySelectorAll('#yak-btn-0').forEach(function(btn){
+    btn.style.background = enabled ? 'transparent' : 'var(--gold)';
+    btn.style.color = enabled ? 'var(--muted)' : '#000';
+    btn.style.borderColor = enabled ? 'rgba(184,150,46,0.3)' : 'var(--gold)';
+    btn.style.fontWeight = enabled ? '400' : '700';
+  });
+  // 現在どちら（あなた/相手）を表示中か判定
+  var opt = document.getElementById('loveSituation');
+  var v = opt ? opt.value : 'meeting';
+  if(v === 'shichuu') {
+    if(typeof runShichuu === 'function') runShichuu();
+    return;
+  }
+  // 現在表示中のタブ（あなた or 相手）を確認
+  var btnP = document.getElementById('sc-btn-partner');
+  var isPartner = btnP && btnP.style.fontWeight === '700';
+  var bd, _t, _cd;
+  if(isPartner) {
+    bd = window._compatBdB;
+    _t = window._compatBirthTime;
+    _cd = window._compatCityData;
+  } else {
+    bd = window._nyBirthdateMe || document.getElementById('birthdate').value;
+    _t = window._normalBirthTime;
+    _cd = window._normalCityData;
+  }
+  var cardBody = document.getElementById('shichuu-card-body');
+  if(cardBody && bd && typeof buildShichuuCardHTML === 'function') {
+    cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd);
+  } else {
+    autoCalculate();
+  }
+}
+
+function showYakodokiToggle() {
+  var wrap = document.getElementById('yakodoki-wrap');
+  if(wrap) wrap.style.display = 'block';
+}
+
+// 時刻に基づいてデフォルトの夜子時ボタンを設定
+function updateYakodokiDefault(timeStr4, unknownTime) {
+  var is23 = false;
+  if(!unknownTime && timeStr4 && timeStr4.length === 4) {
+    var h = parseInt(timeStr4.slice(0,2));
+    is23 = (h >= 23);
+  }
+  // 時刻不明のときはデフォルト0時（false）
+  if(unknownTime) is23 = false;
+  // window._yakodokiを更新
+  window._yakodoki = is23;
+  document.querySelectorAll('#yak-btn-23').forEach(function(btn){
+    btn.style.background = is23 ? 'var(--gold)' : 'transparent';
+    btn.style.color = is23 ? '#000' : 'var(--muted)';
+    btn.style.borderColor = is23 ? 'var(--gold)' : 'rgba(184,150,46,0.3)';
+    btn.style.fontWeight = is23 ? '700' : '400';
+  });
+  document.querySelectorAll('#yak-btn-0').forEach(function(btn){
+    btn.style.background = is23 ? 'transparent' : 'var(--gold)';
+    btn.style.color = is23 ? 'var(--muted)' : '#000';
+    btn.style.borderColor = is23 ? 'rgba(184,150,46,0.3)' : 'var(--gold)';
+    btn.style.fontWeight = is23 ? '400' : '700';
+  });
+}
+/* ======= 夜子時設定 END ======= */
 </script>
 
 <div class="hj-overlay" id="hjOverlay" onclick="closeHjPanel()"></div>
