@@ -1706,7 +1706,17 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   <!-- 入力フォーム -->
   <div class="card">
     <!-- ALL（Date of Birthラベルのすぐ上） -->
-    <div style="display:flex;justify-content:flex-end;margin-bottom:-16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:-16px;">
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);">
+        <span>夜子時</span>
+        <label style="position:relative;display:inline-block;width:36px;height:20px;cursor:pointer;">
+          <input type="checkbox" id="yakodoki-toggle" checked onchange="setYakodoki(this.checked)" style="opacity:0;width:0;height:0;">
+          <span id="yakodoki-slider" style="position:absolute;top:0;left:0;right:0;bottom:0;background:var(--accent);border-radius:20px;transition:.3s;">
+            <span id="yakodoki-thumb" style="position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s;transform:translateX(16px);"></span>
+          </span>
+        </label>
+        <span id="yakodoki-label" style="color:var(--accent);font-weight:700;">23時</span>
+      </div>
       <button type="button" onclick="resetAllBirthdates()" style="padding:3px 14px;border-radius:12px;border:1px solid #f87171;background:rgba(248,113,113,.12);color:#f87171;font-size:10px;font-weight:700;letter-spacing:.1em;cursor:pointer;">ALL</button>
     </div>
     <label style="margin-bottom:4px;">Date of Birth</label>
@@ -6806,7 +6816,8 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData) {
       placeOffset=Math.round((_cityData.lon-135)*4);
     var adjMin=unknownTime?0:minVal-placeOffset;
     var birthDT=new Date(yr,mo-1,da,unknownTime?12:hourVal,adjMin);
-    var nicchiDate=(!unknownTime&&birthDT.getHours()>=23)
+    var _yakodoki = (typeof window._yakodoki !== 'undefined') ? window._yakodoki : true;
+    var nicchiDate=(!unknownTime&&_yakodoki&&birthDT.getHours()>=23)
       ?new Date(birthDT.getTime()+86400000):birthDT;
     var year_p=calcNenchu(birthDT);
     var month_p=calcGetschu(birthDT,year_p.kan);
@@ -12300,7 +12311,8 @@ function getFriendMeishiki() {
       }
       var adjMin = unknownTime?0:minVal-placeOffset;
       var birthDT = new Date(yr,mo-1,da,unknownTime?12:hourVal,adjMin);
-      var nicchiDate = (!unknownTime&&birthDT.getHours()>=23)
+      var _yakodoki2 = (typeof window._yakodoki !== 'undefined') ? window._yakodoki : true;
+      var nicchiDate = (!unknownTime&&_yakodoki2&&birthDT.getHours()>=23)
         ?new Date(birthDT.getTime()+86400000):birthDT;
       var year_p  = calcNenchu(birthDT);
       var month_p = calcGetschu(birthDT,year_p.kan);
