@@ -1703,6 +1703,9 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     </div>
     <h1>Sakuraco<br>占星術</h1>
     <p class="subtitle" style="font-size:11px;letter-spacing:.25em;color:rgba(255,255,255,.25);font-style:italic;">Astrology by Sakuraco</p>
+    <div style="text-align:center;margin-top:8px;">
+      <button type="button" onclick="openFriendDataManager()" style="padding:5px 14px;border-radius:12px;border:1px solid rgba(201,168,76,.4);background:rgba(201,168,76,.1);color:#c9a84c;font-size:11px;font-weight:700;cursor:pointer;">👥 友達データ管理</button>
+    </div>
   </header>
 
   <!-- 入力フォーム -->
@@ -13018,7 +13021,7 @@ const SEASON_KAN_DESC = {
 /* ======= 月支×日干の季節解説データ END ======= */
 
 /* ======= 友達データ（友達データ帳より） ======= */
-const FRIEND_DATA = [
+let FRIEND_DATA = [
   {name:'うさみくん', date:'1993-03-28', time:'', place:''},
   {name:'きゃん', date:'1986-05-19', time:'13:57', place:'福岡'},
   {name:'やぁちゃん', date:'1987-03-23', time:'01:30', place:'福岡'},
@@ -13038,8 +13041,134 @@ const FRIEND_DATA = [
   {name:'井上一也', date:'1957-03-14', time:'', place:''},
   {name:'井上由香', date:'1958-11-05', time:'', place:''},
   {name:'井上領', date:'1990-09-08', time:'16:52', place:'福岡'},
-  {name:'ひろき君', date:'1990-09-08', time:'07:00', place:''}
+  {name:'ひろき君', date:'1990-09-08', time:'07:00', place:''},
+  {name:'井上礼子', date:'1953-03-18', time:'', place:'福岡'},
+  {name:'井上洋', date:'1951-04-15', time:'', place:'福岡'},
+  {name:'かおりちゃん', date:'1985-01-22', time:'07:38', place:'神奈川'}
 ];
+
+/* localStorageに保存された友達データがあれば、それで上書きする */
+(function loadFriendDataFromStorage(){
+  try{
+    var raw = localStorage.getItem('sakurakoFriendData');
+    if(raw){
+      var parsed = JSON.parse(raw);
+      if(Array.isArray(parsed) && parsed.length > 0){
+        FRIEND_DATA = parsed;
+      }
+    }
+  }catch(e){ /* 読み込み失敗時は初期データのまま */ }
+})();
+
+/* 友達データ管理モーダルを開く */
+function openFriendDataManager(){
+  var current = JSON.stringify(FRIEND_DATA, null, 2);
+  var html = ''
+    + '<div style="font-size:14px;font-weight:700;color:var(--gold,#c9a84c);margin-bottom:10px;">👥 友達データ管理</div>'
+    + '<div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.7;">「友達データ帳」アプリで「JSONで出力」（全員）または「新規登録分だけ出力」した内容をここに貼り付けてください。名前が一致する人は情報を更新し、一致しない人は新規追加されます（既存データが消えることはありません）。</div>'
+    + '<textarea id="friend-data-paste" placeholder="ここにJSONを貼り付け" style="width:100%;min-height:160px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--text);font-family:monospace;font-size:11px;padding:8px;box-sizing:border-box;"></textarea>'
+    + '<div id="friend-data-status" style="font-size:11px;color:#7ee787;margin-top:6px;min-height:16px;"></div>'
+    + '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">'
+    + '<button onclick="saveFriendDataFromPaste()" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--gold,#c9a84c);color:#241d10;font-weight:700;font-size:12px;cursor:pointer;">貼り付けた内容で上書き保存</button>'
+    + '</div>'
+    + '<div style="margin-top:14px;font-size:11px;color:var(--muted);">現在登録されている友達（' + FRIEND_DATA.length + '人）:</div>'
+    + '<div id="friend-data-list" style="max-height:280px;overflow-y:auto;margin-top:8px;">' + buildFriendDataListHTML(FRIEND_DATA) + '</div>'
+    + '<div style="text-align:right;margin-top:8px;">'
+    + '<button onclick="toggleFriendDataRawJson()" style="background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--muted);font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;">JSONで表示/隠す</button>'
+    + '</div>'
+    + '<textarea id="friend-data-raw" readonly style="display:none;width:100%;min-height:120px;background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.1);border-radius:8px;color:var(--muted);font-family:monospace;font-size:10px;padding:8px;box-sizing:border-box;margin-top:6px;">' + current.replace(/</g,'&lt;') + '</textarea>';
+  showModal(html);
+}
+
+/* 友達データを見やすいカード形式のHTMLに変換 */
+function buildFriendDataListHTML(list){
+  if(!list || list.length === 0){
+    return '<div style="font-size:11px;color:var(--muted);text-align:center;padding:16px 0;">まだ登録がありません。</div>';
+  }
+  var groups = {};
+  var order = [];
+  list.forEach(function(f){
+    var cat = f.category || '未分類';
+    if(!groups[cat]){ groups[cat] = []; order.push(cat); }
+    groups[cat].push(f);
+  });
+  order.sort(function(a,b){
+    if(a==='未分類') return 1;
+    if(b==='未分類') return -1;
+    return a.localeCompare(b,'ja');
+  });
+  var html = '';
+  order.forEach(function(cat){
+    html += '<div style="font-size:10px;letter-spacing:.06em;color:var(--gold,#c9a84c);margin:10px 0 4px;text-transform:uppercase;">' + cat + '（' + groups[cat].length + '）</div>';
+    groups[cat].forEach(function(f){
+      var dateLabel = f.date ? f.date.replace(/^(\d{4})-(\d{2})-(\d{2})$/, function(_,y,m,d){ return y+'年'+parseInt(m)+'月'+parseInt(d)+'日'; }) : '未設定';
+      var timeLabel = (f.timeUnknown || !f.time) ? '時刻不明' : f.time;
+      var placeLabel = f.place || '未設定';
+      html += '<div style="border:1px solid rgba(255,255,255,.1);border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:11px;">'
+        + '<div style="font-weight:700;color:var(--text);margin-bottom:2px;">' + escapeFriendHtml(f.name) + '</div>'
+        + '<div style="color:var(--muted);line-height:1.7;">生年月日：' + dateLabel + '　出生時刻：' + timeLabel + '　出生地：' + escapeFriendHtml(placeLabel) + '</div>'
+        + (f.memo ? '<div style="color:var(--muted);margin-top:2px;">MEMO：' + escapeFriendHtml(f.memo) + '</div>' : '')
+        + '</div>';
+    });
+  });
+  return html;
+}
+function escapeFriendHtml(s){
+  if(!s) return '';
+  return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; });
+}
+function toggleFriendDataRawJson(){
+  var el = document.getElementById('friend-data-raw');
+  if(!el) return;
+  el.style.display = el.style.display === 'none' ? 'block' : 'none';
+}
+
+/* 貼り付けられたJSONでFRIEND_DATAを上書きしてlocalStorageに保存 */
+function saveFriendDataFromPaste(){
+  var box = document.getElementById('friend-data-paste');
+  var statusEl = document.getElementById('friend-data-status');
+  if(!box || !box.value.trim()){
+    if(statusEl){ statusEl.style.color='#f87171'; statusEl.textContent = '貼り付ける内容がありません。'; }
+    return;
+  }
+  var parsed;
+  try{
+    parsed = JSON.parse(box.value.trim());
+    if(!Array.isArray(parsed)) throw new Error('not array');
+  }catch(e){
+    if(statusEl){ statusEl.style.color='#f87171'; statusEl.textContent = 'JSON形式が正しく読み取れませんでした。'; }
+    return;
+  }
+  var merged = FRIEND_DATA.slice();
+  var nameIndex = {};
+  merged.forEach(function(f, i){ nameIndex[f.name] = i; });
+  var addedCount = 0, updatedCount = 0;
+  parsed.forEach(function(f){
+    if(!f || !f.name) return;
+    if(nameIndex.hasOwnProperty(f.name)){
+      merged[nameIndex[f.name]] = f;
+      updatedCount++;
+    } else {
+      merged.push(f);
+      nameIndex[f.name] = merged.length - 1;
+      addedCount++;
+    }
+  });
+  try{
+    localStorage.setItem('sakurakoFriendData', JSON.stringify(merged));
+  }catch(e){
+    if(statusEl){ statusEl.style.color='#f87171'; statusEl.textContent = '保存に失敗しました。'; }
+    return;
+  }
+  FRIEND_DATA = merged;
+  FRIEND_MEISHIKI_CACHE = null;
+  if(statusEl){ statusEl.style.color='#7ee787'; statusEl.textContent = '新規' + addedCount + '人・更新' + updatedCount + '人。合計' + merged.length + '人になりました。次回このアプリを開いた時も反映されます。'; }
+  var listEl = document.getElementById('friend-data-list');
+  if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA);
+  var rawEl = document.getElementById('friend-data-raw');
+  if(rawEl) rawEl.textContent = JSON.stringify(FRIEND_DATA, null, 2);
+  box.value = '';
+}
 
 /* 友達の命式を計算してキャッシュ */
 var FRIEND_MEISHIKI_CACHE = null;
