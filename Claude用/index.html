@@ -1073,8 +1073,8 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     line-height: 1.2;
     padding: 0.8rem 0.4rem !important;
   }
-  .kan.day { color: var(--sk-gold-light); text-shadow: 0 0 20px rgba(184,150,46,0.4); }
-  .kan.year, .kan.month, .kan.hour { color: var(--text-on-dark); }
+  .kan.day { text-shadow: 0 0 20px rgba(184,150,46,0.3); }
+  .kan.year, .kan.month, .kan.hour { opacity: 0.85; }
 
   .shi { font-size: 2rem; font-weight: 300; padding: 0.7rem 0.4rem !important; }
   .zougan-cell { font-size: 0.75rem; line-height: 1.8; color: var(--sk-silver); padding: 0.5rem 0.3rem !important; }
@@ -1086,12 +1086,30 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
 
   .jyunsei-cell { font-size: 0.8rem; padding: 0.4rem 0.3rem !important; }
 
-  /* 十干 colors */
-  .kan-moku { color: #5db856; }
-  .kan-ka { color: #e05c40; }
-  .kan-do { color: #c8a840; }
-  .kan-kin { color: #b0c4de; }
-  .kan-sui { color: #4aa8d8; }
+  /* 十干 colors（陰陽別10色） */
+  .kan-ko  { color: #3db856 !important; }  /* 甲：濃い緑 */
+  .kan-otsu { color: #7dcf6e !important; } /* 乙：薄い緑 */
+  .kan-hei  { color: #e05c40 !important; } /* 丙：赤オレンジ */
+  .kan-tei  { color: #f0a0b0 !important; } /* 丁：ピンク */
+  .kan-bo   { color: #c8a030 !important; } /* 戊：黄土色 */
+  .kan-ki   { color: #d4b896 !important; } /* 己：ベージュ */
+  .kan-ko2  { color: #a8b8c8 !important; } /* 庚：シルバー */
+  .kan-shin { color: #d8e8f0 !important; } /* 辛：パールシルバー */
+  .kan-jin  { color: #3a7abf !important; } /* 壬：濃い青 */
+  .kan-ki2  { color: #7ab8e0 !important; } /* 癸：水色 */
+  /* 地支 colors（五行別） */
+  .shi-moku { color: #3db856 !important; }  /* 寅・卯：木 */
+  .shi-ka   { color: #e05c40 !important; }  /* 巳・午：火 */
+  .shi-do   { color: #c8a030 !important; }  /* 丑・辰・未・戌：土 */
+  .shi-kin  { color: #a8b8c8 !important; }  /* 申・酉：金 */
+  .shi-sui  { color: #3a7abf !important; }  /* 亥・子：水 */
+
+  /* 旧クラス互換 */
+  .kan-moku { color: #3db856 !important; }
+  .kan-ka   { color: #e05c40 !important; }
+  .kan-do   { color: #c8a030 !important; }
+  .kan-kin  { color: #a8b8c8 !important; }
+  .kan-sui  { color: #3a7abf !important; }
 
   /* 十二運 accent */
   .jyu12-taikyoku { color: var(--sk-gold-light); font-weight: 500; }
@@ -1488,7 +1506,6 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     border-radius: 2px;
     padding: 0.25rem 0.5rem;
     font-size: 1.05rem;
-    color: var(--sk-silver);
     cursor: pointer;
     transition: background 0.2s, border-color 0.2s;
     user-select: none;
@@ -12455,20 +12472,6 @@ const CHOKO_DESC = {
       work: '今は準備の時期かもしれませんね。コツコツ力を蓄えていくことで、一気に開花するときが来る。焦らずじっくりキャリアを積んでいくのが合っていますよ。'
     }
   },
-  '丁': {
-    '寅': { label: '春の初め・炎が育つ', detail: '温かさと勢いが同居している。人を癒しながら自分も前に進んでいくタイプ。' },
-    '卯': { label: '春の真ん中・安定して燃える', detail: '穏やかで安定した温かさがある。そばにいるだけで人が落ち着く。' },
-    '辰': { label: '春の終わり・深まる炎', detail: '温かさの中に深みがある。まだ出し切れていない可能性を秘めている。' },
-    '巳': { label: '夏の初め・熱く揺れる炎', detail: '情熱的で感情が豊か。内側の熱さと鋭い直感を持っている。' },
-    '午': { label: '夏の真ん中・燃え盛る炎', detail: '全力投球で真面目すぎるくらい真面目。燃え尽きやすいが情熱は本物。' },
-    '未': { label: '夏の終わり・包む炎', detail: '人を包む温かさがある。面倒見がよく仲間思い。' },
-    '申': { label: '秋の初め・磨く炎', detail: '言葉や存在で人を動かせる。経験を重ねるほど洗練されていく。' },
-    '酉': { label: '秋の真ん中・洗練された炎', detail: '品格とこだわりがある。知れば知るほど魅力が増す。' },
-    '戌': { label: '秋の終わり・誠実な炎', detail: '義理堅くて誠実。そばにいると安心できる深みのある温かさ。' },
-    '亥': { label: '冬の初め・静かな炎', detail: '控えめだけど消えない。困った人のそばに自然といる。' },
-    '子': { label: '冬の真ん中・内なる炎', detail: '繊細で賢い。暗い場所でこそ際立つ静かな存在感。' },
-    '丑': { label: '冬の終わり・消えない炎', detail: 'コツコツ積み上げる。どんな状況でも炎が消えない粘り強さがある。' }
-  },
   '戊': {
     '寅': {
       base: 'どっしりとした安定感と深い懐をお持ちの方ですよ。一見そう見られないこともあるかもしれませんが、実は周りが揺れても自分だけが落ち着いている。そばにいるだけで安心感を与えられる方ですよ。',
@@ -12555,20 +12558,6 @@ const CHOKO_DESC = {
       work: '安定した基盤をつくる力がありますね。経理・管理・運営など、組織の土台を支える仕事で輝けますよ。あなたがいるから組織が安定する、そういう存在ですよ。'
     }
   },
-  '戊': {
-    '寅': { label: '春の初め・山に芽吹く', detail: '安定感の中に勢いがある。どっしりしながらも前に動き出す力がある。' },
-    '卯': { label: '春の真ん中・山が育てる', detail: '懐が深くて人を受け入れる。そばにいるだけで安心できる存在。' },
-    '辰': { label: '春の終わり・山の恵み', detail: '安定感の中に大きな可能性が眠っている。まだ出し切れていない実力がある。' },
-    '巳': { label: '夏の初め・熱い大地', detail: '安定感の中に強いエネルギーがある。動き出したら誰も止められない。' },
-    '午': { label: '夏の真ん中・燃える大地', detail: '力強くて情熱的。全力投球するが燃え尽きやすい一面も。' },
-    '未': { label: '夏の終わり・実りの大地', detail: '温かくて面倒見がいい。人を育てる豊かさがある。' },
-    '申': { label: '秋の初め・鉱物を宿す山', detail: '積み上げてきた実力がある。頭の回転も速くて機転が利く。' },
-    '酉': { label: '秋の真ん中・磨かれた大地', detail: 'こだわりと本物を見抜く力がある。経験が実力になっている。' },
-    '戌': { label: '秋の終わり・収穫の大地', detail: '誠実で義理堅い。信頼できる存在感がある。' },
-    '亥': { label: '冬の初め・静かな山', detail: 'どんな嵐でも揺るがない。自分のペースを守る強さがある。' },
-    '子': { label: '冬の真ん中・雪を受ける大地', detail: '静かで繊細。でも内側は揺るがない安定感がある。' },
-    '丑': { label: '冬の終わり・春を待つ大地', detail: 'コツコツ積み上げて絶対に止まらない。春が来たら一気に開花する。' }
-  },
   '己': {
     '寅': {
       base: '人の気持ちをよく察して、気づいたら支えている方ですよ。一見そう見られないこともあるかもしれませんが、実はそばにいると人が自然と育っていく、そういう力をお持ちの方ですよ。',
@@ -12654,20 +12643,6 @@ const CHOKO_DESC = {
       love: 'じっくり関係を育てるタイプですね。急いで深めようとしなくていい。コツコツ信頼を積み重ねることで、揺るぎない関係が生まれますよ。',
       work: '専門性を磨いていく仕事が向いていますね。コツコツ積み上げることで誰にも負けない実力がつく。じっくりキャリアを深めていくタイプですよ。'
     }
-  },
-  '己': {
-    '寅': { label: '春の初め・芽を育てる土', detail: '人を育てる力がある。気づいたら支えているタイプ。' },
-    '卯': { label: '春の真ん中・栄養豊かな土', detail: '温かくて人を引き寄せる。そばにいると自然と育っていく。' },
-    '辰': { label: '春の終わり・豊かな大地', detail: '包容力の中に大きな可能性が眠っている。' },
-    '巳': { label: '夏の初め・温まる土', detail: '直感が鋭くて人の本質を見抜く。温かさと鋭さが共存。' },
-    '午': { label: '夏の真ん中・肥沃な大地', detail: '情熱的で頑張り屋。その温かさで人を引っ張っていく。' },
-    '未': { label: '夏の終わり・実りの土', detail: '面倒見がよくて仲間思い。人のために動ける温かさがある。' },
-    '申': { label: '秋の初め・実力の土', detail: 'コツコツ積み上げた実力がある。機転も利いて賢い。' },
-    '酉': { label: '秋の真ん中・磨かれた土', detail: 'こだわりと本物を見抜くセンスがある。' },
-    '戌': { label: '秋の終わり・収穫の土', detail: '誠実で義理堅い。縁の下の力持ちとして信頼される。' },
-    '亥': { label: '冬の初め・しっとりした土', detail: '感受性が豊かで察する力がある。自分のペースを大切にする。' },
-    '子': { label: '冬の真ん中・水を含む土', detail: '繊細で感受性が高い。賢くて場の空気を読む力がある。' },
-    '丑': { label: '冬の終わり・春を待つ土', detail: 'コツコツ粘り強く積み上げる。感受性と忍耐力を持っている。' }
   },
   '庚': {
     '寅': {
@@ -13457,7 +13432,10 @@ const SEASON_KAN_DESC = {
 };
 /* ======= 月支×日干の季節解説データ END ======= */
 
-/* ======= 友達データ（友達データ帳より） ======= */
+/* ======= API設定 ======= */
+/* ↓ここにAnthropicのAPIキーを貼り付けてください */
+const ANTHROPIC_API_KEY = 'YOUR_API_KEY_HERE';
+/* ======= API設定 END ======= */
 let FRIEND_DATA = [
   {name:'うさみくん', date:'1993-03-28', time:'', place:''},
   {name:'きゃん', date:'1986-05-19', time:'13:57', place:'福岡'},
@@ -14340,8 +14318,27 @@ function calcBalance(pillars){
 //  HTML描画
 // ========================================================
 function kanClass(kan_idx){
-  const g = KAN_GOGYO[kan_idx];
-  return {木:'kan-moku',火:'kan-ka',土:'kan-do',金:'kan-kin',水:'kan-sui'}[g] || '';
+  // 陰陽別の色クラス
+  const classes = ['kan-ko','kan-otsu','kan-hei','kan-tei','kan-bo','kan-ki','kan-ko2','kan-shin','kan-jin','kan-ki2'];
+  return classes[kan_idx] || '';
+}
+
+function shiClass(shi_name){
+  var moku = ['寅','卯'];
+  var ka   = ['巳','午'];
+  var do_  = ['丑','辰','未','戌'];
+  var kin  = ['申','酉'];
+  var sui  = ['亥','子'];
+  if(moku.indexOf(shi_name)!==-1) return 'shi-moku';
+  if(ka.indexOf(shi_name)!==-1)   return 'shi-ka';
+  if(do_.indexOf(shi_name)!==-1)  return 'shi-do';
+  if(kin.indexOf(shi_name)!==-1)  return 'shi-kin';
+  if(sui.indexOf(shi_name)!==-1)  return 'shi-sui';
+  return '';
+}
+function kanClassByName(kan_name){
+  const idx = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'].indexOf(kan_name);
+  return idx >= 0 ? kanClass(idx) : '';
 }
 
 function jyu12Class(name){
@@ -14426,8 +14423,9 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime){
     ${pillars.map((p,i)=>{
       if(!p) return `<td class="${cols[i]} hour-col shi" style="color:var(--sk-silver-dim);">—</td>`;
       const shiName = SHI12[p.shi];
+      const sc = shiClass(shiName);
       return `<td class="${cols[i]} shi">
-        <span class="shi-pill" onclick="openShiPanel('${shiName}',${i})">${shiName}</span>
+        <span class="shi-pill ${sc}" onclick="openShiPanel('${shiName}',${i})">${shiName}</span>
       </td>`;
     }).join('')}
   </tr>`;
@@ -14681,11 +14679,13 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime){
   <div class="interp-grid fade-in">
     <div class="interp-card">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-        <div class="interp-card-title">日 干 — 命 の 主 星</div>
+        <div class="interp-card-title">基本性格</div>
         <span onclick="openNikkanBasicPanel('${nichikan}')" style="font-size:10px;color:var(--sk-gold-light);cursor:pointer;text-decoration:underline;white-space:nowrap;margin-left:8px;margin-top:2px;">基本</span>
       </div>
-      <div class="nichikan-name ${kanClass(nik)}">${nichikan}</div>
-      <div style="font-size:0.72rem;color:var(--sk-gold-light);margin-bottom:0.6rem;">${ndesc.title}／${ndesc.gogyoFull}</div>
+      <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:0.3rem;">
+        <div class="nichikan-name ${kanClass(nik)}">${nichikan}</div>
+        <div class="${shiClass(month_shi_name)}" style="font-size:2rem;font-weight:300;">${month_shi_name}${(typeof MOON_SHI_LABEL !== 'undefined' && MOON_SHI_LABEL[nichikan] && MOON_SHI_LABEL[nichikan][month_shi_name]) ? '<span style="font-size:0.75rem;color:var(--sk-gold-light);font-weight:500;margin-left:4px;">（' + MOON_SHI_LABEL[nichikan][month_shi_name].label.split('・')[0] + '）</span>' : ''}</div>
+      </div>
       <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px;">
         <button onclick="generateNikkanAI('${nichikan}','${month_shi_name}','${day_shi_name}','${month_p ? KAN10[month_p.kan] : ''}')" style="padding:2px 10px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid var(--sk-gold);background:transparent;color:var(--sk-gold);">✨ AI鑑定文</button>
         <button onclick="showNikkanReason('${nichikan}','${month_shi_name}','${day_shi_name}','${month_p ? KAN10[month_p.kan] : ''}')" style="padding:2px 10px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid rgba(255,255,255,0.2);background:transparent;color:var(--muted);">📖 理由</button>
@@ -14906,12 +14906,13 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan) {
     
     // あなたはこういう人：base + 改行 + self + 改行 + note
     var selfCombined = baseText 
-      ? '<span style="font-size:10px;color:var(--sk-gold-light);font-weight:700;">（日干：' + kan + '）</span><br>' + baseText + '<br><br><span style="font-size:10px;color:var(--sk-gold-light);font-weight:700;">（月支：' + moon_shi + '）' +
+      ? '<div style="display:inline-block;background:rgba(184,150,46,0.15);border:1px solid rgba(184,150,46,0.4);border-radius:6px;padding:2px 8px;font-size:10px;color:var(--sk-gold-light);font-weight:700;margin-bottom:6px;">日干：' + kan + '</div><br>' + baseText + '<br><br>' +
+        '<div style="display:inline-block;background:rgba(184,150,46,0.15);border:1px solid rgba(184,150,46,0.4);border-radius:6px;padding:2px 8px;font-size:10px;color:var(--sk-gold-light);font-weight:700;margin-bottom:6px;">月支：' + moon_shi + '</div>' +
         (typeof MOON_SHI_LABEL !== 'undefined' && MOON_SHI_LABEL[kan] && MOON_SHI_LABEL[kan][moon_shi] ?
-          ' ※' + MOON_SHI_LABEL[kan][moon_shi].label +
-          '  <button onclick=\'showMoonShiDetail(\"' + kan + '\",\"' + moon_shi + '\")\' style=\'font-size:9px;padding:1px 6px;border-radius:8px;border:1px solid rgba(184,150,46,0.6);background:transparent;color:var(--sk-gold-light);cursor:pointer;margin-left:4px;\'>詳細</button>'
+          ' <span style="font-size:10px;color:var(--sk-gold-light);">※' + MOON_SHI_LABEL[kan][moon_shi].label + '</span>' +
+          '  <button onclick="showMoonShiDetail(\'' + kan + '\',\'' + moon_shi + '\')" style="font-size:9px;padding:1px 6px;border-radius:8px;border:1px solid rgba(184,150,46,0.6);background:transparent;color:var(--sk-gold-light);cursor:pointer;margin-left:4px;">詳細</button>'
           : '') +
-        '</span><br>' + selfText + (noteText ? '<br><br><span style="color:var(--sk-silver-dim);">' + noteText + '</span>' : '')
+        '<br>' + selfText + (noteText ? '<br><br><span style="color:var(--sk-silver-dim);">' + noteText + '</span>' : '')
       : selfText + (noteText ? '<br><br><span style="color:var(--sk-silver-dim);">' + noteText + '</span>' : '');
     
     // 月干フレーズを追加
@@ -14947,7 +14948,8 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan) {
   }
   
   // 旧形式（文字列）の場合
-  var base = baseData || '';
+  // baseDataがオブジェクト（{base,self,note}）の場合は空文字に
+  var base = (baseData && typeof baseData === 'string') ? baseData : '';
   var dp = day_shi ? NICHISHI_PHRASE[day_shi] : null;
 
   if (!base && !dp) return '';
@@ -15052,6 +15054,44 @@ function openJyu12Panel(name, context){
 
 
 /* ======= MEMO機能（hjPanel用） ======= */
+/* openHjMemo and saveHjMemo are defined above */
+
+/* ======= メモ保存・読み込み（Artifact/Cloudflare両対応） ======= */
+async function saveMemoStorage(key, value) {
+  // Artifact環境（window.storage）
+  if(typeof window.storage !== 'undefined') {
+    try { await window.storage.set('memo_' + key, value); } catch(e) {}
+  }
+  // Cloudflare環境（localStorage）
+  try { localStorage.setItem('sakurako_memo_' + key, value); } catch(e) {}
+}
+
+async function loadMemoStorage(key) {
+  // Artifact環境（window.storage）
+  if(typeof window.storage !== 'undefined') {
+    try {
+      var r = await window.storage.get('memo_' + key);
+      if(r && r.value) return r.value;
+    } catch(e) {}
+  }
+  // Cloudflare環境（localStorage）
+  try {
+    var v = localStorage.getItem('sakurako_memo_' + key);
+    if(v) return v;
+  } catch(e) {}
+  return '';
+}
+
+function saveHjMemo() {
+  var ta = document.getElementById('hj-memo-text');
+  var key = ta.dataset.key;
+  if (!key) return;
+  MEMO_DATA[key] = ta.value;
+  saveMemoStorage(key, ta.value);
+  var btn = document.getElementById('hj-memo-copy-btn');
+  if (btn) { btn.textContent = '✅ 保存しました'; setTimeout(function(){ btn.textContent = '📋 コピーしてClaudeへ'; }, 2000); }
+}
+
 function openHjMemo() {
   var titleEl = document.getElementById('hjTitle');
   var key = titleEl.dataset.memoKey || ('memo_' + titleEl.textContent.replace(/[^\w\u3000-\u9fff\uff00-\uffef]/g,'_'));
@@ -15060,23 +15100,16 @@ function openHjMemo() {
   var isOpen = wrap.style.display === 'block';
   wrap.style.display = isOpen ? 'none' : 'block';
   if (!isOpen) {
-    ta.value = MEMO_DATA[key] || '';
     ta.dataset.key = key;
+    ta.value = MEMO_DATA[key] || '';
+    // 非同期でストレージから読み込み
+    loadMemoStorage(key).then(function(val) {
+      if(val) { ta.value = val; MEMO_DATA[key] = val; }
+    });
     ta.focus();
   }
 }
-
-function saveHjMemo() {
-  var ta = document.getElementById('hj-memo-text');
-  var key = ta.dataset.key;
-  if (!key) return;
-  MEMO_DATA[key] = ta.value;
-  // コピー用テキスト生成
-  var output = JSON.stringify(MEMO_DATA, null, 2);
-  // コピーボタンを光らせる
-  var btn = document.getElementById('hj-memo-copy-btn');
-  if (btn) { btn.textContent = '✅ コピー済み'; setTimeout(function(){ btn.textContent = '📋 コピーしてClaudeへ'; }, 2000); }
-}
+/* ======= メモ保存・読み込み END ======= */
 
 function copyHjMemoData() {
   var ta = document.getElementById('hj-memo-text');
@@ -15112,6 +15145,7 @@ function openKanPanel(kanName, colIdx){
   var gogyoYomi = {木:'もく',火:'か',土:'ど',金:'こん',水:'すい'};
 
   document.getElementById('hjTitle').textContent = colLabels[colIdx] + 'の' + kanName;
+  document.getElementById('hjTitle').dataset.memoKey = 'kan_' + kanName + '_' + colIdx;
   document.getElementById('hjYomi').textContent = nd.image + '　' + nd.gogyo + '（' + (gogyoYomi[nd.gogyo]||'') + '）・' + nd.inyo;
   document.getElementById('hjBadge').textContent = pd ? pd.short[colIdx] : nd.gogyo;
 
@@ -15419,7 +15453,7 @@ async function generateNikkanAI(nichi, moonShi, dayShi, moonKan) {
   try {
     var res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
-      headers: {'Content-Type': 'application/json'},
+      headers: {'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true'},
       body: JSON.stringify({
         model: 'claude-sonnet-4-6',
         max_tokens: 1000,
