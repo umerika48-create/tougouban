@@ -13235,6 +13235,53 @@ const MOON_SHI_LABEL = {
 
 /* ======= 月支×日干の季節ラベル・詳細データ END ======= */
 
+
+/* ======= 基本性格カード ラベルデータ ======= */
+const KAN_LABELS = {
+  '甲': ['芯が強い','曲げない','まっすぐ','自分で決める','生命力がある'],
+  '乙': ['柔らかくしなやか','どんな環境にも馴染む','絶対に曲げないラインがある','人に合わせるのが得意','表は柔らかく内側は芯がある'],
+  '丙': ['いるだけで場が明るい','表裏がない','エネルギーが強い','自然と人が集まる','本質から出ている明るさ'],
+  '丁': ['じわじわ人の心に届く','派手でないのに記憶に残る','消えない炎の芯がある','近づいた人だけが知る深さ','時間が経つほど好きになられる'],
+  '戊': ['どっしりした安定感','周りが揺れても動じない','懐が深い','そばにいると安心','山のような存在感'],
+  '己': ['人の気持ちをよく察する','言わなくてもわかる','縁の下の力持ち','気づいたら人を育てている','感受性が豊か'],
+  '庚': ['決断が速くぶれない','白黒はっきりしている','切れ味がある','プレッシャーに強い','追い込まれるほど力が出る'],
+  '辛': ['細部にこだわる','本物を見抜くセンス','繊細で傷つきやすい','苦労するほど輝きが増す','磨かれるほど美しくなる'],
+  '壬': ['スケールが大きい','枠に収まらない','発想が周りと違う','行動力と自由さがある','動き出したら止まらない'],
+  '癸': ['感性が鋭くて繊細','深く共感できる','じわじわ人の心に染み込む','静かなのに圧倒的な存在感','直感が当たる']
+};
+
+const SHI_LABELS = {
+  '子': ['場の空気を敏感に読む','繊細で感受性が高い','賢くて記憶力がいい','静かに待てる・動くときは素早い','観察力と分析力がある'],
+  '丑': ['コツコツ積み上げる','急がない・焦らない','でも止まらない','粘り強い','頑張り屋さん'],
+  '寅': ['行動力がある','考えるより先に動く','度胸がある','直感が鋭い','スタートダッシュが速い'],
+  '卯': ['気づいたら人が集まる','いるだけで場が和む','押しつけがましくない温かさ','自然体で人を引き寄せる','居心地がいいと言われる'],
+  '辰': ['大きな可能性が眠っている','まだ出し切れていない力','スケールが周りと違う','これからどんどん開花する','本番はこれから'],
+  '巳': ['直感が鋭い・本質を見抜く','初対面でも相手がわかる','内側に秘めた熱さがある','表は落ち着いて内側は鋭い','第六感が働く'],
+  '午': ['情熱的で裏表がない','感じたことが正直に出る','頑張り屋さん・妥協できない','全力投球する','燃え尽きるくらい本気になれる'],
+  '未': ['面倒見がいい・放っておけない','仲間意識が強い','人のために動ける','温かくて尽くせる','諦めない粘り強さがある'],
+  '申': ['頭の回転が速い','状況をすぐ読める','機転が利く・器用','臨機応変に対応できる','賢くて抜け目がない'],
+  '酉': ['こだわりが強い','本物を見抜くセンス','審美眼が高い','細部が気になる','完璧主義なところがある'],
+  '戌': ['誠実で義理堅い','一度信頼した人を裏切らない','約束を必ず守る','仲間への愛情が深い','信頼できる存在'],
+  '亥': ['自由を愛する','枠に収まらない','本音を話せる人が少ない','深く物事を考える','一人の時間が大事']
+};
+/* ======= 基本性格カード ラベルデータ END ======= */
+
+
+/* ======= 通変星ラベルデータ ======= */
+const HENSEI_LABELS = {
+  '比肩': ['独立心が強い','自分の道を行く','人に頼らない','こだわりがある','ぶれない'],
+  '劫財': ['負けず嫌い','ライバル意識が強い','競争心がある','頑張り屋','闘志がある'],
+  '食神': ['自由でのびやか','楽しむことが得意','表現力がある','マイペース','おおらか'],
+  '傷官': ['感性が鋭い','完璧主義','既存の枠を壊す','クリエイティブ','こだわりが強い'],
+  '偏財': ['行動力がある','人脈が広い','フットワークが軽い','社交的','チャンスをつかむ'],
+  '正財': ['堅実','コツコツ積み上げる','安定を大切にする','真面目','計画的'],
+  '偏官': ['プレッシャーに強い','反骨精神がある','追い込まれると燃える','負けず嫌い','チャレンジ精神'],
+  '正官': ['責任感が強い','規律を守る','信頼される','真面目','きっちりしている'],
+  '偏印': ['独自の発想','探究心がある','マイペース','直感が鋭い','独創的'],
+  '印綬': ['学ぶことが好き','面倒見がいい','知識が豊富','思いやりがある','慎重']
+};
+/* ======= 通変星ラベルデータ END ======= */
+
 /* ======= 月干フレーズ（月干が日干に与える影響） ======= */
 const MOON_KAN_PHRASE = {
   // 日干甲
@@ -14684,13 +14731,14 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime){
       </div>
       <div style="display:flex;align-items:baseline;gap:8px;margin-bottom:0.3rem;">
         <div class="nichikan-name ${kanClass(nik)}">${nichikan}</div>
-        <div class="${shiClass(month_shi_name)}" style="font-size:2rem;font-weight:300;">${month_shi_name}${(typeof MOON_SHI_LABEL !== 'undefined' && MOON_SHI_LABEL[nichikan] && MOON_SHI_LABEL[nichikan][month_shi_name]) ? '<span style="font-size:0.75rem;color:var(--sk-gold-light);font-weight:500;margin-left:4px;">（' + MOON_SHI_LABEL[nichikan][month_shi_name].label.split('・')[0] + '）</span>' : ''}</div>
+        <div class="${shiClass(month_shi_name)}" style="font-size:2rem;font-weight:300;">${month_shi_name}</div>
+        ${(typeof MOON_SHI_LABEL !== 'undefined' && MOON_SHI_LABEL[nichikan] && MOON_SHI_LABEL[nichikan][month_shi_name]) ? '<button onclick="showMoonShiDetail(\'' + nichikan + '\',\'' + month_shi_name + '\')" style="display:inline-block;margin-left:6px;padding:3px 10px;border-radius:12px;font-size:11px;background:rgba(184,150,46,0.15);border:1px solid rgba(184,150,46,0.4);color:var(--sk-gold-light);cursor:pointer;vertical-align:middle;">' + MOON_SHI_LABEL[nichikan][month_shi_name].label.split('・')[0] + '</button>' : ''}
       </div>
       <div style="display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px;">
         <button onclick="generateNikkanAI('${nichikan}','${month_shi_name}','${day_shi_name}','${month_p ? KAN10[month_p.kan] : ''}')" style="padding:2px 10px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid var(--sk-gold);background:transparent;color:var(--sk-gold);">✨ AI鑑定文</button>
         <button onclick="showNikkanReason('${nichikan}','${month_shi_name}','${day_shi_name}','${month_p ? KAN10[month_p.kan] : ''}')" style="padding:2px 10px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid rgba(255,255,255,0.2);background:transparent;color:var(--muted);">📖 理由</button>
       </div>
-      <div id="nikkan-ai-result" class="nichikan-desc">${getNikkanMessage(nichikan, month_shi_name, day_shi_name, month_p ? KAN10[month_p.kan] : '')||ndesc.desc}</div>
+      <div id="nikkan-ai-result" class="nichikan-desc">${getNikkanMessage(nichikan, month_shi_name, day_shi_name, month_p ? KAN10[month_p.kan] : '', hensei)||ndesc.desc}</div>
       ${month_shi_name?'<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:6px;">'+nichikan+'（'+month_shi_name+'月・'+day_shi_name+'日支）</div>':''}
       ${(function(){
         var nikFriends = getFriendsWithKan(['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'].indexOf(nichikan), 2);
@@ -14893,62 +14941,109 @@ document.addEventListener('click', ()=>{
 
 
 /* 命の主星テキスト生成（日干×月支×日支の自然な合成） */
-function getNikkanMessage(kan, moon_shi, day_shi, moon_kan) {
+function getNikkanMessage(kan, moon_shi, day_shi, moon_kan, hensei) {
   var baseData = (CHOKO_DESC[kan] && CHOKO_DESC[kan][moon_shi]);
   
   // 3セクション構成の場合
   if(baseData && typeof baseData === 'object' && baseData.self) {
-    var baseText = baseData.base || '';  // 日干の共通文章
-    var selfText = baseData.self || '';  // 月支の文章
-    var noteText = baseData.note || '';  // 注意書き
+    var baseText = baseData.base || '';
+    var selfText = baseData.self || '';
+    var noteText = baseData.note || '';
     var loveText = baseData.love || '';
     var workText = baseData.work || '';
     
-    // あなたはこういう人：base + 改行 + self + 改行 + note
-    var selfCombined = baseText 
-      ? '<div style="display:inline-block;background:rgba(184,150,46,0.15);border:1px solid rgba(184,150,46,0.4);border-radius:6px;padding:2px 8px;font-size:10px;color:var(--sk-gold-light);font-weight:700;margin-bottom:6px;">日干：' + kan + '</div><br>' + baseText + '<br><br>' +
-        '<div style="display:inline-block;background:rgba(184,150,46,0.15);border:1px solid rgba(184,150,46,0.4);border-radius:6px;padding:2px 8px;font-size:10px;color:var(--sk-gold-light);font-weight:700;margin-bottom:6px;">月支：' + moon_shi + '</div>' +
-        (typeof MOON_SHI_LABEL !== 'undefined' && MOON_SHI_LABEL[kan] && MOON_SHI_LABEL[kan][moon_shi] ?
-          ' <span style="font-size:10px;color:var(--sk-gold-light);">※' + MOON_SHI_LABEL[kan][moon_shi].label + '</span>' +
-          '  <button onclick="showMoonShiDetail(\'' + kan + '\',\'' + moon_shi + '\')" style="font-size:9px;padding:1px 6px;border-radius:8px;border:1px solid rgba(184,150,46,0.6);background:transparent;color:var(--sk-gold-light);cursor:pointer;margin-left:4px;">詳細</button>'
-          : '') +
-        '<br>' + selfText + (noteText ? '<br><br><span style="color:var(--sk-silver-dim);">' + noteText + '</span>' : '')
-      : selfText + (noteText ? '<br><br><span style="color:var(--sk-silver-dim);">' + noteText + '</span>' : '');
+    // 日支フレーズ
+    var dp = day_shi ? NICHISHI_PHRASE[day_shi] : null;
+    var dayShiPhrase = dp ? dp.pre + dp.post : '';
     
-    // 月干フレーズを追加
+    // 月干フレーズ
     var moonKanPhrase = '';
     if(moon_kan && typeof MOON_KAN_PHRASE !== 'undefined' &&
        MOON_KAN_PHRASE[kan] && MOON_KAN_PHRASE[kan][moon_kan]) {
       moonKanPhrase = MOON_KAN_PHRASE[kan][moon_kan];
     }
-    
+
+    // 月支ラベル
+    var moonShiLabelHTML = '';
+    if(typeof MOON_SHI_LABEL !== 'undefined' && MOON_SHI_LABEL[kan] && MOON_SHI_LABEL[kan][moon_shi]) {
+      var lbl = MOON_SHI_LABEL[kan][moon_shi];
+      moonShiLabelHTML = ' <span style="font-size:10px;color:var(--sk-gold-light);">※' + lbl.label + '</span>' +
+        '  <button onclick="showMoonShiDetail(\'' + kan + '\',\'' + moon_shi + '\')" style="font-size:9px;padding:1px 6px;border-radius:8px;border:1px solid rgba(184,150,46,0.6);background:transparent;color:var(--sk-gold-light);cursor:pointer;margin-left:4px;">詳細</button>';
+    }
+
+    // ラベル生成関数
+    function makeTags(items, color) {
+      if(!items) return '';
+      return items.map(function(t){
+        return '<span style="display:inline-block;margin:2px 3px 2px 0;padding:3px 8px;border-radius:12px;font-size:11px;background:' + color + ';color:var(--text);border:1px solid rgba(255,255,255,0.15);">' + t + '</span>';
+      }).join('');
+    }
+
+    // 日干ラベル
+    var kanLabels = (typeof KAN_LABELS !== 'undefined' && KAN_LABELS[kan]) ? KAN_LABELS[kan] : [];
+    var shiLabels = (typeof SHI_LABELS !== 'undefined' && SHI_LABELS[moon_shi]) ? SHI_LABELS[moon_shi] : [];
+
+    // あなたはこういう人：ラベル形式
+    // 日支ラベル
+    var dayShiLabels = (typeof SHI_LABELS !== 'undefined' && SHI_LABELS[day_shi]) ? SHI_LABELS[day_shi] : [];
+
+    var selfSection =
+      '<div style="margin-bottom:8px;">' +
+      '<div style="font-size:10px;color:var(--sk-gold-light);font-weight:700;margin-bottom:4px;">日干：' + kan + '</div>' +
+      '<div>' + makeTags(kanLabels, 'rgba(61,184,86,0.15)') + '</div>' +
+      '</div>' +
+      '<div style="margin-bottom:8px;">' +
+      '<div style="font-size:10px;color:var(--sk-gold-light);font-weight:700;margin-bottom:4px;">月支：' + moon_shi + moonShiLabelHTML + '</div>' +
+      '<div>' + makeTags(shiLabels, 'rgba(184,150,46,0.15)') + '</div>' +
+      '</div>' +
+      (dayShiLabels.length ? 
+      '<div style="margin-bottom:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);">' +
+      '<div style="font-size:10px;color:var(--sk-silver-dim);font-weight:700;margin-bottom:4px;">日支：' + day_shi + '（内面・近い人への素顔）</div>' +
+      '<div>' + makeTags(dayShiLabels, 'rgba(120,120,180,0.15)') + '</div>' +
+      '</div>' : '') +
+      (noteText ? '<div style="font-size:11px;color:var(--sk-silver-dim);margin-top:4px;">' + noteText + '</div>' : '') +
+      // 通変星ラベル
+      (function(){
+        if(!hensei || typeof HENSEI_LABELS === 'undefined') return '';
+        // 重複を除いた通変星を収集
+        var seen = {};
+        var tags = [];
+        hensei.forEach(function(h){
+          if(h && h !== '—' && !seen[h] && HENSEI_LABELS[h]) {
+            seen[h] = true;
+            HENSEI_LABELS[h].forEach(function(lbl){
+              tags.push('<span style="display:inline-block;margin:2px 3px 2px 0;padding:3px 8px;border-radius:12px;font-size:11px;background:rgba(180,100,180,0.15);color:var(--text);border:1px solid rgba(180,100,180,0.2);">' + lbl + '</span>');
+            });
+          }
+        });
+        if(!tags.length) return '';
+        return '<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);">' +
+          '<div style="font-size:10px;color:rgba(180,100,180,0.8);font-weight:700;margin-bottom:4px;">通変星</div>' +
+          '<div>' + tags.join('') + '</div></div>';
+      })();
+
     var html = '<div style="margin-bottom:10px;">' +
-      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">' +
+      '<div style="display:flex;align-items:center;gap:6px;">' +
       '<span style="font-size:10px;color:var(--sk-gold-light);font-weight:700;">👤 あなたはこういう人</span>' +
       '<span style="font-size:9px;color:var(--sk-gold-light);background:rgba(184,150,46,0.12);padding:1px 6px;border-radius:8px;">日干・' + kan + '／月支・' + moon_shi + '</span>' +
       '</div>' +
-      '<p style="font-size:12px;line-height:1.8;color:var(--text);margin:0;">' + selfCombined + '</p>' +
-      (moonKanPhrase ? '<p style="font-size:12px;line-height:1.8;color:var(--text);margin:4px 0 0;">' + moonKanPhrase + '</p>' : '') +
+      '<button onclick="toggleSakurakoText(this)" style="font-size:9px;padding:2px 8px;border-radius:10px;border:1px solid var(--sk-gold-light);background:transparent;color:var(--sk-gold-light);cursor:pointer;white-space:nowrap;">さくらこ文章</button>' +
       '</div>' +
-      '<div style="margin-bottom:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">' +
-      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
-      '<span style="font-size:10px;color:#ff9ec4;font-weight:700;">💕 恋愛では</span>' +
-      '<span style="font-size:9px;color:#ff9ec4;background:rgba(255,158,196,0.15);padding:1px 6px;border-radius:8px;">日支・' + day_shi + '／日干・' + kan + '</span>' +
+      '<div class="sakurako-text" style="display:none;margin-bottom:8px;padding:8px;background:rgba(184,150,46,0.06);border-radius:8px;font-size:12px;line-height:1.8;color:var(--text);">' +
+      '<div style="font-size:10px;color:var(--sk-gold-light);margin-bottom:4px;">日干：' + kan + '</div>' + baseText +
+      '<br><br><div style="font-size:10px;color:var(--sk-gold-light);margin-bottom:4px;">月支：' + moon_shi + '</div>' + selfText +
+      (dayShiPhrase ? '<br><br>' + dayShiPhrase : '') +
+      (moonKanPhrase ? '<br><br>' + moonKanPhrase : '') +
       '</div>' +
-      '<p style="font-size:12px;line-height:1.8;color:var(--text);margin:0;">' + loveText + '</p>' +
+      '<div>' + selfSection + '</div>' +
       '</div>' +
-      '<div style="padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">' +
-      '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">' +
-      '<span style="font-size:10px;color:var(--sk-gold-light);font-weight:700;">💼 仕事・将来では</span>' +
-      '<span style="font-size:9px;color:var(--sk-gold-light);background:rgba(184,150,46,0.12);padding:1px 6px;border-radius:8px;">月干・' + moon_kan + '／月支・' + moon_shi + '</span>' +
-      '</div>' +
-      '<p style="font-size:12px;line-height:1.8;color:var(--text);margin:0;">' + workText + '</p>' +
-      '</div>';
+      /* 恋愛・仕事セクションは一旦非表示（後で整理して追加予定）*/
+      '';
     return html;
   }
   
   // 旧形式（文字列）の場合
-  // baseDataがオブジェクト（{base,self,note}）の場合は空文字に
   var base = (baseData && typeof baseData === 'string') ? baseData : '';
   var dp = day_shi ? NICHISHI_PHRASE[day_shi] : null;
 
@@ -14961,25 +15056,30 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan) {
   // 同じ地支が月支と日支に重なる場合（例：辰月×辰日）は強調
   if (moon_shi === day_shi) {
     var doubleMsg = {
-      '子': 'しかも、水のエネルギーが二重に重なっているんです。内側に秘めた力と深く考える力が、両方命式に宿っていますね。',
-      '丑': 'しかも、大地のエネルギーが二重に重なっているんです。積み上げる力が人一倍強い方ですよ。',
-      '寅': 'しかも、虎のエネルギーが二重に重なっているんです。行動力と直感が命式に二重に宿っています。動き出したときの力が、半端ではないですよ。',
-      '卯': 'しかも、春の草花のエネルギーが二重に重なっているんです。人を引き寄せる力が命式に二重に入っていますね。',
-      '辰': 'しかも、辰が二重に重なっているんです。大きな可能性が命式に二重に眠っている。これはなかなかないことですよ。',
-      '巳': 'しかも、巳が二重に重なっているんです。直感と洞察力が命式に二重に宿っています。人の本質を見抜く力が並外れていますね。',
-      '午': 'しかも、情熱のエネルギーが二重に重なっているんです。周りを動かす力が、特別に強い方ですよ。',
-      '未': 'しかも、温かさのエネルギーが二重に重なっているんです。人を包み込む力が命式に二重に宿っていますね。',
-      '申': 'しかも、機転のエネルギーが二重に重なっているんです。状況を読む力が命式に二重に入っています。',
-      '酉': 'しかも、磨かれた感性が二重に重なっているんです。本物を見抜く目が、特別に鋭い方ですよ。',
-      '戌': 'しかも、誠実さのエネルギーが二重に重なっているんです。信頼される力が命式に二重に入っていますね。',
-      '亥': 'しかも、自由のエネルギーが二重に重なっているんです。独自の世界観が命式に二重に宿っていますね。'
+      '子': 'しかも、水のエネルギーが二重に重なっているんです。内側に秘めた力と深く考える力が、両方命式に宿っています。',
+      '丑': 'しかも、コツコツ力が二重に重なっています。積み上げる力が命式全体に流れていますよ。',
+      '寅': 'しかも、行動力が二重に重なっています。動き出したら本当に誰も止められないですよ。',
+      '卯': 'しかも、人を引き寄せる力が二重に重なっています。あなたのそばには自然と人が集まりますよ。',
+      '辰': 'しかも、大きな可能性が二重に重なっています。これはなかなかないことですよ。',
+      '巳': 'しかも、直感の鋭さが二重に重なっています。人の本質を見抜く力が命式全体に宿っていますよ。',
+      '午': 'しかも、情熱と頑張り屋さん気質が二重に重なっています。その熱量は本物ですよ。',
+      '未': 'しかも、面倒見の良さと温かさが二重に重なっています。仲間を大切にする心が命式全体に流れていますよ。',
+      '申': 'しかも、機転の良さと賢さが二重に重なっています。頭の回転の速さが命式全体に宿っていますよ。',
+      '酉': 'しかも、こだわりと審美眼が二重に重なっています。本物を見抜く力が命式全体に流れていますよ。',
+      '戌': 'しかも、誠実さと義理の強さが二重に重なっています。信頼できる人柄が命式全体に宿っていますよ。',
+      '亥': 'しかも、自由を愛する心と深い内面が二重に重なっています。独自の世界観が命式全体に流れていますよ。'
     };
-    var dMsg = doubleMsg[moon_shi] || ('しかも、' + moon_shi + 'のエネルギーが二重に重なっているんです。その力が命式に二重に宿っている。なかなかないことですよ。');
-    result = base + ' ' + dMsg;
+    if (doubleMsg[moon_shi]) result += ' ' + doubleMsg[moon_shi];
+  }
+
+  if(moon_kan && typeof MOON_KAN_PHRASE !== 'undefined' &&
+     MOON_KAN_PHRASE[kan] && MOON_KAN_PHRASE[kan][moon_kan]) {
+    result += ' ' + MOON_KAN_PHRASE[kan][moon_kan];
   }
 
   return result;
 }
+
 
 function openNikkanBasicPanel(kanName) {
   var d = NICHIKAN_DESC[kanName];
@@ -15589,13 +15689,52 @@ function showMoonShiDetail(kan, moonShi) {
   if(typeof MOON_SHI_LABEL === 'undefined') return;
   var entry = MOON_SHI_LABEL[kan] && MOON_SHI_LABEL[kan][moonShi];
   if(!entry) return;
-  document.getElementById('hjTitle').textContent = '月支 ' + moonShi + ' の性格的特徴';
-  document.getElementById('hjYomi').textContent = '（月支：' + moonShi + '）※' + entry.label;
-  document.getElementById('hjBadge').textContent = 'さくらこメモ';
-  document.getElementById('hjDesc').innerHTML = '<p style="font-size:13px;line-height:1.9;color:var(--text);">' + entry.detail + '</p>';
+
+  // 季節を判定
+  var seasonKey = '';
+  if(['寅','卯','辰'].indexOf(moonShi) !== -1) seasonKey = '春';
+  else if(['巳','午','未'].indexOf(moonShi) !== -1) seasonKey = '夏';
+  else if(['申','酉','戌'].indexOf(moonShi) !== -1) seasonKey = '秋';
+  else seasonKey = '冬';
+
+  // SEASON_KAN_DESCから説明を取得
+  var seasonDesc = (typeof SEASON_KAN_DESC !== 'undefined' && SEASON_KAN_DESC[kan]) 
+    ? SEASON_KAN_DESC[kan][seasonKey] || '' : '';
+
+  // 五行マップ
+  var gogyoMap = {'甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水'};
+  var kanGogyo = gogyoMap[kan] || '';
+  
+  // タイトル：「春の終わりの甲」
+  var titleText = entry.label.split('・')[0] + 'の' + kan;
+
+  var html = 
+    '<div style="margin-bottom:10px;padding:8px 10px;background:rgba(184,150,46,0.08);border-radius:8px;">' +
+    '<div style="font-size:10px;color:var(--sk-gold-light);margin-bottom:6px;font-weight:700;">🌸 ' + entry.label + '</div>' +
+    '<p style="font-size:12px;line-height:1.8;color:var(--text);margin:0;">' + entry.detail + '</p>' +
+    '</div>' +
+    (seasonDesc ? 
+    '<div style="padding:8px 10px;background:rgba(184,150,46,0.04);border-radius:8px;">' +
+    '<div style="font-size:10px;color:var(--sk-gold-light);margin-bottom:6px;font-weight:700;">📖 ' + seasonKey + 'の' + kan + '（' + kanGogyo + '）とは</div>' +
+    '<p style="font-size:12px;line-height:1.8;color:var(--text);margin:0;">' + seasonDesc + '</p>' +
+    '</div>' : '');
+
+  document.getElementById('hjTitle').textContent = titleText;
+  document.getElementById('hjYomi').textContent = moonShi + '（' + entry.label + '）';
+  document.getElementById('hjBadge').textContent = kan + '×' + seasonKey;
+  document.getElementById('hjDesc').innerHTML = html;
   document.getElementById('hjContext').innerHTML = '';
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
+}
+
+function toggleSakurakoText(btn) {
+  var wrap = btn.closest('div').parentElement;
+  var textDiv = wrap ? wrap.querySelector('.sakurako-text') : null;
+  if(!textDiv) return;
+  var isOpen = textDiv.style.display !== 'none';
+  textDiv.style.display = isOpen ? 'none' : 'block';
+  btn.textContent = isOpen ? 'さくらこ文章' : '閉じる';
 }
 
 /* ======= 命の主星AI鑑定文・理由表示 END ======= */
