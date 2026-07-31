@@ -6873,7 +6873,7 @@ function toggleAccordion(id) {
 /* アコーディオンHTMLを生成するヘルパー */
 
 /* 四柱推命命式カード（通常鑑定用） */
-function buildShichuuCardHTML(birthdate, optTime, optCityData) {
+function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner) {
   if(!birthdate) return '';
   try {
     var parts=birthdate.split('-');
@@ -7754,7 +7754,7 @@ function switchShichuuCard(view) {
   var _timeStr4 = (_t || '').replace(':','').replace(/[^0-9]/g,'');
   var _unknownTime = !_timeStr4 || _timeStr4.length < 4;
   if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(_timeStr4, _unknownTime);
-  container.innerHTML = buildShichuuCardHTML(bd, _t, _cd);
+  container.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner);
 }
 
 function switchSanmeiCard(view) {
@@ -7933,7 +7933,7 @@ function buildPersonalCardsHTML(birthdate, honmei, kYear, kMonth, isPartner) {
         var _act='padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;';
         var _smAct=_act+'background:var(--accent);color:#fff;border-color:var(--accent);';
         var _smInact=_act+'background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);font-weight:600;';
-        var _initPartner = (window._currentShichuuView === 'partner');
+        var _initPartner = isPartner; // 引数から直接取得
         _scBtnHTML='<div style="display:flex;gap:4px;">'+
           '<button id="sc-btn-me" onclick="switchShichuuCard(\'me\')" style="'+(_initPartner?_smInact:_smAct)+'">あなた</button>'+
           '<button id="sc-btn-partner" onclick="switchShichuuCard(\'partner\')" style="'+(_initPartner?_smAct:_smInact)+'">相手</button>'+
@@ -8576,7 +8576,7 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
         var _act='padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;';
         var _smAct=_act+'background:var(--accent);color:#fff;border-color:var(--accent);';
         var _smInact=_act+'background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);font-weight:600;';
-        var _initPartner = (window._currentShichuuView === 'partner');
+        var _initPartner = isPartner; // 引数から直接取得
         _scBtnHTML='<div style="display:flex;gap:4px;">'+
           '<button id="sc-btn-me" onclick="switchShichuuCard(\'me\')" style="'+(_initPartner?_smInact:_smAct)+'">あなた</button>'+
           '<button id="sc-btn-partner" onclick="switchShichuuCard(\'partner\')" style="'+(_initPartner?_smAct:_smInact)+'">相手</button>'+
@@ -9568,7 +9568,7 @@ function calculate() {
       var _act='padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;';
       var _smAct=_act+'background:var(--accent);color:#fff;border-color:var(--accent);';
       var _smInact=_act+'background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);font-weight:600;';
-      var _initPartner = (window._currentShichuuView === 'partner');
+      var _initPartner = false; // calculate()はあなた側のみ
       _scBtnHTML='<div style="display:flex;gap:4px;">'+
         '<button id="sc-btn-me" onclick="switchShichuuCard(\'me\')" style="'+(_initPartner?_smInact:_smAct)+'">あなた</button>'+
         '<button id="sc-btn-partner" onclick="switchShichuuCard(\'partner\')" style="'+(_initPartner?_smAct:_smInact)+'">相手</button>'+
@@ -15508,7 +15508,7 @@ function setYakodoki(enabled) {
   }
   var cardBody = document.getElementById('shichuu-card-body');
   if(cardBody && bd && typeof buildShichuuCardHTML === 'function') {
-    cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd);
+    cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner);
   } else {
     autoCalculate();
   }
