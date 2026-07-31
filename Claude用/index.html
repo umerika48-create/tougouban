@@ -14991,10 +14991,22 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan, hensei) {
     // 日支ラベル
     var dayShiLabels = (typeof SHI_LABELS !== 'undefined' && SHI_LABELS[day_shi]) ? SHI_LABELS[day_shi] : [];
 
+    // 日干の友達
+    var kanIdx = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'].indexOf(kan);
+    var moonKanIdx = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'].indexOf(moon_kan);
+    var nikFriends = (typeof getFriendsWithKan === 'function') ? getFriendsWithKan(kanIdx, 2) : [];
+    var moonKanFriends = (typeof getFriendsWithKan === 'function' && moonKanIdx >= 0) ? getFriendsWithKan(moonKanIdx, 1) : [];
+
+    function friendBadges(names) {
+      if(!names||!names.length) return '';
+      return '<div style="margin-top:4px;font-size:10px;color:#b8a8ff;">👥 ' + names.join('・') + '</div>';
+    }
+
     var selfSection =
       '<div style="margin-bottom:8px;">' +
       '<div style="font-size:10px;color:var(--sk-gold-light);font-weight:700;margin-bottom:4px;">日干：' + kan + '</div>' +
       '<div>' + makeTags(kanLabels, 'rgba(61,184,86,0.15)') + '</div>' +
+      friendBadges(nikFriends) +
       '</div>' +
       '<div style="margin-bottom:8px;">' +
       '<div style="font-size:10px;color:var(--sk-gold-light);font-weight:700;margin-bottom:4px;">月支：' + moon_shi + moonShiLabelHTML + '</div>' +
@@ -15004,6 +15016,13 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan, hensei) {
       '<div style="margin-bottom:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);">' +
       '<div style="font-size:10px;color:var(--sk-silver-dim);font-weight:700;margin-bottom:4px;">日支：' + day_shi + '（内面・近い人への素顔）</div>' +
       '<div>' + makeTags(dayShiLabels, 'rgba(120,120,180,0.15)') + '</div>' +
+      '</div>' : '') +
+      // 月干ラベル＋友達
+      (moon_kan ? 
+      '<div style="margin-bottom:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);">' +
+      '<div style="font-size:10px;color:var(--sk-gold-light);font-weight:700;margin-bottom:4px;">月干：' + moon_kan + '（社会・仕事での才能）</div>' +
+      '<div>' + makeTags((typeof KAN_LABELS !== 'undefined' && KAN_LABELS[moon_kan]) ? KAN_LABELS[moon_kan] : [], 'rgba(184,150,46,0.12)') + '</div>' +
+      friendBadges(moonKanFriends) +
       '</div>' : '') +
       (noteText ? '<div style="font-size:11px;color:var(--sk-silver-dim);margin-top:4px;">' + noteText + '</div>' : '') +
       // 通変星ラベル
@@ -15276,13 +15295,20 @@ function openKanPanel(kanName, colIdx){
     }
   }
 
-  document.getElementById('hjDesc').innerHTML =
-    '<p style="font-size:12px;line-height:1.8;color:var(--text);">' + mainDesc + '</p>' + chokoBaseHTML;
-
   // 友達データから自動取得
   var kanIdx = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'].indexOf(kanName);
   var autoFriends = (kanIdx !== -1) ? getFriendsWithKan(kanIdx, colIdx) : [];
   var autoHTML = buildFriendBadgeHTML(autoFriends);
+
+  // 友達名を一番上に表示
+  var friendTopHTML = autoFriends.length ? 
+    '<div style="margin-bottom:10px;padding:6px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);">' +
+    '<div style="font-size:10px;color:#b8a8ff;margin-bottom:4px;">👥 同じ' + colLabels[colIdx] + 'の友達</div>' +
+    '<div>' + autoHTML + '</div></div>' : '';
+
+  document.getElementById('hjDesc').innerHTML =
+    friendTopHTML +
+    '<p style="font-size:12px;line-height:1.8;color:var(--text);">' + mainDesc + '</p>' + chokoBaseHTML;
 
   document.getElementById('hjContext').innerHTML =
     '<div style="margin-top:10px;padding:8px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);">' +
@@ -15427,7 +15453,6 @@ function openShiPanel(shiName, colIdx){
     }
   }
 
-  document.getElementById('hjDesc').innerHTML = '<p style="font-size:12px;line-height:1.8;color:var(--text);">' + mainDesc + '</p>' + seasonHTML + chokoShiHTML;
   // Friend表示
   var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
   var shiIdx = SHI12.indexOf(shiName);
@@ -15435,12 +15460,11 @@ function openShiPanel(shiName, colIdx){
   if(shiIdx !== -1 && colIdx !== undefined){
     var shiFriends = getFriendsWithShi(shiIdx, colIdx);
     if(shiFriends.length > 0){
-      shiFriendHTML = '<div style="margin-top:8px;padding:8px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);">' +
-        '<div style="font-size:10px;color:#b8a8ff;margin-bottom:6px;">👥 この地支を持つ友達</div>' +
-        '<div>' + buildFriendBadgeHTML(shiFriends) + '</div></div>';
+      shiFriendHTML = '<div style="margin-bottom:10px;padding:6px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);"><div style="font-size:10px;color:#b8a8ff;margin-bottom:4px;">👥 同じ地支の友達</div><div>' + buildFriendBadgeHTML(shiFriends) + '</div></div>';
     }
   }
-  document.getElementById('hjContext').innerHTML = shiFriendHTML || '';
+  document.getElementById('hjDesc').innerHTML = shiFriendHTML + '<p style="font-size:12px;line-height:1.8;color:var(--text);">' + mainDesc + '</p>' + seasonHTML + chokoShiHTML;
+  document.getElementById('hjContext').innerHTML = '';
   document.getElementById('hjTitle').dataset.memoKey = 'memo_shi_' + shiName + '_' + colIdx2;
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
