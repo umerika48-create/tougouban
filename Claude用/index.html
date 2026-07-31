@@ -7933,9 +7933,10 @@ function buildPersonalCardsHTML(birthdate, honmei, kYear, kMonth, isPartner) {
         var _act='padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;';
         var _smAct=_act+'background:var(--accent);color:#fff;border-color:var(--accent);';
         var _smInact=_act+'background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);font-weight:600;';
+        var _initPartner = (window._currentShichuuView === 'partner');
         _scBtnHTML='<div style="display:flex;gap:4px;">'+
-          '<button id="sc-btn-me" onclick="switchShichuuCard(\'me\')" style="'+_smAct+'">あなた</button>'+
-          '<button id="sc-btn-partner" onclick="switchShichuuCard(\'partner\')" style="'+_smInact+'">相手</button>'+
+          '<button id="sc-btn-me" onclick="switchShichuuCard(\'me\')" style="'+(_initPartner?_smInact:_smAct)+'">あなた</button>'+
+          '<button id="sc-btn-partner" onclick="switchShichuuCard(\'partner\')" style="'+(_initPartner?_smAct:_smInact)+'">相手</button>'+
           '</div>';
       }
       return '<div class="accordion-wrap">'+
@@ -8575,9 +8576,10 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
         var _act='padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;';
         var _smAct=_act+'background:var(--accent);color:#fff;border-color:var(--accent);';
         var _smInact=_act+'background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);font-weight:600;';
+        var _initPartner = (window._currentShichuuView === 'partner');
         _scBtnHTML='<div style="display:flex;gap:4px;">'+
-          '<button id="sc-btn-me" onclick="switchShichuuCard(\'me\')" style="'+_smAct+'">あなた</button>'+
-          '<button id="sc-btn-partner" onclick="switchShichuuCard(\'partner\')" style="'+_smInact+'">相手</button>'+
+          '<button id="sc-btn-me" onclick="switchShichuuCard(\'me\')" style="'+(_initPartner?_smInact:_smAct)+'">あなた</button>'+
+          '<button id="sc-btn-partner" onclick="switchShichuuCard(\'partner\')" style="'+(_initPartner?_smAct:_smInact)+'">相手</button>'+
           '</div>';
       }
       return '<div class="accordion-wrap">'+
@@ -9566,9 +9568,10 @@ function calculate() {
       var _act='padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;';
       var _smAct=_act+'background:var(--accent);color:#fff;border-color:var(--accent);';
       var _smInact=_act+'background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);font-weight:600;';
+      var _initPartner = (window._currentShichuuView === 'partner');
       _scBtnHTML='<div style="display:flex;gap:4px;">'+
-        '<button id="sc-btn-me" onclick="switchShichuuCard(\'me\')" style="'+_smAct+'">あなた</button>'+
-        '<button id="sc-btn-partner" onclick="switchShichuuCard(\'partner\')" style="'+_smInact+'">相手</button>'+
+        '<button id="sc-btn-me" onclick="switchShichuuCard(\'me\')" style="'+(_initPartner?_smInact:_smAct)+'">あなた</button>'+
+        '<button id="sc-btn-partner" onclick="switchShichuuCard(\'partner\')" style="'+(_initPartner?_smAct:_smInact)+'">相手</button>'+
         '</div>';
     }
     return  '<div class="accordion-wrap">'+
