@@ -7736,6 +7736,7 @@ function switchCycleCard(view) {
 
 function switchShichuuCard(view) {
   var isPartner = (view === 'partner');
+  window._currentShichuuView = view; // 現在の表示を記録
   var bM = document.getElementById('sc-btn-me');
   var bP = document.getElementById('sc-btn-partner');
   if(!bM||!bP) return;
@@ -15489,7 +15490,9 @@ function setYakodoki(enabled) {
   }
   // 現在表示中のタブ（あなた or 相手）を確認
   var btnP = document.getElementById('sc-btn-partner');
-  var isPartner = btnP && btnP.style.fontWeight === '700';
+  var btnM = document.getElementById('sc-btn-me');
+  // fontWeightではなくbackgroundで判定（アクティブ=var(--accent)背景）
+  var isPartner = window._currentShichuuView === 'partner';
   var bd, _t, _cd;
   if(isPartner) {
     bd = window._compatBdB;
