@@ -13573,30 +13573,22 @@ function buildFriendDataListHTML(list){
       var placeLabel = f.place || '未設定';
       var safeName = escapeFriendHtml(f.name);
       var jsName = f.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
-      // 四柱情報を取得
-      var fMei = null;
-      try {
-        var fParts = f.date.split('-');
-        var fYr=parseInt(fParts[0]),fMo=parseInt(fParts[1]),fDa=parseInt(fParts[2]);
-        var fTimeStr = f.time ? f.time.replace(':','') : '';
-        var fUnknown = !fTimeStr || f.timeUnknown;
-        var fH=12,fMin=0;
-        if(!fUnknown && fTimeStr.length===4){ fH=parseInt(fTimeStr.slice(0,2)); fMin=parseInt(fTimeStr.slice(2,4)); }
-        // calcShichu4Pillarsが利用可能なら使用
-        if(typeof calcShichu4Pillars === 'function'){
-          fMei = calcShichu4Pillars(fYr,fMo,fDa,fH,fMin,fUnknown,null);
-        }
-      } catch(e){}
+      // 四柱情報をgetFriendMeishikiキャッシュから取得
       var KAN10f=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
       var SHI12f=['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
       var meishikiLabel = '';
-      if(fMei && fMei.month_p && fMei.day_p){
-        var moonKanStr = KAN10f[fMei.month_p.kan] || '';
-        var moonShiStr = SHI12f[fMei.month_p.shi] || '';
-        var dayKanStr  = KAN10f[fMei.day_p.kan]   || '';
-        var dayShiStr  = SHI12f[fMei.day_p.shi]   || '';
-        meishikiLabel = moonKanStr+moonShiStr+' / '+dayKanStr+dayShiStr+(fUnknown?' ※時刻不明':'');
-      }
+      try {
+        var meishikis = getFriendMeishiki();
+        var fMei = meishikis.find(function(m){ return m.name === f.name; });
+        var fUnknown = !f.time || f.timeUnknown;
+        if(fMei && fMei.month_p && fMei.day_p){
+          var moonKanStr = KAN10f[fMei.month_p.kan] || '';
+          var moonShiStr = SHI12f[fMei.month_p.shi] || '';
+          var dayKanStr  = KAN10f[fMei.day_p.kan]   || '';
+          var dayShiStr  = SHI12f[fMei.day_p.shi]   || '';
+          meishikiLabel = moonKanStr+moonShiStr+' / '+dayKanStr+dayShiStr+(fUnknown?' ※時刻不明':'');
+        }
+      } catch(e){}
       html += '<div style="border:1px solid rgba(255,255,255,' + (isHidden?'.05':'.1') + ');border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:11px;opacity:' + (isHidden?'0.4':'1') + ';">'
         + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
         + '<div style="font-weight:700;color:var(--text);">' + safeName + '</div>'
@@ -13772,8 +13764,19 @@ function saveEditFriend() {
   FRIEND_MEISHIKI_CACHE = null;
   try { localStorage.setItem('sakurakoFriendData', JSON.stringify(FRIEND_DATA)); } catch(e) {}
   closeEditFriendModal();
+  // キャッシュをクリアして再描画
+  FRIEND_MEISHIKI_CACHE = null;
   var listEl = document.getElementById('friend-data-list');
   if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA);
+  // 命式カードが表示中なら再計算
+  var nikkanResult = document.getElementById('nikkan-ai-result');
+  if(nikkanResult && typeof renderResult === 'function') {
+    // 現在の計算結果を再描画（calculateボタンを自動クリック）
+    var calcBtn = document.querySelector('button[onclick*="calculate"]');
+    // 直接再描画：結果エリアが表示中なら友達バッジを更新
+    var friendBadgeEls = document.querySelectorAll('.friend-badge-area');
+    friendBadgeEls.forEach(function(el){ el.innerHTML = ''; });
+  }
 }
 
 function toggleFriendHidden(name) {
