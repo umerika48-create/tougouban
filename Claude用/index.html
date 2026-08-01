@@ -13852,6 +13852,8 @@ function editFriend(name) {
   document.getElementById('edit-friend-time').value = f.time || '';
   document.getElementById('edit-friend-place').value = f.place || '';
   document.getElementById('edit-friend-memo').value = f.memo || '';
+  var catEl = document.getElementById('edit-friend-category');
+  if(catEl) catEl.value = f.category || '友達';
   document.getElementById('edit-friend-original-name').value = f.name;
   var em = document.getElementById('friend-edit-modal'); if(em) em.style.display = 'flex';
 }
@@ -13869,12 +13871,14 @@ function saveEditFriend() {
   var newTime = document.getElementById('edit-friend-time').value.trim();
   var newPlace = document.getElementById('edit-friend-place').value.trim();
   var newMemo = document.getElementById('edit-friend-memo').value.trim();
+  var newCategory = (document.getElementById('edit-friend-category') || {}).value || f.category || '友達';
   f.name = newName || f.name;
   f.date = newDate || f.date;
   f.time = newTime;
   f.timeUnknown = !newTime;
   f.place = newPlace;
   f.memo = newMemo;
+  f.category = newCategory;
   FRIEND_MEISHIKI_CACHE = null;
   try { localStorage.setItem('sakurakoFriendData', JSON.stringify(FRIEND_DATA)); } catch(e) {}
   closeEditFriendModal();
@@ -16016,6 +16020,19 @@ function toggleSakurakoText(btn) {
     <div style="margin-bottom:10px;">
       <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">出生地</label>
       <input id="edit-friend-place" type="text" placeholder="例：福岡" style="width:100%;padding:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text);font-size:12px;box-sizing:border-box;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">カテゴリー</label>
+      <select id="edit-friend-category" style="width:100%;padding:8px;background:rgba(20,30,60,0.9);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text);font-size:12px;box-sizing:border-box;">
+        <option value="友達">友達</option>
+        <option value="親しい友人">親しい友人</option>
+        <option value="身内">身内</option>
+        <option value="先生">先生</option>
+        <option value="お客様">お客様</option>
+        <option value="仕事関係">仕事関係</option>
+        <option value="友人">友人</option>
+        <option value="その他">その他</option>
+      </select>
     </div>
     <div style="margin-bottom:14px;">
       <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">メモ</label>
