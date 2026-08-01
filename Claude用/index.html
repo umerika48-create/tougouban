@@ -7002,6 +7002,10 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
       hourVal=parseInt(timeStr4.slice(0,2));
       minVal=parseInt(timeStr4.slice(2,4));
     }
+    // タブのデフォルト状態を時刻に合わせて更新
+    if(typeof updateYakodokiDefault === 'function'){
+      updateYakodokiDefault(timeStr4, unknownTime);
+    }
 
     // 地方時補正（calculateShichuuと同じ）
     var _cityData=optCityData!==undefined?optCityData:window._normalCityData;
