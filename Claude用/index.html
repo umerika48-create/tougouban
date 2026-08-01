@@ -6919,7 +6919,7 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
     var dauResult=calcDaun(new Date(yr,mo-1,da,12,0),year_p.kan,year_p.shi,month_p.kan,month_p.shi,isFemale);
     if(dauResult) dauResult.birthYear=yr;
     // renderResult+buildUnseiHTMLをそのまま使う
-    return renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime)
+    return renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime,hideTabs)
       + buildUnseiHTML(dauResult,yr,day_p?day_p.kan:0);
   } catch(e){ 
     console.error('buildShichuuCardHTML error:', e);
@@ -14637,7 +14637,7 @@ function buildPillarCell(pillar, colClass, nichikan_idx, label){
   return `<td class="${colClass} kan ${dayHighlight} ${kc}">${KAN10[pillar.kan]}</td>`;
 }
 
-function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime){
+function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hideTabs){
   const nik = day_p.kan; // 日干インデックス
   const pillars = [year_p, month_p, day_p, hour_p];
   const labels = ['年柱','月柱','日柱','時柱'];
