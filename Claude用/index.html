@@ -13538,7 +13538,7 @@ function openFriendDataManager(){
     + '<button onclick="saveFriendDataFromPaste()" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--gold,#c9a84c);color:#241d10;font-weight:700;font-size:12px;cursor:pointer;">貼り付けた内容で上書き保存</button>'    + '<button onclick="resetAllFriendData()" style="padding:10px 14px;border-radius:8px;border:1px solid rgba(255,80,80,.4);background:rgba(255,80,80,.1);color:#ff8080;font-weight:700;font-size:12px;cursor:pointer;">全リセット</button>'
     + '</div>'
     + '<div style="margin-top:14px;font-size:11px;color:var(--muted);">現在登録されている友達（' + FRIEND_DATA.length + '人）:</div>'
-    + '<div id="friend-category-filter" style="display:flex;flex-wrap:wrap;gap:4px;margin:8px 0;">' + buildCategoryFilterHTML(FRIEND_DATA) + '</div>'
+    + '<div style="margin:8px 0 4px;"><input id="friend-name-search" type="text" placeholder="名前で検索..." oninput="filterFriendsByName(this.value)" style="width:100%;padding:6px 10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text);font-size:12px;box-sizing:border-box;"></div>'    + '<div id="friend-category-filter" style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0 8px;">' + buildCategoryFilterHTML(FRIEND_DATA) + '</div>'
     + '<div id="friend-data-list" style="max-height:280px;overflow-y:auto;margin-top:8px;">' + buildFriendDataListHTML(FRIEND_DATA, null) + '</div>'
     + '<div style="text-align:right;margin-top:8px;">'
     + '<button onclick="toggleFriendDataRawJson()" style="background:transparent;border:1px solid rgba(255,255,255,.15);color:var(--muted);font-size:10px;padding:4px 10px;border-radius:6px;cursor:pointer;">JSONで表示/隠す</button>'
@@ -13554,9 +13554,11 @@ function buildFriendDataListHTML(list, filterCat){
   }
   var groups = {};
   var order = [];
+  var nameQuery = (window._friendNameSearch || '').toLowerCase();
   list.forEach(function(f){
     var cat = f.category || '未分類';
     if(filterCat && cat !== filterCat) return;
+    if(nameQuery && f.name.toLowerCase().indexOf(nameQuery) === -1) return;
     if(!groups[cat]){ groups[cat] = []; order.push(cat); }
     groups[cat].push(f);
   });
@@ -13742,6 +13744,14 @@ function buildCategoryFilterHTML(list) {
     var isActive = (window._friendCategoryFilter || '全員') === cat;
     return '<button onclick="filterFriendsByCategory(\'' + cat + '\')" style="padding:3px 10px;border-radius:12px;font-size:10px;cursor:pointer;border:1px solid rgba(184,150,46,' + (isActive?'0.8':'0.3') + ');background:rgba(184,150,46,' + (isActive?'0.2':'0.05') + ');color:' + (isActive?'var(--sk-gold-light)':'var(--muted)') + ';font-weight:' + (isActive?'700':'400') + ';">' + cat + '</button>';
   }).join('');
+}
+
+
+function filterFriendsByName(query) {
+  window._friendNameSearch = query.trim();
+  var cat = window._friendCategoryFilter && window._friendCategoryFilter !== '全員' ? window._friendCategoryFilter : null;
+  var listEl = document.getElementById('friend-data-list');
+  if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA, cat);
 }
 
 function filterFriendsByCategory(cat) {
