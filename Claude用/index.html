@@ -16006,7 +16006,17 @@ function setYakodoki(enabled) {
   }
   var cardBody = document.getElementById('shichuu-card-body');
   if(cardBody && bd && typeof buildShichuuCardHTML === 'function') {
-    cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner);
+    cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner, false);
+  } else if(bd && typeof buildShichuuCardHTML === 'function') {
+    // shichuu-card-bodyがない場合もcalculateShichuuで再計算
+    if(typeof calculateShichuu === 'function'){
+      calculateShichuu({
+        dateStr: bd.replace(/-/g,''),
+        timeStr4: _t ? _t.replace(':','') : '',
+        placeOffset: _cd && _cd.lon ? Math.round((_cd.lon-135)*4) : 0,
+        isFemale: true
+      });
+    }
   } else {
     autoCalculate();
   }
