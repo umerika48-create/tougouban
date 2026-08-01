@@ -4915,6 +4915,10 @@ function runShichuu() {
   var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
   var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
 
+  // enhanced-wrapをクリア（九星気学の項目を非表示）
+  var ew = document.getElementById('enhanced-wrap');
+  if(ew) ew.innerHTML = '';
+
   // 友達取得
   function getFriendsByKan(kanIdx, colIdx) {
     var meishikis = getFriendMeishiki();
@@ -4945,28 +4949,30 @@ function runShichuu() {
     var tags = items.map(function(item, i){
       var friends = isKan ? getFriendsByKan(i, colIdx) : getFriendsByShi(i, colIdx);
       var count = friends.length;
-      var friendsHTML = friends.map(function(n){
-        return '<span style="display:inline-block;padding:2px 8px;margin:2px;border-radius:10px;background:rgba(168,154,255,0.15);border:1px solid rgba(168,154,255,0.3);font-size:11px;color:#b8a8ff;cursor:pointer;" onclick="showFriendMeishiki(\''+n.replace(/'/g,"\\'")+'\')">'+ n +'</span>';
-      }).join('');
-      var id = 'shichuu-tag-' + title + '-' + i;
-      return '<div style="display:inline-block;margin:2px;">'
-        + '<button id="'+id+'" onclick="toggleShichuuTag(\''+id+'\',\''+id+'-list\')" style="padding:4px 10px;border-radius:12px;font-size:13px;font-weight:300;border:1px solid rgba(184,150,46,0.4);background:rgba(184,150,46,0.08);color:var(--sk-gold-light);cursor:pointer;position:relative;">'
+      var friendsHTML = count > 0
+        ? friends.map(function(n){
+            return '<span onclick="showFriendMeishiki(\''+n.replace(/'/g,"\\'")+'\')" style="display:inline-block;padding:4px 12px;margin:3px;border-radius:12px;background:rgba(168,154,255,0.15);border:1px solid rgba(168,154,255,0.3);font-size:12px;color:#b8a8ff;cursor:pointer;">'+ n +'</span>';
+          }).join('')
+        : '<span style="font-size:12px;color:var(--muted);">なし</span>';
+      var id = 'stag-' + colIdx + '-' + i;
+      return '<div style="display:inline-block;margin:3px;position:relative;">'
+        + '<button id="'+id+'" onclick="toggleShichuuTag(\''+id+'\')" style="padding:8px 16px;border-radius:14px;font-size:22px;font-weight:300;border:1px solid rgba(184,150,46,0.4);background:rgba(184,150,46,0.08);color:var(--sk-gold-light);cursor:pointer;min-width:52px;position:relative;">'
         + item
-        + (count > 0 ? '<span style="position:absolute;top:-4px;right:-4px;background:#b8a8ff;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;line-height:16px;text-align:center;font-weight:700;">'+count+'</span>' : '')
+        + (count > 0 ? '<span style="position:absolute;top:-5px;right:-5px;background:#b8a8ff;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;line-height:18px;text-align:center;font-weight:700;">'+count+'</span>' : '')
         + '</button>'
-        + '<div id="'+id+'-list" style="display:none;margin-top:4px;padding:6px 8px;background:rgba(20,30,60,0.9);border-radius:8px;border:1px solid rgba(184,150,46,0.2);">'
-        + (count > 0 ? friendsHTML : '<span style="font-size:11px;color:var(--muted);">なし</span>')
+        + '<div id="'+id+'-list" style="display:none;position:absolute;left:0;top:100%;margin-top:4px;padding:8px 10px;background:#0d1a2b;border-radius:10px;border:1px solid rgba(184,150,46,0.3);z-index:100;white-space:nowrap;min-width:120px;box-shadow:0 4px 20px rgba(0,0,0,0.5);">'
+        + friendsHTML
         + '</div>'
         + '</div>';
     }).join('');
-    return '<div style="margin-bottom:16px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.07);">'
-      + '<div style="font-size:12px;color:var(--sk-gold-light);font-weight:700;margin-bottom:8px;padding-left:8px;border-left:2px solid var(--sk-gold-light);">'+title+'</div>'
-      + '<div>'+tags+'</div>'
+    return '<div style="margin-bottom:20px;">'
+      + '<div style="font-size:13px;color:var(--sk-gold-light);font-weight:700;margin-bottom:10px;padding-left:8px;border-left:3px solid var(--sk-gold-light);">'+title+'</div>'
+      + '<div style="display:flex;flex-wrap:wrap;">'+tags+'</div>'
       + '</div>';
   }
 
-  var html = '<div style="padding:12px;">'
-    + '<div style="font-size:11px;color:var(--muted);margin-bottom:12px;">タップすると友達名が表示されます</div>'
+  var html = '<div style="padding:16px;">'
+    + '<div style="font-size:11px;color:var(--muted);margin-bottom:16px;">タップすると友達名が表示されます</div>'
     + makeTagSection('月干', KAN10, 1, true)
     + makeTagSection('日干', KAN10, 2, true)
     + makeTagSection('月支', SHI12, 1, false)
@@ -4979,21 +4985,16 @@ function runShichuu() {
   rd.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-function toggleShichuuTag(btnId, listId) {
+function toggleShichuuTag(btnId) {
+  var listId = btnId + '-list';
   var list = document.getElementById(listId);
   if(!list) return;
   var isOpen = list.style.display !== 'none';
-  // 同じセクション内の他のリストを閉じる
-  var btn = document.getElementById(btnId);
-  if(btn) {
-    var parent = btn.closest('div[style*="margin-bottom:16px"]');
-    if(parent) {
-      parent.querySelectorAll('[id$="-list"]').forEach(function(el){
-        el.style.display = 'none';
-      });
-    }
-  }
-  list.style.display = isOpen ? 'none' : 'block';
+  // 全リストを閉じる
+  document.querySelectorAll('[id^="stag-"][id$="-list"]').forEach(function(el){
+    el.style.display = 'none';
+  });
+  if(!isOpen) list.style.display = 'block';
 }
 
 /* 生年月日から算命学エネルギー値（総エネルギー値・五本能）を算出 */
