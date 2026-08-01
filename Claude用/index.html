@@ -6873,7 +6873,7 @@ function toggleAccordion(id) {
 /* アコーディオンHTMLを生成するヘルパー */
 
 /* 四柱推命命式カード（通常鑑定用） */
-function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner) {
+function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTabs) {
   if(!birthdate) return '';
   try {
     var parts=birthdate.split('-');
@@ -13781,7 +13781,7 @@ function showFriendMeishiki(name, isYakodoki) {
   var dayShi = fMei && fMei.day_p ? SHI12[fMei.day_p.shi] : '?';
 
   var html2 = (typeof buildShichuuCardHTML === 'function')
-    ? buildShichuuCardHTML(f.date, timeStr, null, false)
+    ? buildShichuuCardHTML(f.date, timeStr, null, false, true)
     : '<p style="color:var(--muted);">命式を計算できませんでした</p>';
 
   // 時間切り替えボタン（時刻不明の場合のみ）
@@ -14914,7 +14914,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime){
       '<button onclick="setYakodoki(false)" id="yak-btn-0" style="padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (window._yakodoki === false ? 'var(--sk-gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (window._yakodoki === false ? 'var(--sk-gold)' : 'transparent') + ';color:' + (window._yakodoki === false ? '#000' : 'var(--sk-silver-dim)') + ';font-weight:' + (window._yakodoki === false ? '700' : '400') + ';">0時</button>' +
     '</div>' +
   '</div>';
-  const html = _toggleHTML + `
+  const html = (hideTabs ? '' : _toggleHTML) + `
   <div class="result-title fade-in">
     <h2>命 式 表</h2>
     <div class="person-name">${birthStr}生</div>
