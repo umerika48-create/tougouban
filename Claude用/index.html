@@ -13603,6 +13603,9 @@ function buildFriendDataListHTML(list, filterCat){
         + '<div style="color:var(--muted);line-height:1.7;">生年月日：' + dateLabel + '　出生時刻：' + timeLabel + '　出生地：' + escapeFriendHtml(placeLabel) + '</div>'
         + (meishikiLabel ? '<div style="color:var(--sk-gold-light);margin-top:4px;font-size:10px;">月干支/日干支：' + meishikiLabel + '</div>' : '')
         + (f.memo ? '<div style="color:var(--muted);margin-top:2px;">MEMO：' + escapeFriendHtml(f.memo) + '</div>' : '')
+        + '<div style="margin-top:6px;">'
+        + '<button onclick="showFriendMeishiki(\'' + jsName + '\')" style="font-size:10px;padding:4px 12px;border-radius:8px;border:1px solid rgba(184,150,46,0.4);background:rgba(184,150,46,0.08);color:var(--sk-gold-light);cursor:pointer;">📊 命式を見る</button>'
+        + '</div>'
         + '</div>';
     });
   });
@@ -13745,6 +13748,75 @@ function filterFriendsByCategory(cat) {
   if(filterEl) filterEl.innerHTML = buildCategoryFilterHTML(FRIEND_DATA);
   var listEl = document.getElementById('friend-data-list');
   if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA, cat === '全員' ? null : cat);
+}
+
+
+function showFriendMeishiki(name) {
+  var f = FRIEND_DATA.find(function(d){ return d.name === name; });
+  if(!f) return;
+  
+  // 友達データ管理モーダルを閉じる
+  var mgr = document.getElementById('friend-data-manager');
+  if(mgr) mgr.style.display = 'none';
+  
+  // 生年月日をセット
+  var bdInput = document.getElementById('birthdate');
+  if(bdInput) bdInput.value = f.date || '';
+  
+  // 時刻をセット
+  window._normalBirthTime = f.time || '';
+  window._currentShichuuView = 'me';
+  
+  // buildShichuuCardHTMLで命式を生成して表示
+  var parts = (f.date || '').split('-');
+  if(parts.length < 3) return;
+  
+  var timeStr = f.time || '';
+  var unknown = !timeStr || f.timeUnknown;
+  
+  // 命式カードエリアを探す
+  var container = document.getElementById('shichuu-result-container');
+  if(!container) {
+    // アコーディオンを開く
+    var accordion = document.getElementById('abody-shichuu-card');
+    if(accordion) {
+      accordion.style.display = 'block';
+      container = accordion;
+    }
+  }
+  
+  // buildShichuuCardHTMLを呼び出す
+  if(typeof buildShichuuCardHTML === 'function') {
+    var html = buildShichuuCardHTML(f.date, timeStr, null, false);
+    if(container) container.innerHTML = html;
+    
+    // スクロール
+    if(container) container.scrollIntoView({ behavior: 'smooth' });
+  }
+  
+  // ポップアップで表示
+  var meishikis = getFriendMeishiki();
+  var fMei = meishikis.find(function(m){ return m.name === name; });
+  if(!fMei) return;
+  
+  var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  
+  var moonKan = fMei.month_p ? KAN10[fMei.month_p.kan] : '?';
+  var moonShi = fMei.month_p ? SHI12[fMei.month_p.shi] : '?';
+  var dayKan  = fMei.day_p  ? KAN10[fMei.day_p.kan]   : '?';
+  var dayShi  = fMei.day_p  ? SHI12[fMei.day_p.shi]   : '?';
+  var moonKanForFn = fMei.month_p ? KAN10[fMei.month_p.kan] : '';
+
+  var html2 = buildShichuuCardHTML(f.date, f.time || '', null, false);
+  
+  document.getElementById('hjTitle').textContent = name + 'の命式';
+  document.getElementById('hjYomi').textContent = f.date + (f.time ? ' ' + f.time : ' 時刻不明');
+  document.getElementById('hjBadge').textContent = dayKan + dayShi + '（日柱）';
+  document.getElementById('hjDesc').innerHTML = html2 || '<p style="color:var(--muted);">命式を計算できませんでした</p>';
+  document.getElementById('hjContext').innerHTML = '';
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
 }
 
 function resetAllFriendData() {
