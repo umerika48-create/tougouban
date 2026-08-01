@@ -13748,15 +13748,24 @@ function filterFriendsByCategory(cat) {
 }
 
 function resetAllFriendData() {
-  if(!confirm('友達データを全員削除しますか？\nこの操作は元に戻せません。')) return;
-  if(!confirm('本当によろしいですか？')) return;
+  document.getElementById('friend-reset-modal').style.display = 'flex';
+}
+
+function confirmResetAllFriendData() {
   FRIEND_DATA = [];
   FRIEND_MEISHIKI_CACHE = null;
   try { localStorage.removeItem('sakurakoFriendData'); } catch(e) {}
+  document.getElementById('friend-reset-modal').style.display = 'none';
   var listEl = document.getElementById('friend-data-list');
-  if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA);
+  if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA, null);
+  var filterEl = document.getElementById('friend-category-filter');
+  if(filterEl) filterEl.innerHTML = buildCategoryFilterHTML(FRIEND_DATA);
   var statusEl = document.getElementById('friend-data-status');
-  if(statusEl) { statusEl.textContent = '✅ 全データをリセットしました'; statusEl.style.color = '#ff8080'; }
+  if(statusEl) { statusEl.textContent = '全データをリセットしました'; statusEl.style.color = '#ff8080'; }
+}
+
+function cancelResetFriendData() {
+  document.getElementById('friend-reset-modal').style.display = 'none';
 }
 
 function deleteFriend(name) {
