@@ -4912,91 +4912,88 @@ function toggleShichuuDetail(id) {
 }
 
 function runShichuu() {
-  var bd = document.getElementById('birthdate').value;
-  if(!bd){ alert('生年月日を入力してください'); return; }
-
-  // 命式計算
-  var timeVal = window._normalBirthTime || '';
-  var timeStr4 = timeVal.replace(':','').replace(/[^0-9]/g,'');
-  var unknownTime = !timeStr4 || timeStr4.length < 4;
-  var parts = bd.split('-');
-  var yr=parseInt(parts[0]),mo=parseInt(parts[1]),da=parseInt(parts[2]);
-  var hourVal=0,minVal=0;
-  if(!unknownTime){
-    hourVal=parseInt(timeStr4.slice(0,2));
-    minVal=parseInt(timeStr4.slice(2,4));
-  }
-  var offsetMin=0;
-  if(window._normalCityData&&window._normalCityData.lon)
-    offsetMin=Math.round((window._normalCityData.lon-135)*4);
-  var birthDT = unknownTime
-    ? new Date(yr,mo-1,da,12,0)
-    : new Date(yr,mo-1,da,hourVal,minVal-offsetMin);
-  var nicchiDate = birthDT;
-  if(!unknownTime && window._yakodoki===true && birthDT.getHours()>=23)
-    nicchiDate = new Date(birthDT.getTime()+24*60*60*1000);
-
-  var year_p = calcNenchu(birthDT);
-  var month_p = calcGetschu(birthDT, year_p.kan);
-  var day_p = calcNicchu(nicchiDate);
-
   var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
   var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
 
-  var moonKan = KAN10[month_p.kan];
-  var moonShi = SHI12[month_p.shi];
-  var dayKan  = KAN10[day_p.kan];
-  var dayShi  = SHI12[day_p.shi];
-
-  // 友達を取得する関数
-  function getFriendsByKanShi(kanIdx, shiIdx, colIdx) {
+  // 友達取得
+  function getFriendsByKan(kanIdx, colIdx) {
     var meishikis = getFriendMeishiki();
     var result = [];
     meishikis.forEach(function(m){
       var fd = FRIEND_DATA.find(function(d){ return d.name === m.name; });
       if(fd && fd.hidden) return;
       var p = [m.year_p, m.month_p, m.day_p, m.hour_p][colIdx];
-      if(!p) return;
-      if(kanIdx !== null && p.kan !== kanIdx) return;
-      if(shiIdx !== null && p.shi !== shiIdx) return;
-      result.push(m.name);
+      if(p && p.kan === kanIdx) result.push(m.name);
     });
     return result;
   }
 
-  function friendTag(names) {
-    if(!names.length) return '<span style="font-size:11px;color:var(--muted);">なし</span>';
-    return names.map(function(n){
-      return '<span style="display:inline-block;padding:3px 10px;margin:2px;border-radius:12px;background:rgba(168,154,255,0.15);border:1px solid rgba(168,154,255,0.3);font-size:11px;color:#b8a8ff;cursor:pointer;" onclick="showFriendMeishiki(\''+n.replace(/'/g,"\\'")+'\')">'+ n +'</span>';
-    }).join('');
+  function getFriendsByShi(shiIdx, colIdx) {
+    var meishikis = getFriendMeishiki();
+    var result = [];
+    meishikis.forEach(function(m){
+      var fd = FRIEND_DATA.find(function(d){ return d.name === m.name; });
+      if(fd && fd.hidden) return;
+      var p = [m.year_p, m.month_p, m.day_p, m.hour_p][colIdx];
+      if(p && p.shi === shiIdx) result.push(m.name);
+    });
+    return result;
   }
 
-  function section(label, kan, shi, colIdx, color) {
-    var kanIdx = kan ? KAN10.indexOf(kan) : null;
-    var shiIdx = shi ? SHI12.indexOf(shi) : null;
-    var friends = getFriendsByKanShi(kanIdx, shiIdx, colIdx);
-    var tagColor = color || 'rgba(184,150,46,0.15)';
-    return '<div style="margin-bottom:14px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.07);">'
-      + '<div style="font-size:12px;color:var(--sk-gold-light);font-weight:700;margin-bottom:6px;padding-left:8px;border-left:2px solid var(--sk-gold-light);">'+ label +'</div>'
-      + '<div style="margin-bottom:6px;">'
-      + '<span style="display:inline-block;padding:4px 14px;border-radius:12px;font-size:18px;font-weight:300;background:'+ tagColor +';border:1px solid rgba(184,150,46,0.4);color:var(--sk-gold-light);margin-right:8px;">'+ (kan||'') + (shi||'') +'</span>'
-      + '</div>'
-      + '<div>' + friendTag(friends) + '</div>'
+  // タグHTML生成
+  function makeTagSection(title, items, colIdx, isKan) {
+    var tags = items.map(function(item, i){
+      var friends = isKan ? getFriendsByKan(i, colIdx) : getFriendsByShi(i, colIdx);
+      var count = friends.length;
+      var friendsHTML = friends.map(function(n){
+        return '<span style="display:inline-block;padding:2px 8px;margin:2px;border-radius:10px;background:rgba(168,154,255,0.15);border:1px solid rgba(168,154,255,0.3);font-size:11px;color:#b8a8ff;cursor:pointer;" onclick="showFriendMeishiki(\''+n.replace(/'/g,"\\'")+'\')">'+ n +'</span>';
+      }).join('');
+      var id = 'shichuu-tag-' + title + '-' + i;
+      return '<div style="display:inline-block;margin:2px;">'
+        + '<button id="'+id+'" onclick="toggleShichuuTag(\''+id+'\',\''+id+'-list\')" style="padding:4px 10px;border-radius:12px;font-size:13px;font-weight:300;border:1px solid rgba(184,150,46,0.4);background:rgba(184,150,46,0.08);color:var(--sk-gold-light);cursor:pointer;position:relative;">'
+        + item
+        + (count > 0 ? '<span style="position:absolute;top:-4px;right:-4px;background:#b8a8ff;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;line-height:16px;text-align:center;font-weight:700;">'+count+'</span>' : '')
+        + '</button>'
+        + '<div id="'+id+'-list" style="display:none;margin-top:4px;padding:6px 8px;background:rgba(20,30,60,0.9);border-radius:8px;border:1px solid rgba(184,150,46,0.2);">'
+        + (count > 0 ? friendsHTML : '<span style="font-size:11px;color:var(--muted);">なし</span>')
+        + '</div>'
+        + '</div>';
+    }).join('');
+    return '<div style="margin-bottom:16px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.07);">'
+      + '<div style="font-size:12px;color:var(--sk-gold-light);font-weight:700;margin-bottom:8px;padding-left:8px;border-left:2px solid var(--sk-gold-light);">'+title+'</div>'
+      + '<div>'+tags+'</div>'
       + '</div>';
   }
 
   var html = '<div style="padding:12px;">'
-    + '<div style="font-size:11px;color:var(--muted);margin-bottom:12px;">タップすると友達の命式を表示</div>'
-    + section('月干（' + moonKan + '）', moonKan, null, 1, 'rgba(61,184,86,0.1)')
-    + section('日干（' + dayKan + '）', dayKan, null, 2, 'rgba(61,184,86,0.1)')
-    + section('月支（' + moonShi + '）', null, moonShi, 1, 'rgba(184,150,46,0.1)')
-    + section('日支（' + dayShi + '）', null, dayShi, 2, 'rgba(120,120,200,0.1)')
+    + '<div style="font-size:11px;color:var(--muted);margin-bottom:12px;">タップすると友達名が表示されます</div>'
+    + makeTagSection('月干', KAN10, 1, true)
+    + makeTagSection('日干', KAN10, 2, true)
+    + makeTagSection('月支', SHI12, 1, false)
+    + makeTagSection('日支', SHI12, 2, false)
     + '</div>';
 
   var rd = document.getElementById('result');
   rd.style.display = 'block';
   rd.innerHTML = html;
   rd.scrollIntoView({behavior:'smooth', block:'start'});
+}
+
+function toggleShichuuTag(btnId, listId) {
+  var list = document.getElementById(listId);
+  if(!list) return;
+  var isOpen = list.style.display !== 'none';
+  // 同じセクション内の他のリストを閉じる
+  var btn = document.getElementById(btnId);
+  if(btn) {
+    var parent = btn.closest('div[style*="margin-bottom:16px"]');
+    if(parent) {
+      parent.querySelectorAll('[id$="-list"]').forEach(function(el){
+        el.style.display = 'none';
+      });
+    }
+  }
+  list.style.display = isOpen ? 'none' : 'block';
 }
 
 /* 生年月日から算命学エネルギー値（総エネルギー値・五本能）を算出 */
