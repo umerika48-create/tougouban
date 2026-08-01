@@ -7021,7 +7021,9 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
     var _yak = (typeof window._yakodoki !== 'undefined') ? window._yakodoki : true;
     var nicchiDate=birthDT;
     if(!unknownTime && _yak && hourVal>=23){
-      nicchiDate=new Date(birthDT.getTime()+24*60*60*1000);
+      if(birthDT.getDate() === da){
+        nicchiDate=new Date(birthDT.getTime()+24*60*60*1000);
+      }
     }
 
     // 四柱計算（calculateShichuuと同じ）
@@ -13931,9 +13933,16 @@ function getFriendMeishiki() {
         birthDT = new Date(yr,mo-1,da,hourVal,adjMin,0,0);
       }
       var _yakodoki2 = (typeof window._yakodoki !== 'undefined') ? window._yakodoki : true;
-      // 夜子時：birthDTの元の時刻（補正前）が23時以降かどうかで判定
-      var nicchiDate = (!unknownTime && _yakodoki2 && hourVal >= 23)
-        ?new Date(birthDT.getTime()+86400000):birthDT;
+      // 夜子時判定：元の時刻が23時以降かつbirthDTが既に翌日になっていない場合のみ+1日
+      var nicchiDate = birthDT;
+      if(!unknownTime && _yakodoki2 && hourVal >= 23){
+        // birthDTが既に翌日になっている（adjMin>=60で自動繰越）場合は+1日しない
+        if(birthDT.getDate() === da){
+          nicchiDate = new Date(birthDT.getTime()+86400000);
+        }
+        // birthDTが既に翌日なら日柱はbithDTの日付がすでに翌日分
+        // nicchiDate = birthDT のまま
+      }
       var year_p  = calcNenchu(birthDT);
       var month_p = calcGetschu(birthDT,year_p.kan);
       var day_p   = calcNicchu(nicchiDate);
@@ -15317,7 +15326,9 @@ function calculateShichuu(opts){
   // 夜子時対応: _yakodokiの設定に従う（23時タブ選択時のみ翌日の日柱）
   let nicchiDate = birthDT;
   if(!unknownTime && window._yakodoki === true && hourVal >= 23){
-    nicchiDate = new Date(birthDT.getTime() + 24 * 60 * 60 * 1000);
+    if(birthDT.getDate() === da){
+      nicchiDate = new Date(birthDT.getTime() + 24 * 60 * 60 * 1000);
+    }
   }
 
   // 年柱
