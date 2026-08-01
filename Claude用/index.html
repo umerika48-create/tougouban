@@ -13758,69 +13758,37 @@ function showFriendMeishiki(name, isYakodoki) {
   if(!f) return;
   var unknown = !f.time || f.timeUnknown;
   var timeStr = f.time || '';
-  // 時刻不明の場合、isYakodokiに応じて時刻を設定
   if(unknown) {
     timeStr = isYakodoki ? '23:30' : '12:00';
   }
-  
-  // 友達データ管理モーダルを閉じる
-  var mgr = document.getElementById('friend-data-manager');
-  if(mgr) mgr.style.display = 'none';
-  
-  // 生年月日をセット
-  var bdInput = document.getElementById('birthdate');
-  if(bdInput) bdInput.value = f.date || '';
-  
-  // 時刻をセット
-  window._normalBirthTime = f.time || '';
-  window._currentShichuuView = 'me';
-  
-  // buildShichuuCardHTMLで命式を生成して表示
-  var parts = (f.date || '').split('-');
-  if(parts.length < 3) return;
-  
-  // timeStr・unknownは上で設定済み
-  
-  // 命式カードエリアを探す
-  var container = document.getElementById('shichuu-result-container');
-  if(!container) {
-    // アコーディオンを開く
-    var accordion = document.getElementById('abody-shichuu-card');
-    if(accordion) {
-      accordion.style.display = 'block';
-      container = accordion;
-    }
-  }
-  
-  // buildShichuuCardHTMLを呼び出す
-  if(typeof buildShichuuCardHTML === 'function') {
-    var html = buildShichuuCardHTML(f.date, timeStr, null, false);
-    if(container) container.innerHTML = html;
-    
-    // スクロール
-    if(container) container.scrollIntoView({ behavior: 'smooth' });
-  }
-  
-  // ポップアップで表示
-  var meishikis = getFriendMeishiki();
-  var fMei = meishikis.find(function(m){ return m.name === name; });
-  if(!fMei) return;
-  
+
   var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
   var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
-  
-  var moonKan = fMei.month_p ? KAN10[fMei.month_p.kan] : '?';
-  var moonShi = fMei.month_p ? SHI12[fMei.month_p.shi] : '?';
-  var dayKan  = fMei.day_p  ? KAN10[fMei.day_p.kan]   : '?';
-  var dayShi  = fMei.day_p  ? SHI12[fMei.day_p.shi]   : '?';
-  var moonKanForFn = fMei.month_p ? KAN10[fMei.month_p.kan] : '';
 
-  var html2 = buildShichuuCardHTML(f.date, f.time || '', null, false);
-  
+  var meishikis = getFriendMeishiki();
+  var fMei = meishikis.find(function(m){ return m.name === name; });
+  var dayKan = fMei && fMei.day_p ? KAN10[fMei.day_p.kan] : '?';
+  var dayShi = fMei && fMei.day_p ? SHI12[fMei.day_p.shi] : '?';
+
+  var html2 = (typeof buildShichuuCardHTML === 'function')
+    ? buildShichuuCardHTML(f.date, timeStr, null, false)
+    : '<p style="color:var(--muted);">命式を計算できませんでした</p>';
+
+  // 時間切り替えボタン（時刻不明の場合のみ）
+  var timeSwitchHTML = '';
+  if(unknown) {
+    var btn0Style = 'flex:1;padding:6px;border-radius:8px;font-size:11px;cursor:pointer;border:1px solid rgba(184,150,46,' + (!isYakodoki?'0.8':'0.3') + ');background:rgba(184,150,46,' + (!isYakodoki?'0.2':'0.05') + ');color:var(--sk-gold-light);font-weight:' + (!isYakodoki?'700':'400') + ';';
+    var btn23Style = 'flex:1;padding:6px;border-radius:8px;font-size:11px;cursor:pointer;border:1px solid rgba(184,150,46,' + (isYakodoki?'0.8':'0.3') + ');background:rgba(184,150,46,' + (isYakodoki?'0.2':'0.05') + ');color:var(--sk-gold-light);font-weight:' + (isYakodoki?'700':'400') + ';';
+    timeSwitchHTML = '<div style="display:flex;gap:6px;margin-bottom:10px;">'
+      + '<button style="' + btn0Style + '" onclick="showFriendMeishiki(this.dataset.n,false)" data-n="' + name.replace(/"/g,'&quot;') + '">0時（正午計算）</button>'
+      + '<button style="' + btn23Style + '" onclick="showFriendMeishiki(this.dataset.n,true)" data-n="' + name.replace(/"/g,'&quot;') + '">23時</button>'
+      + '</div>';
+  }
+
   document.getElementById('hjTitle').textContent = name + 'の命式';
   document.getElementById('hjYomi').textContent = f.date + (f.time ? ' ' + f.time : ' 時刻不明');
   document.getElementById('hjBadge').textContent = dayKan + dayShi + '（日柱）' + (unknown ? (isYakodoki ? ' 23時' : ' 0時') : '');
-  document.getElementById('hjDesc').innerHTML = html2 || '<p style="color:var(--muted);">命式を計算できませんでした</p>';
+  document.getElementById('hjDesc').innerHTML = timeSwitchHTML + html2;
   document.getElementById('hjContext').innerHTML = '';
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
