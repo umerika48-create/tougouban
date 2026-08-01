@@ -7025,6 +7025,10 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
         nicchiDate=new Date(birthDT.getTime()+24*60*60*1000);
       }
     }
+    // 時刻不明で23時タブ選択中 → 翌日切替
+    if(unknownTime && _yak){
+      nicchiDate=new Date(yr,mo-1,da+1,0,30,0,0);
+    }
 
     // 四柱計算（calculateShichuuと同じ）
     var year_p=calcNenchu(birthDT);
@@ -15329,6 +15333,10 @@ function calculateShichuu(opts){
     if(birthDT.getDate() === da){
       nicchiDate = new Date(birthDT.getTime() + 24 * 60 * 60 * 1000);
     }
+  }
+  // 時刻不明で23時タブ選択中 → 23:30として翌日切替
+  if(unknownTime && window._yakodoki === true){
+    nicchiDate = new Date(yr, mo-1, da+1, 0, 30, 0, 0);
   }
 
   // 年柱
