@@ -4914,12 +4914,8 @@ function toggleShichuuDetail(id) {
 function runShichuu() {
   var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
   var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
-
-  // enhanced-wrapをクリア（九星気学の項目を非表示）
   var ew = document.getElementById('enhanced-wrap');
   if(ew) ew.innerHTML = '';
-
-  // 友達取得
   function getFriendsByKan(kanIdx, colIdx) {
     var meishikis = getFriendMeishiki();
     var result = [];
@@ -4931,7 +4927,6 @@ function runShichuu() {
     });
     return result;
   }
-
   function getFriendsByShi(shiIdx, colIdx) {
     var meishikis = getFriendMeishiki();
     var result = [];
@@ -4943,37 +4938,23 @@ function runShichuu() {
     });
     return result;
   }
-
-  // タグHTML生成
   function makeTagSection(title, items, colIdx, isKan) {
     var tags = items.map(function(item, i){
       var friends = isKan ? getFriendsByKan(i, colIdx) : getFriendsByShi(i, colIdx);
       var count = friends.length;
-      var friendsHTML = count > 0
-        ? friends.map(function(n){
-            var fd2 = FRIEND_DATA.find(function(d){ return d.name === n; });
-            var isUnk = fd2 && (!fd2.time || fd2.timeUnknown);
-            var lbl = n + (isUnk ? '（？）' : '');
-            return '<span onclick="showFriendMeishiki(\''+n.replace(/'/g,"\\'")+'\','+isUnk+')" style="display:inline-block;padding:4px 12px;margin:3px;border-radius:12px;background:rgba(168,154,255,0.15);border:1px solid rgba(168,154,255,0.3);font-size:12px;color:#b8a8ff;cursor:pointer;">'+ lbl +'</span>';
-          }).join('')
-        : '<span style="font-size:12px;color:var(--muted);">なし</span>';
-      var id = 'stag-' + colIdx + '-' + i;
+      var safeJson = JSON.stringify(friends).replace(/'/g, "\\'");
       return '<div style="display:inline-block;margin:3px;position:relative;">'
-        + '<button id="'+id+'" onclick="toggleShichuuTag(\''+id+'\')" style="padding:8px 16px;border-radius:14px;font-size:22px;font-weight:300;border:1px solid rgba(184,150,46,0.4);background:rgba(184,150,46,0.08);color:var(--sk-gold-light);cursor:pointer;min-width:52px;position:relative;">'
+        + '<button onclick="showShichuuFriendPopup(\'' + item + '\',' + JSON.stringify(friends) + ')" style="padding:8px 16px;border-radius:14px;font-size:22px;font-weight:300;border:1px solid rgba(184,150,46,0.4);background:rgba(184,150,46,0.08);color:var(--sk-gold-light);cursor:pointer;min-width:52px;position:relative;">'
         + item
-        + (count > 0 ? '<span style="position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;line-height:18px;text-align:center;font-weight:700;">'+count+'</span>' : '')
+        + (count > 0 ? '<span style="position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;line-height:18px;text-align:center;font-weight:700;">' + count + '</span>' : '')
         + '</button>'
-        + '<div id="'+id+'-list" style="display:none;position:absolute;left:0;top:100%;margin-top:4px;padding:8px 10px;background:#0d1a2b;border-radius:10px;border:1px solid rgba(184,150,46,0.3);z-index:100;white-space:nowrap;min-width:120px;box-shadow:0 4px 20px rgba(0,0,0,0.5);">'
-        + friendsHTML
-        + '</div>'
         + '</div>';
     }).join('');
     return '<div style="margin-bottom:20px;">'
-      + '<div style="font-size:13px;color:var(--sk-gold-light);font-weight:700;margin-bottom:10px;padding-left:8px;border-left:3px solid var(--sk-gold-light);">'+title+'</div>'
-      + '<div style="display:flex;flex-wrap:wrap;">'+tags+'</div>'
+      + '<div style="font-size:13px;color:var(--sk-gold-light);font-weight:700;margin-bottom:10px;padding-left:8px;border-left:3px solid var(--sk-gold-light);">' + title + '</div>'
+      + '<div style="display:flex;flex-wrap:wrap;">' + tags + '</div>'
       + '</div>';
   }
-
   var html = '<div style="padding:16px;">'
     + '<div style="font-size:11px;color:var(--muted);margin-bottom:16px;">タップすると友達名が表示されます</div>'
     + makeTagSection('月干', KAN10, 1, true)
@@ -4981,24 +4962,37 @@ function runShichuu() {
     + makeTagSection('月支', SHI12, 1, false)
     + makeTagSection('日支', SHI12, 2, false)
     + '</div>';
-
   var rd = document.getElementById('result');
   rd.style.display = 'block';
   rd.innerHTML = html;
   rd.scrollIntoView({behavior:'smooth', block:'start'});
 }
 
-function toggleShichuuTag(btnId) {
-  var listId = btnId + '-list';
-  var list = document.getElementById(listId);
-  if(!list) return;
-  var isOpen = list.style.display !== 'none';
-  // 全リストを閉じる
-  document.querySelectorAll('[id^="stag-"][id$="-list"]').forEach(function(el){
-    el.style.display = 'none';
-  });
-  if(!isOpen) list.style.display = 'block';
+function showShichuuFriendPopup(label, friends) {
+  // hjPanelを使って表示
+  var titleEl = document.getElementById('hjTitle');
+  var descEl = document.getElementById('hjDesc');
+  var ctxEl = document.getElementById('hjContext');
+  if(!titleEl || !descEl) return;
+  titleEl.textContent = label + ' の友達';
+  document.getElementById('hjYomi').textContent = '';
+  document.getElementById('hjBadge').textContent = '';
+  if(!friends || friends.length === 0) {
+    descEl.innerHTML = '<p style="color:var(--muted);text-align:center;padding:10px;">該当する友達はいません</p>';
+  } else {
+    descEl.innerHTML = friends.map(function(n){
+      var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
+      var isUnknown = fd && (!fd.time || fd.timeUnknown);
+      var lbl = n + (isUnknown ? '（？）' : '');
+      return '<div onclick="showFriendMeishiki(\'' + n.replace(/'/g, "\\'") + '\',' + isUnknown + ');document.getElementById(\'hjPanel\').classList.remove(\'open\');document.getElementById(\'hjOverlay\').classList.remove(\'open\')" style="padding:10px 14px;margin-bottom:6px;border-radius:10px;background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);cursor:pointer;font-size:14px;color:var(--text);">' + lbl + '</div>';
+    }).join('');
+  }
+  if(ctxEl) ctxEl.innerHTML = '';
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
 }
+
+function toggleShichuuTag(btnId) {}
 
 /* 生年月日から算命学エネルギー値（総エネルギー値・五本能）を算出 */
 function getSanmeiEnergy(birthdate) {
