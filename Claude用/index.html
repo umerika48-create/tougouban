@@ -4951,7 +4951,10 @@ function runShichuu() {
       var count = friends.length;
       var friendsHTML = count > 0
         ? friends.map(function(n){
-            return '<span onclick="showFriendMeishiki(\''+n.replace(/'/g,"\\'")+'\')" style="display:inline-block;padding:4px 12px;margin:3px;border-radius:12px;background:rgba(168,154,255,0.15);border:1px solid rgba(168,154,255,0.3);font-size:12px;color:#b8a8ff;cursor:pointer;">'+ n +'</span>';
+            var fd2 = FRIEND_DATA.find(function(d){ return d.name === n; });
+            var isUnk = fd2 && (!fd2.time || fd2.timeUnknown);
+            var lbl = n + (isUnk ? '（？）' : '');
+            return '<span onclick="showFriendMeishiki(\''+n.replace(/'/g,"\\'")+'\','+isUnk+')" style="display:inline-block;padding:4px 12px;margin:3px;border-radius:12px;background:rgba(168,154,255,0.15);border:1px solid rgba(168,154,255,0.3);font-size:12px;color:#b8a8ff;cursor:pointer;">'+ lbl +'</span>';
           }).join('')
         : '<span style="font-size:12px;color:var(--muted);">なし</span>';
       var id = 'stag-' + colIdx + '-' + i;
@@ -15373,7 +15376,12 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan, hensei) {
 
     function friendBadges(names) {
       if(!names||!names.length) return '';
-      return '<div style="margin-top:4px;font-size:10px;color:#b8a8ff;">👥 ' + names.join('・') + '</div>';
+      var labels = names.map(function(n){
+        var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
+        var isUnknown = fd && (!fd.time || fd.timeUnknown);
+        return n + (isUnknown ? '（？）' : '');
+      });
+      return '<div style="margin-top:4px;font-size:10px;color:#b8a8ff;">👥 ' + labels.join('・') + '</div>';
     }
 
     var selfSection =
