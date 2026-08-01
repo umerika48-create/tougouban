@@ -4969,7 +4969,6 @@ function runShichuu() {
 }
 
 function showShichuuFriendPopup(label, friends) {
-  // hjPanelを使って表示
   var titleEl = document.getElementById('hjTitle');
   var descEl = document.getElementById('hjDesc');
   var ctxEl = document.getElementById('hjContext');
@@ -4980,17 +4979,29 @@ function showShichuuFriendPopup(label, friends) {
   if(!friends || friends.length === 0) {
     descEl.innerHTML = '<p style="color:var(--muted);text-align:center;padding:10px;">該当する友達はいません</p>';
   } else {
-    descEl.innerHTML = friends.map(function(n){
+    var html = '';
+    friends.forEach(function(n){
       var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
-      var isUnknown = fd && (!fd.time || fd.timeUnknown);
+      var isUnknown = !!(fd && (!fd.time || fd.timeUnknown));
       var lbl = n + (isUnknown ? '（？）' : '');
-      return '<div onclick="showFriendMeishiki(\'' + n.replace(/'/g, "\\'") + '\',' + isUnknown + ');document.getElementById(\'hjPanel\').classList.remove(\'open\');document.getElementById(\'hjOverlay\').classList.remove(\'open\')" style="padding:10px 14px;margin-bottom:6px;border-radius:10px;background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);cursor:pointer;font-size:14px;color:var(--text);">' + lbl + '</div>';
-    }).join('');
+      html += '<div class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="' + isUnknown + '" style="padding:10px 14px;margin-bottom:6px;border-radius:10px;background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);cursor:pointer;font-size:14px;color:var(--text);">' + lbl + '</div>';
+    });
+    descEl.innerHTML = html;
+    descEl.querySelectorAll('.sfp-item').forEach(function(el){
+      el.addEventListener('click', function(){
+        var name = this.getAttribute('data-name');
+        var isUnk = this.getAttribute('data-unknown') === 'true';
+        document.getElementById('hjPanel').classList.remove('open');
+        document.getElementById('hjOverlay').classList.remove('open');
+        showFriendMeishiki(name, isUnk);
+      });
+    });
   }
   if(ctxEl) ctxEl.innerHTML = '';
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
 }
+
 
 function toggleShichuuTag(btnId) {}
 
