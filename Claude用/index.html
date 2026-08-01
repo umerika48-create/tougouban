@@ -14163,10 +14163,13 @@ function getFriendsWithHensei(henseiName, colIdx) {
 }
 
 /* Friend表示用HTML生成 */
-function buildFriendBadgeHTML(names) {
+function buildFriendBadgeHTML(names, showUnknown) {
   if(!names || names.length === 0) return '<span style="font-size:11px;color:var(--sk-silver-dim);">なし</span>';
   return names.map(function(n){
-    return '<span style="display:inline-block;background:rgba(168,154,255,0.15);color:#b8a8ff;font-size:11px;padding:2px 8px;border-radius:10px;margin:2px;">' + n + '</span>';
+    var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
+    var isUnknown = !!(fd && (!fd.time || fd.timeUnknown));
+    var lbl = n + (showUnknown && isUnknown ? '（？）' : '');
+    return '<span style="display:inline-block;background:rgba(168,154,255,0.15);color:#b8a8ff;font-size:11px;padding:2px 8px;border-radius:10px;margin:2px;">' + lbl + '</span>';
   }).join('');
 }
 
@@ -15725,7 +15728,8 @@ function openKanPanel(kanName, colIdx){
   // 友達データから自動取得
   var kanIdx = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'].indexOf(kanName);
   var autoFriends = (kanIdx !== -1) ? getFriendsWithKan(kanIdx, colIdx) : [];
-  var autoHTML = buildFriendBadgeHTML(autoFriends);
+  var isDayKan = (colIdx === 2);
+  var autoHTML = buildFriendBadgeHTML(autoFriends, isDayKan);
 
   // 友達名を一番上に表示
   var friendTopHTML = autoFriends.length ? 
@@ -15881,7 +15885,8 @@ function openShiPanel(shiName, colIdx){
   if(shiIdx !== -1 && colIdx !== undefined){
     var shiFriends = getFriendsWithShi(shiIdx, colIdx);
     if(shiFriends.length > 0){
-      shiFriendHTML = '<div style="margin-bottom:10px;padding:6px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);"><div style="font-size:10px;color:#b8a8ff;margin-bottom:4px;">👥 同じ地支の友達</div><div>' + buildFriendBadgeHTML(shiFriends) + '</div></div>';
+      var isDayShi = (colIdx === 2);
+      shiFriendHTML = '<div style="margin-bottom:10px;padding:6px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);"><div style="font-size:10px;color:#b8a8ff;margin-bottom:4px;">👥 同じ地支の友達</div><div>' + buildFriendBadgeHTML(shiFriends, isDayShi) + '</div></div>';
     }
   }
   document.getElementById('hjDesc').innerHTML = shiFriendHTML + '<p style="font-size:12px;line-height:1.8;color:var(--text);">' + mainDesc + '</p>' + seasonHTML + chokoShiHTML;
