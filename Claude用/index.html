@@ -4916,6 +4916,7 @@ function runShichuu() {
   var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
   var ew = document.getElementById('enhanced-wrap');
   if(ew) ew.innerHTML = '';
+  FRIEND_MEISHIKI_CACHE = null; // 正午計算でキャッシュクリア
 
   // 友達データをグローバルに保存
   window._shichuuTagData = {};
@@ -4998,7 +4999,34 @@ function showShichuuFriendPopup(key) {
       var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
       var isUnknown = !!(fd && (!fd.time || fd.timeUnknown));
       var lbl = n + (isUnknown ? '（？）' : '');
-      html += '<div class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="' + isUnknown + '" style="padding:10px 14px;margin-bottom:6px;border-radius:10px;background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);cursor:pointer;font-size:14px;color:var(--text);">' + lbl + '</div>';
+      if(isUnknown) {
+        // 時刻不明：当日・翌日の両方のボタンを表示
+        var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+        var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+        // 当日（正午）の日柱
+        var meishikis = getFriendMeishiki();
+        var fMei = meishikis.find(function(m){ return m.name === n; });
+        var todayKan = fMei && fMei.day_p ? KAN10[fMei.day_p.kan] : '?';
+        var todayShi = fMei && fMei.day_p ? SHI12[fMei.day_p.shi] : '?';
+        // 翌日（23:30）の日柱
+        var parts = fd.date.split('-');
+        var yr=parseInt(parts[0]),mo=parseInt(parts[1]),da=parseInt(parts[2]);
+        var birthDT23 = new Date(yr,mo-1,da,23,30);
+        var nicchi23 = new Date(birthDT23.getTime()+24*60*60*1000);
+        var day23 = calcNicchu(nicchi23);
+        var nextKan = day23 ? KAN10[day23.kan] : '?';
+        var nextShi = day23 ? SHI12[day23.shi] : '?';
+        html += '<div style="padding:10px 14px;margin-bottom:6px;border-radius:10px;background:rgba(184,150,46,0.06);border:1px solid rgba(184,150,46,0.2);">'
+          + '<div style="font-size:13px;color:var(--text);margin-bottom:8px;">' + lbl + '</div>'
+          + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">時刻不明のため2つの可能性があります</div>'
+          + '<div style="display:flex;gap:6px;">'
+          + '<button class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="flex:1;padding:8px;border-radius:8px;background:rgba(184,150,46,0.1);border:1px solid rgba(184,150,46,0.3);color:var(--sk-gold-light);cursor:pointer;font-size:11px;">当日（' + todayKan + todayShi + '）</button>'
+          + '<button class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="true" style="flex:1;padding:8px;border-radius:8px;background:rgba(120,120,200,0.1);border:1px solid rgba(120,120,200,0.3);color:#b8a8ff;cursor:pointer;font-size:11px;">翌日（' + nextKan + nextShi + '）</button>'
+          + '</div>'
+          + '</div>';
+      } else {
+        html += '<div class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="padding:10px 14px;margin-bottom:6px;border-radius:10px;background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);cursor:pointer;font-size:14px;color:var(--text);">' + lbl + '</div>';
+      }
     });
     descEl.innerHTML = html;
     descEl.querySelectorAll('.sfp-item').forEach(function(el){
@@ -13861,15 +13889,9 @@ function getFriendMeishiki() {
         hourVal=parseInt(timeStr4.slice(0,2));
         minVal=parseInt(timeStr4.slice(2,4));
       }
-      // 時刻不明のとき
+      // 時刻不明のとき → 常に正午（当日扱い）で計算
       if(unknownTime){
-        if(window._yakodoki === true){
-          // 23時タブ → 23:30として計算
-          hourVal=23; minVal=30; unknownTime=false;
-        } else {
-          // 0時タブ → 12:00（正午）として計算
-          hourVal=12; minVal=0; unknownTime=false;
-        }
+        hourVal=12; minVal=0; unknownTime=false;
       }
       var placeOffset=0;
       if(f.place && typeof lookupCity === 'function'){
