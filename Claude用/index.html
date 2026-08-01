@@ -13811,6 +13811,8 @@ function getFriendsWithShi(shiIdx, colIdx) {
   var result = [];
   for(var i=0; i<meishikis.length; i++) {
     var m = meishikis[i];
+    var fd = FRIEND_DATA.find(function(d){ return d.name === m.name; });
+    if(fd && fd.hidden) continue;
     var pillars = [m.year_p, m.month_p, m.day_p, m.hour_p];
     var p = pillars[colIdx];
     if(p && p.shi === shiIdx) result.push(m.name);
@@ -15105,11 +15107,13 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan, hensei) {
       '<div style="margin-bottom:8px;">' +
       '<div style="font-size:10px;color:var(--sk-gold-light);font-weight:700;margin-bottom:4px;">月支：' + moon_shi + moonShiLabelHTML + '</div>' +
       '<div>' + makeTags(shiLabels, 'rgba(184,150,46,0.15)') + '</div>' +
+      friendBadges((typeof getFriendsWithShi === 'function') ? getFriendsWithShi(['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'].indexOf(moon_shi), 1) : []) +
       '</div>' +
       (dayShiLabels.length ? 
       '<div style="margin-bottom:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);">' +
       '<div style="font-size:10px;color:var(--sk-silver-dim);font-weight:700;margin-bottom:4px;">日支：' + day_shi + '（内面・近い人への素顔）</div>' +
       '<div>' + makeTags(dayShiLabels, 'rgba(120,120,180,0.15)') + '</div>' +
+      friendBadges((typeof getFriendsWithShi === 'function') ? getFriendsWithShi(['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'].indexOf(day_shi), 2) : []) +
       '</div>' : '') +
       // 月干ラベル＋友達
       (moon_kan ? 
