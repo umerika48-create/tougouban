@@ -6904,9 +6904,10 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
       birthDT=new Date(yr,mo-1,da,hourVal,minVal-offsetMin,0,0);
     }
 
-    // 夜子時対応（calculateShichuuと同じ）
+    // 夜子時対応（_yakodokiの設定に従う）
+    var _yak = (typeof window._yakodoki !== 'undefined') ? window._yakodoki : false;
     var nicchiDate=birthDT;
-    if(!unknownTime&&birthDT.getHours()>=23){
+    if(!unknownTime && _yak && birthDT.getHours()>=23){
       nicchiDate=new Date(birthDT.getTime()+24*60*60*1000);
     }
 
@@ -15176,10 +15177,9 @@ function calculateShichuu(opts){
     birthDT = new Date(yr, mo-1, da, hourVal, minVal - offsetMin, 0, 0);
   }
 
-  // 夜子時対応: 23:00以降は翌日の日柱で計算（伝統的中国式）
-  // 年柱・月柱は当日の時刻で判定、日柱のみ翌日を使用
+  // 夜子時対応: _yakodokiの設定に従う（23時タブ選択時のみ翌日の日柱）
   let nicchiDate = birthDT;
-  if(!unknownTime && birthDT.getHours() >= 23){
+  if(!unknownTime && window._yakodoki === true && birthDT.getHours() >= 23){
     nicchiDate = new Date(birthDT.getTime() + 24 * 60 * 60 * 1000);
   }
 
