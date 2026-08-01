@@ -6879,6 +6879,8 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
     var parts=birthdate.split('-');
     if(parts.length<3) return '';
     var yr=parseInt(parts[0]),mo=parseInt(parts[1]),da=parseInt(parts[2]);
+
+    // 時刻処理（calculateShichuuと同じロジック）
     var timeVal=(optTime!==undefined?optTime:window._normalBirthTime)||'';
     var timeStr4=timeVal.replace(':','').replace(/[^0-9]/g,'');
     var unknownTime=!timeStr4;
@@ -6887,38 +6889,43 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
       hourVal=parseInt(timeStr4.slice(0,2));
       minVal=parseInt(timeStr4.slice(2,4));
     }
-    // 時刻不明のとき
-    if(unknownTime){
-      if(window._yakodoki === true){
-        // 23時タブ → 23:30として計算
-        hourVal=23; minVal=30; unknownTime=false;
-      } else {
-        // 0時タブ（デフォルト）→ 12:00として計算
-        hourVal=12; minVal=0; unknownTime=false;
-      }
-    }
-    var placeOffset=0;
+
+    // 地方時補正（calculateShichuuと同じ）
     var _cityData=optCityData!==undefined?optCityData:window._normalCityData;
+    var offsetMin=0;
     if(_cityData&&_cityData.lon)
-      placeOffset=Math.round((_cityData.lon-135)*4);
-    var adjMin=unknownTime?0:minVal-placeOffset;
-    var birthDT=new Date(yr,mo-1,da,unknownTime?12:hourVal,adjMin);
-    var _yakodoki = (typeof window._yakodoki !== 'undefined') ? window._yakodoki : true;
-    var nicchiDate=(!unknownTime&&_yakodoki&&birthDT.getHours()>=23)
-      ?new Date(birthDT.getTime()+86400000):birthDT;
+      offsetMin=Math.round((_cityData.lon-135)*4);
+
+    // birthDT（calculateShichuuと同じ）
+    var birthDT;
+    if(unknownTime){
+      birthDT=new Date(yr,mo-1,da,12,0,0,0);
+    } else {
+      birthDT=new Date(yr,mo-1,da,hourVal,minVal-offsetMin,0,0);
+    }
+
+    // 夜子時対応（calculateShichuuと同じ）
+    var nicchiDate=birthDT;
+    if(!unknownTime&&birthDT.getHours()>=23){
+      nicchiDate=new Date(birthDT.getTime()+24*60*60*1000);
+    }
+
+    // 四柱計算（calculateShichuuと同じ）
     var year_p=calcNenchu(birthDT);
     var month_p=calcGetschu(birthDT,year_p.kan);
     var day_p=calcNicchu(nicchiDate);
     var hour_p=null;
     if(!unknownTime){
-      var adjDate=new Date(yr,mo-1,da,hourVal,adjMin);
+      var adjDate=new Date(yr,mo-1,da,hourVal,minVal-offsetMin,0,0);
       hour_p=calcJicchu(adjDate.getHours(),adjDate.getMinutes(),day_p.kan);
     }
-    var isFemale=true;
+
     var birthStr=yr+'年'+mo+'月'+da+'日'+(unknownTime?'':'　'+('0'+hourVal).slice(-2)+':'+('0'+minVal).slice(-2));
-    var dauResult=calcDaun(new Date(yr,mo-1,da,12,0),year_p.kan,year_p.shi,month_p.kan,month_p.shi,isFemale);
+    var isFemale=true;
+    var birthForDaun=new Date(yr,mo-1,da,12,0);
+    var dauResult=calcDaun(birthForDaun,year_p.kan,year_p.shi,month_p.kan,month_p.shi,isFemale);
     if(dauResult) dauResult.birthYear=yr;
-    // renderResult+buildUnseiHTMLをそのまま使う
+
     return renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime,hideTabs)
       + buildUnseiHTML(dauResult,yr,day_p?day_p.kan:0);
   } catch(e){ 
