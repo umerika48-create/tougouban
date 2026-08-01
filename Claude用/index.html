@@ -4966,6 +4966,7 @@ function runShichuu() {
 
   var html = '<div style="padding:16px;">'
     + '<div style="font-size:11px;color:var(--muted);margin-bottom:16px;">タップすると友達名が表示されます</div>'
+    + (function(){ FRIEND_MEISHIKI_CACHE = null; return ''; })()  // ここでキャッシュクリア
     + makeTagSection('月干', KAN10, 1, true)
     + makeTagSection('日干', KAN10, 2, true)
     + makeTagSection('月支', SHI12, 1, false)
@@ -7019,7 +7020,7 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
     // 夜子時対応（_yakodokiの設定に従う）
     var _yak = (typeof window._yakodoki !== 'undefined') ? window._yakodoki : true;
     var nicchiDate=birthDT;
-    if(!unknownTime && _yak && birthDT.getHours()>=23){
+    if(!unknownTime && _yak && hourVal>=23){
       nicchiDate=new Date(birthDT.getTime()+24*60*60*1000);
     }
 
@@ -13922,10 +13923,16 @@ function getFriendMeishiki() {
         var cd = lookupCity(f.place);
         if(cd && cd.lon) placeOffset = Math.round((cd.lon-135)*4);
       }
-      var adjMin = unknownTime?0:minVal-placeOffset;
-      var birthDT = new Date(yr,mo-1,da,unknownTime?12:hourVal,adjMin);
+      var adjMin = minVal - placeOffset;
+      var birthDT;
+      if(unknownTime){
+        birthDT = new Date(yr,mo-1,da,12,0,0,0);
+      } else {
+        birthDT = new Date(yr,mo-1,da,hourVal,adjMin,0,0);
+      }
       var _yakodoki2 = (typeof window._yakodoki !== 'undefined') ? window._yakodoki : true;
-      var nicchiDate = (!unknownTime&&_yakodoki2&&birthDT.getHours()>=23)
+      // 夜子時：birthDTの元の時刻（補正前）が23時以降かどうかで判定
+      var nicchiDate = (!unknownTime && _yakodoki2 && hourVal >= 23)
         ?new Date(birthDT.getTime()+86400000):birthDT;
       var year_p  = calcNenchu(birthDT);
       var month_p = calcGetschu(birthDT,year_p.kan);
@@ -15309,7 +15316,7 @@ function calculateShichuu(opts){
 
   // 夜子時対応: _yakodokiの設定に従う（23時タブ選択時のみ翌日の日柱）
   let nicchiDate = birthDT;
-  if(!unknownTime && window._yakodoki === true && birthDT.getHours() >= 23){
+  if(!unknownTime && window._yakodoki === true && hourVal >= 23){
     nicchiDate = new Date(birthDT.getTime() + 24 * 60 * 60 * 1000);
   }
 
