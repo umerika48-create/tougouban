@@ -13741,20 +13741,37 @@ function deleteFriend(name) {
 function editFriend(name) {
   var f = FRIEND_DATA.find(function(d){ return d.name === name; });
   if(!f) return;
-  var newName = prompt('名前', f.name);
-  if(newName === null) return;
-  var newDate = prompt('生年月日（YYYY-MM-DD）', f.date || '');
-  if(newDate === null) return;
-  var newTime = prompt('出生時刻（HH:MM、不明の場合は空欄）', f.time || '');
-  if(newTime === null) return;
-  var newMemo = prompt('メモ', f.memo || '');
-  if(newMemo === null) return;
-  f.name = newName.trim() || f.name;
-  f.date = newDate.trim() || f.date;
-  f.time = newTime.trim();
-  f.timeUnknown = !newTime.trim();
-  f.memo = newMemo.trim();
+  document.getElementById('edit-friend-name').value = f.name || '';
+  document.getElementById('edit-friend-date').value = f.date || '';
+  document.getElementById('edit-friend-time').value = f.time || '';
+  document.getElementById('edit-friend-place').value = f.place || '';
+  document.getElementById('edit-friend-memo').value = f.memo || '';
+  document.getElementById('edit-friend-original-name').value = f.name;
+  document.getElementById('friend-edit-modal').style.display = 'flex';
+}
+
+function closeEditFriendModal() {
+  document.getElementById('friend-edit-modal').style.display = 'none';
+}
+
+function saveEditFriend() {
+  var originalName = document.getElementById('edit-friend-original-name').value;
+  var f = FRIEND_DATA.find(function(d){ return d.name === originalName; });
+  if(!f) return;
+  var newName = document.getElementById('edit-friend-name').value.trim();
+  var newDate = document.getElementById('edit-friend-date').value.trim();
+  var newTime = document.getElementById('edit-friend-time').value.trim();
+  var newPlace = document.getElementById('edit-friend-place').value.trim();
+  var newMemo = document.getElementById('edit-friend-memo').value.trim();
+  f.name = newName || f.name;
+  f.date = newDate || f.date;
+  f.time = newTime;
+  f.timeUnknown = !newTime;
+  f.place = newPlace;
+  f.memo = newMemo;
+  FRIEND_MEISHIKI_CACHE = null;
   try { localStorage.setItem('sakurakoFriendData', JSON.stringify(FRIEND_DATA)); } catch(e) {}
+  closeEditFriendModal();
   var listEl = document.getElementById('friend-data-list');
   if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA);
 }
@@ -15868,5 +15885,38 @@ function toggleSakurakoText(btn) {
     </div>
   </div>
 </div>
+
+<!-- 友達編集モーダル -->
+<div id="friend-edit-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:500;align-items:center;justify-content:center;">
+  <div style="background:#0d1a2b;border:1px solid rgba(184,150,46,0.4);border-radius:12px;padding:20px;width:min(320px,90vw);max-height:90vh;overflow-y:auto;">
+    <div style="font-size:14px;font-weight:700;color:var(--sk-gold-light);margin-bottom:14px;">友達データ編集</div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">名前</label>
+      <input id="edit-friend-name" type="text" style="width:100%;padding:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text);font-size:12px;box-sizing:border-box;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">生年月日（YYYY-MM-DD）</label>
+      <input id="edit-friend-date" type="text" placeholder="例：1990-04-15" style="width:100%;padding:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text);font-size:12px;box-sizing:border-box;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">出生時刻（HH:MM、不明の場合は空欄）</label>
+      <input id="edit-friend-time" type="text" placeholder="例：13:30" style="width:100%;padding:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text);font-size:12px;box-sizing:border-box;">
+    </div>
+    <div style="margin-bottom:10px;">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">出生地</label>
+      <input id="edit-friend-place" type="text" placeholder="例：福岡" style="width:100%;padding:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text);font-size:12px;box-sizing:border-box;">
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">メモ</label>
+      <textarea id="edit-friend-memo" style="width:100%;padding:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text);font-size:12px;box-sizing:border-box;min-height:60px;resize:vertical;"></textarea>
+    </div>
+    <input type="hidden" id="edit-friend-original-name">
+    <div style="display:flex;gap:8px;">
+      <button onclick="saveEditFriend()" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--sk-gold-light);color:#241d10;font-weight:700;font-size:12px;cursor:pointer;">保存</button>
+      <button onclick="closeEditFriendModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;">キャンセル</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
