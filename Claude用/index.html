@@ -7044,7 +7044,11 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
       hour_p=calcJicchu(adjDate.getHours(),adjDate.getMinutes(),day_p.kan);
     }
 
-    var birthStr=yr+'年'+mo+'月'+da+'日'+(unknownTime?'':'　'+('0'+hourVal).slice(-2)+':'+('0'+minVal).slice(-2));
+    var _yakLabel = '';
+    if(unknownTime){
+      _yakLabel = (typeof window._yakodoki !== 'undefined' && window._yakodoki === true) ? '（23時以降）' : '（正午）';
+    }
+    var birthStr=yr+'年'+mo+'月'+da+'日'+(unknownTime ? _yakLabel : '　'+('0'+hourVal).slice(-2)+':'+('0'+minVal).slice(-2));
     var isFemale=true;
     var birthForDaun=new Date(yr,mo-1,da,12,0);
     var dauResult=calcDaun(birthForDaun,year_p.kan,year_p.shi,month_p.kan,month_p.shi,isFemale);
@@ -15358,7 +15362,8 @@ function calculateShichuu(opts){
   }
 
 
-  const birthStr = `${yr}年${mo}月${da}日${unknownTime?'':'　'+String(hourVal).padStart(2,'0')+':'+String(minVal).padStart(2,'0')}`;
+  const _yakLabel2 = unknownTime ? (window._yakodoki === true ? '（23時以降）' : '（正午）') : '';
+  const birthStr = `${yr}年${mo}月${da}日${unknownTime ? _yakLabel2 : '　'+String(hourVal).padStart(2,'0')+':'+String(minVal).padStart(2,'0')}`;
   const isFemale=(opts&&opts.isFemale!==undefined)?opts.isFemale:(document.getElementById('genderFemale')?document.getElementById('genderFemale').checked:true);
   const birthForDaun = new Date(yr, mo-1, da, 12, 0);
   const dauResult = calcDaun(birthForDaun, year_p.kan, year_p.shi, month_p.kan, month_p.shi, isFemale);
