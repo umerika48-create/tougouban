@@ -13772,36 +13772,47 @@ function showFriendMeishiki(name, isYakodoki) {
     timeStr = isYakodoki ? '23:30' : '12:00';
   }
 
-  var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
-  var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  // 専用モーダルに表示
+  var modal = document.getElementById('friend-meishiki-modal');
+  var titleEl = document.getElementById('fmm-title');
+  var yomiEl = document.getElementById('fmm-yomi');
+  var switchEl = document.getElementById('fmm-switch');
+  var bodyEl = document.getElementById('fmm-body');
 
-  var meishikis = getFriendMeishiki();
-  var fMei = meishikis.find(function(m){ return m.name === name; });
-  var dayKan = fMei && fMei.day_p ? KAN10[fMei.day_p.kan] : '?';
-  var dayShi = fMei && fMei.day_p ? SHI12[fMei.day_p.shi] : '?';
+  if(!modal || !bodyEl) {
+    alert(name + 'の命式を表示できませんでした');
+    return;
+  }
 
+  if(titleEl) titleEl.textContent = name + 'の命式';
+  if(yomiEl) yomiEl.textContent = f.date + (f.time ? ' ' + f.time : ' 時刻不明');
+
+  // 時間切り替えボタン（時刻不明の場合のみ）
+  if(switchEl) {
+    if(unknown) {
+      var btn0Style = 'flex:1;padding:6px;border-radius:8px;font-size:11px;cursor:pointer;border:1px solid rgba(184,150,46,' + (!isYakodoki?'0.8':'0.3') + ');background:rgba(184,150,46,' + (!isYakodoki?'0.2':'0.05') + ');color:var(--sk-gold-light);font-weight:' + (!isYakodoki?'700':'400') + ';';
+      var btn23Style = 'flex:1;padding:6px;border-radius:8px;font-size:11px;cursor:pointer;border:1px solid rgba(184,150,46,' + (isYakodoki?'0.8':'0.3') + ');background:rgba(184,150,46,' + (isYakodoki?'0.2':'0.05') + ');color:var(--sk-gold-light);font-weight:' + (isYakodoki?'700':'400') + ';';
+      switchEl.innerHTML = '<div style="display:flex;gap:6px;">'
+        + '<button style="' + btn0Style + '" onclick="showFriendMeishiki(this.dataset.n,false)" data-n="' + name.replace(/"/g,'&quot;') + '">0時（正午計算）</button>'
+        + '<button style="' + btn23Style + '" onclick="showFriendMeishiki(this.dataset.n,true)" data-n="' + name.replace(/"/g,'&quot;') + '">23時</button>'
+        + '</div>';
+    } else {
+      switchEl.innerHTML = '';
+    }
+  }
+
+  // 命式HTML生成
   var html2 = (typeof buildShichuuCardHTML === 'function')
     ? buildShichuuCardHTML(f.date, timeStr, null, false, true)
     : '<p style="color:var(--muted);">命式を計算できませんでした</p>';
 
-  // 時間切り替えボタン（時刻不明の場合のみ）
-  var timeSwitchHTML = '';
-  if(unknown) {
-    var btn0Style = 'flex:1;padding:6px;border-radius:8px;font-size:11px;cursor:pointer;border:1px solid rgba(184,150,46,' + (!isYakodoki?'0.8':'0.3') + ');background:rgba(184,150,46,' + (!isYakodoki?'0.2':'0.05') + ');color:var(--sk-gold-light);font-weight:' + (!isYakodoki?'700':'400') + ';';
-    var btn23Style = 'flex:1;padding:6px;border-radius:8px;font-size:11px;cursor:pointer;border:1px solid rgba(184,150,46,' + (isYakodoki?'0.8':'0.3') + ');background:rgba(184,150,46,' + (isYakodoki?'0.2':'0.05') + ');color:var(--sk-gold-light);font-weight:' + (isYakodoki?'700':'400') + ';';
-    timeSwitchHTML = '<div style="display:flex;gap:6px;margin-bottom:10px;">'
-      + '<button style="' + btn0Style + '" onclick="showFriendMeishiki(this.dataset.n,false)" data-n="' + name.replace(/"/g,'&quot;') + '">0時（正午計算）</button>'
-      + '<button style="' + btn23Style + '" onclick="showFriendMeishiki(this.dataset.n,true)" data-n="' + name.replace(/"/g,'&quot;') + '">23時</button>'
-      + '</div>';
-  }
+  bodyEl.innerHTML = html2;
+  modal.style.display = 'flex';
+}
 
-  document.getElementById('hjTitle').textContent = name + 'の命式';
-  document.getElementById('hjYomi').textContent = f.date + (f.time ? ' ' + f.time : ' 時刻不明');
-  document.getElementById('hjBadge').textContent = dayKan + dayShi + '（日柱）' + (unknown ? (isYakodoki ? ' 23時' : ' 0時') : '');
-  document.getElementById('hjDesc').innerHTML = timeSwitchHTML + html2;
-  document.getElementById('hjContext').innerHTML = '';
-  document.getElementById('hjPanel').classList.add('open');
-  document.getElementById('hjOverlay').classList.add('open');
+function closeFriendMeishikiModal() {
+  var modal = document.getElementById('friend-meishiki-modal');
+  if(modal) modal.style.display = 'none';
 }
 
 function resetAllFriendData() {
@@ -16043,6 +16054,22 @@ function toggleSakurakoText(btn) {
       <button onclick="saveEditFriend()" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--sk-gold-light);color:#241d10;font-weight:700;font-size:12px;cursor:pointer;">保存</button>
       <button onclick="closeEditFriendModal()" style="flex:1;padding:10px;border-radius:8px;border:1px solid rgba(255,255,255,0.2);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;">キャンセル</button>
     </div>
+  </div>
+</div>
+
+
+<!-- 友達命式モーダル -->
+<div id="friend-meishiki-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:500;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;box-sizing:border-box;">
+  <div style="background:#0d1a2b;border:1px solid rgba(184,150,46,0.4);border-radius:12px;width:min(480px,100%);margin:0 auto;padding:16px;position:relative;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <div>
+        <div id="fmm-title" style="font-size:16px;font-weight:700;color:var(--sk-gold-light);"></div>
+        <div id="fmm-yomi" style="font-size:11px;color:var(--muted);margin-top:2px;"></div>
+      </div>
+      <button onclick="closeFriendMeishikiModal()" style="background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;">×</button>
+    </div>
+    <div id="fmm-switch" style="margin-bottom:10px;"></div>
+    <div id="fmm-body"></div>
   </div>
 </div>
 
