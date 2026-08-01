@@ -6921,7 +6921,10 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
     // renderResult+buildUnseiHTMLをそのまま使う
     return renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime)
       + buildUnseiHTML(dauResult,yr,day_p?day_p.kan:0);
-  } catch(e){ return ''; }
+  } catch(e){ 
+    console.error('buildShichuuCardHTML error:', e);
+    return '<p style="color:#ff8080;padding:10px;">命式の計算中にエラーが発生しました：' + e.message + '</p>'; 
+  }
 }
 
 function makeAccordion(id, label, innerHtml, small) {
