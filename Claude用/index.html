@@ -4997,6 +4997,7 @@ function showShichuuFriendPopup(key) {
     var html = '';
     friends.forEach(function(n){
       var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
+      if(fd && fd.hidden) return; // 非表示の友達はスキップ
       var isUnknown = !!(fd && (!fd.time || fd.timeUnknown));
       var colIdx = parseInt(key.split('_')[1]);
       var isDayCol = (colIdx === 2) && key.indexOf('_kan_') !== -1 || (colIdx === 2) && key.indexOf('_shi_') !== -1;
