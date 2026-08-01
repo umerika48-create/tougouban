@@ -14842,11 +14842,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime){
       </div>
       <div id="nikkan-ai-result" class="nichikan-desc">${getNikkanMessage(nichikan, month_shi_name, day_shi_name, month_p ? KAN10[month_p.kan] : '', hensei)||ndesc.desc}</div>
       ${month_shi_name?'<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:6px;">'+nichikan+'（'+month_shi_name+'月・'+day_shi_name+'日支）</div>':''}
-      ${(function(){
-        var nikFriends = getFriendsWithKan(['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'].indexOf(nichikan), 2);
-        if(!nikFriends||nikFriends.length===0) return '';
-        return '<div style="margin-top:8px;padding:6px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);"><div style="font-size:10px;color:#b8a8ff;margin-bottom:4px;">\u{1F465} 同じ日干の友達</div><div>'+buildFriendBadgeHTML(nikFriends)+'</div></div>';
-      })()}
+
     </div>
 
     <div class="interp-card">
