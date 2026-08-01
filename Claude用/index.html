@@ -13601,7 +13601,6 @@ function buildFriendDataListHTML(list, filterCat){
         + '</div>'
         + '</div>'
         + '<div style="color:var(--muted);line-height:1.7;">生年月日：' + dateLabel + '　出生時刻：' + timeLabel + '　出生地：' + escapeFriendHtml(placeLabel) + '</div>'
-        + (meishikiLabel ? '<div style="color:var(--sk-gold-light);margin-top:4px;font-size:10px;">月干支/日干支：' + meishikiLabel + '</div>' : '')
         + (f.memo ? '<div style="color:var(--muted);margin-top:2px;">MEMO：' + escapeFriendHtml(f.memo) + '</div>' : '')
         + '<div style="margin-top:6px;display:flex;gap:6px;">'
         + ((!f.time || f.timeUnknown)
