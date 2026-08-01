@@ -13573,6 +13573,30 @@ function buildFriendDataListHTML(list){
       var placeLabel = f.place || '未設定';
       var safeName = escapeFriendHtml(f.name);
       var jsName = f.name.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      // 四柱情報を取得
+      var fMei = null;
+      try {
+        var fParts = f.date.split('-');
+        var fYr=parseInt(fParts[0]),fMo=parseInt(fParts[1]),fDa=parseInt(fParts[2]);
+        var fTimeStr = f.time ? f.time.replace(':','') : '';
+        var fUnknown = !fTimeStr || f.timeUnknown;
+        var fH=12,fMin=0;
+        if(!fUnknown && fTimeStr.length===4){ fH=parseInt(fTimeStr.slice(0,2)); fMin=parseInt(fTimeStr.slice(2,4)); }
+        // calcShichu4Pillarsが利用可能なら使用
+        if(typeof calcShichu4Pillars === 'function'){
+          fMei = calcShichu4Pillars(fYr,fMo,fDa,fH,fMin,fUnknown,null);
+        }
+      } catch(e){}
+      var KAN10f=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+      var SHI12f=['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+      var meishikiLabel = '';
+      if(fMei && fMei.month_p && fMei.day_p){
+        var moonKanStr = KAN10f[fMei.month_p.kan] || '';
+        var moonShiStr = SHI12f[fMei.month_p.shi] || '';
+        var dayKanStr  = KAN10f[fMei.day_p.kan]   || '';
+        var dayShiStr  = SHI12f[fMei.day_p.shi]   || '';
+        meishikiLabel = moonKanStr+moonShiStr+' / '+dayKanStr+dayShiStr+(fUnknown?' ※時刻不明':'');
+      }
       html += '<div style="border:1px solid rgba(255,255,255,' + (isHidden?'.05':'.1') + ');border-radius:8px;padding:8px 10px;margin-bottom:6px;font-size:11px;opacity:' + (isHidden?'0.4':'1') + ';">'
         + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">'
         + '<div style="font-weight:700;color:var(--text);">' + safeName + '</div>'
@@ -13583,6 +13607,7 @@ function buildFriendDataListHTML(list){
         + '</div>'
         + '</div>'
         + '<div style="color:var(--muted);line-height:1.7;">生年月日：' + dateLabel + '　出生時刻：' + timeLabel + '　出生地：' + escapeFriendHtml(placeLabel) + '</div>'
+        + (meishikiLabel ? '<div style="color:var(--sk-gold-light);margin-top:4px;font-size:10px;">月干支/日干支：' + meishikiLabel + '</div>' : '')
         + (f.memo ? '<div style="color:var(--muted);margin-top:2px;">MEMO：' + escapeFriendHtml(f.memo) + '</div>' : '')
         + '</div>';
     });
