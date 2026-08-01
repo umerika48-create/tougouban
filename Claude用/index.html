@@ -4949,7 +4949,7 @@ function runShichuu() {
     var tags = items.map(function(item, i){
       var friends = isKan ? getFriendsByKan(i, colIdx) : getFriendsByShi(i, colIdx);
       var count = friends.length;
-      var key = 'tag_' + colIdx + '_' + i;
+      var key = 'tag_' + colIdx + '_' + (isKan ? 'kan' : 'shi') + '_' + i;
       window._shichuuTagData[key] = { label: item, friends: friends };
       return '<div style="display:inline-block;margin:3px;position:relative;">'
         + '<button onclick="showShichuuFriendPopup(\'' + key + '\')" style="padding:8px 16px;border-radius:14px;font-size:22px;font-weight:300;border:1px solid rgba(184,150,46,0.4);background:rgba(184,150,46,0.08);color:var(--sk-gold-light);cursor:pointer;min-width:52px;position:relative;">'
@@ -4999,7 +4999,7 @@ function showShichuuFriendPopup(key) {
       var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
       var isUnknown = !!(fd && (!fd.time || fd.timeUnknown));
       var colIdx = parseInt(key.split('_')[1]);
-      var isDayCol = (colIdx === 2); // 日柱のみ（？）表示
+      var isDayCol = (colIdx === 2) && key.indexOf('_kan_') !== -1 || (colIdx === 2) && key.indexOf('_shi_') !== -1;
       var lbl = n + (isUnknown && isDayCol ? '（？）' : '');
       if(isUnknown && isDayCol) {
         // 時刻不明：当日・翌日の両方のボタンを表示
