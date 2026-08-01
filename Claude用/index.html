@@ -13747,17 +13747,7 @@ let FRIEND_DATA = [
 ];
 
 /* localStorageに保存された友達データがあれば、それで上書きする */
-(function loadFriendDataFromStorage(){
-  try{
-    var raw = localStorage.getItem('sakurakoFriendData');
-    if(raw){
-      var parsed = JSON.parse(raw);
-      if(Array.isArray(parsed) && parsed.length > 0){
-        FRIEND_DATA = parsed;
-      }
-    }
-  }catch(e){ /* 読み込み失敗時は初期データのまま */ }
-})();
+/* localStorage読み込み無効化：HTMLデータを正として使用 */
 
 /* 友達データ管理モーダルを開く */
 function openFriendDataManager(){
@@ -13889,7 +13879,7 @@ function saveFriendDataFromPaste(){
     }
   });
   try{
-    localStorage.setItem('sakurakoFriendData', JSON.stringify(merged));
+    /* localStorage保存無効化 */
   }catch(e){
     if(statusEl){ statusEl.style.color='#f87171'; statusEl.textContent = '保存に失敗しました。'; }
     return;
@@ -14054,7 +14044,7 @@ function resetAllFriendData() {
 function confirmResetAllFriendData() {
   FRIEND_DATA.splice(0, FRIEND_DATA.length);
   FRIEND_MEISHIKI_CACHE = null;
-  try { localStorage.removeItem('sakurakoFriendData'); } catch(e) {}
+  try { /* localStorage削除無効化 */ } catch(e) {}
   var modal = document.getElementById('friend-reset-modal');
   if(modal) modal.style.display = 'none';
   var listEl = document.getElementById('friend-data-list');
@@ -14075,7 +14065,7 @@ function deleteFriend(name) {
   if(idx === -1) return;
   FRIEND_DATA.splice(idx, 1);
   FRIEND_MEISHIKI_CACHE = null;
-  try { localStorage.setItem('sakurakoFriendData', JSON.stringify(FRIEND_DATA)); } catch(e) {}
+  try { /* localStorage保存無効化 */ } catch(e) {}
   var listEl = document.getElementById('friend-data-list');
   if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA, window._friendCategoryFilter && window._friendCategoryFilter !== '全員' ? window._friendCategoryFilter : null);
   var filterEl = document.getElementById('friend-category-filter');
@@ -14118,7 +14108,7 @@ function saveEditFriend() {
   f.memo = newMemo;
   f.category = newCategory;
   FRIEND_MEISHIKI_CACHE = null;
-  try { localStorage.setItem('sakurakoFriendData', JSON.stringify(FRIEND_DATA)); } catch(e) {}
+  try { /* localStorage保存無効化 */ } catch(e) {}
   closeEditFriendModal();
   // キャッシュをクリアして再描画
   FRIEND_MEISHIKI_CACHE = null;
@@ -14140,7 +14130,7 @@ function toggleFriendHidden(name) {
   if(!f) return;
   f.hidden = !f.hidden;
   // localStorageに保存
-  try { localStorage.setItem('sakurakoFriendData', JSON.stringify(FRIEND_DATA)); } catch(e) {}
+  try { /* localStorage保存無効化 */ } catch(e) {}
   // リストを更新
   var listEl = document.getElementById('friend-data-list');
   if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA);
