@@ -13752,14 +13752,12 @@ function resetAllFriendData() {
   if(modal) {
     modal.style.display = 'flex';
   } else {
-    // モーダルがない場合は直接実行
-    if(!window.confirm('友達データを全員削除しますか？この操作は元に戻せません。')) return;
     confirmResetAllFriendData();
   }
 }
 
 function confirmResetAllFriendData() {
-  FRIEND_DATA = [];
+  FRIEND_DATA.splice(0, FRIEND_DATA.length);
   FRIEND_MEISHIKI_CACHE = null;
   try { localStorage.removeItem('sakurakoFriendData'); } catch(e) {}
   var modal = document.getElementById('friend-reset-modal');
@@ -13778,11 +13776,15 @@ function cancelResetFriendData() {
 }
 
 function deleteFriend(name) {
-  if(!confirm('「' + name + '」を削除しますか？')) return;
-  FRIEND_DATA = FRIEND_DATA.filter(function(d){ return d.name !== name; });
+  var idx = FRIEND_DATA.findIndex(function(d){ return d.name === name; });
+  if(idx === -1) return;
+  FRIEND_DATA.splice(idx, 1);
+  FRIEND_MEISHIKI_CACHE = null;
   try { localStorage.setItem('sakurakoFriendData', JSON.stringify(FRIEND_DATA)); } catch(e) {}
   var listEl = document.getElementById('friend-data-list');
-  if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA);
+  if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA, window._friendCategoryFilter && window._friendCategoryFilter !== '全員' ? window._friendCategoryFilter : null);
+  var filterEl = document.getElementById('friend-category-filter');
+  if(filterEl) filterEl.innerHTML = buildCategoryFilterHTML(FRIEND_DATA);
 }
 
 function editFriend(name) {
