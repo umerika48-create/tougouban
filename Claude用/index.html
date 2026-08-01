@@ -13535,7 +13535,7 @@ function openFriendDataManager(){
     + '<textarea id="friend-data-paste" placeholder="ここにJSONを貼り付け" style="width:100%;min-height:160px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--text);font-family:monospace;font-size:11px;padding:8px;box-sizing:border-box;"></textarea>'
     + '<div id="friend-data-status" style="font-size:11px;color:#7ee787;margin-top:6px;min-height:16px;"></div>'
     + '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">'
-    + '<button onclick="saveFriendDataFromPaste()" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--gold,#c9a84c);color:#241d10;font-weight:700;font-size:12px;cursor:pointer;">貼り付けた内容で上書き保存</button>'
+    + '<button onclick="saveFriendDataFromPaste()" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--gold,#c9a84c);color:#241d10;font-weight:700;font-size:12px;cursor:pointer;">貼り付けた内容で上書き保存</button>'    + '<button onclick="resetAllFriendData()" style="padding:10px 14px;border-radius:8px;border:1px solid rgba(255,80,80,.4);background:rgba(255,80,80,.1);color:#ff8080;font-weight:700;font-size:12px;cursor:pointer;">全リセット</button>'
     + '</div>'
     + '<div style="margin-top:14px;font-size:11px;color:var(--muted);">現在登録されている友達（' + FRIEND_DATA.length + '人）:</div>'
     + '<div id="friend-data-list" style="max-height:280px;overflow-y:auto;margin-top:8px;">' + buildFriendDataListHTML(FRIEND_DATA) + '</div>'
@@ -13721,6 +13721,19 @@ function getFriendMeishiki() {
 
 /* 特定の柱×干に一致する友達を返す */
 
+
+
+function resetAllFriendData() {
+  if(!confirm('友達データを全員削除しますか？\nこの操作は元に戻せません。')) return;
+  if(!confirm('本当によろしいですか？')) return;
+  FRIEND_DATA = [];
+  FRIEND_MEISHIKI_CACHE = null;
+  try { localStorage.removeItem('sakurakoFriendData'); } catch(e) {}
+  var listEl = document.getElementById('friend-data-list');
+  if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA);
+  var statusEl = document.getElementById('friend-data-status');
+  if(statusEl) { statusEl.textContent = '✅ 全データをリセットしました'; statusEl.style.color = '#ff8080'; }
+}
 
 function deleteFriend(name) {
   if(!confirm('「' + name + '」を削除しますか？')) return;
