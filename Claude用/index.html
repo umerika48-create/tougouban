@@ -13748,14 +13748,22 @@ function filterFriendsByCategory(cat) {
 }
 
 function resetAllFriendData() {
-  document.getElementById('friend-reset-modal').style.display = 'flex';
+  var modal = document.getElementById('friend-reset-modal');
+  if(modal) {
+    modal.style.display = 'flex';
+  } else {
+    // モーダルがない場合は直接実行
+    if(!window.confirm('友達データを全員削除しますか？この操作は元に戻せません。')) return;
+    confirmResetAllFriendData();
+  }
 }
 
 function confirmResetAllFriendData() {
   FRIEND_DATA = [];
   FRIEND_MEISHIKI_CACHE = null;
   try { localStorage.removeItem('sakurakoFriendData'); } catch(e) {}
-  document.getElementById('friend-reset-modal').style.display = 'none';
+  var modal = document.getElementById('friend-reset-modal');
+  if(modal) modal.style.display = 'none';
   var listEl = document.getElementById('friend-data-list');
   if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA, null);
   var filterEl = document.getElementById('friend-category-filter');
@@ -13765,7 +13773,8 @@ function confirmResetAllFriendData() {
 }
 
 function cancelResetFriendData() {
-  document.getElementById('friend-reset-modal').style.display = 'none';
+  var modal = document.getElementById('friend-reset-modal');
+  if(modal) modal.style.display = 'none';
 }
 
 function deleteFriend(name) {
@@ -13785,11 +13794,11 @@ function editFriend(name) {
   document.getElementById('edit-friend-place').value = f.place || '';
   document.getElementById('edit-friend-memo').value = f.memo || '';
   document.getElementById('edit-friend-original-name').value = f.name;
-  document.getElementById('friend-edit-modal').style.display = 'flex';
+  var em = document.getElementById('friend-edit-modal'); if(em) em.style.display = 'flex';
 }
 
 function closeEditFriendModal() {
-  document.getElementById('friend-edit-modal').style.display = 'none';
+  var em = document.getElementById('friend-edit-modal'); if(em) em.style.display = 'none';
 }
 
 function saveEditFriend() {
