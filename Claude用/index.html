@@ -15689,7 +15689,15 @@ function openHenseiPanel(name, context){
   document.getElementById('hjTitle').textContent = name + '（' + d.image + '）';
   document.getElementById('hjYomi').textContent = '（' + d.yomi + '）';
   document.getElementById('hjBadge').textContent = d.keyword;
-  // 詳細内容（基本解説＋天干の読み方＋恋愛・仕事）
+  // ラベル表示
+  var labelHTML = '';
+  if(typeof HENSEI_LABELS !== 'undefined' && HENSEI_LABELS[name]) {
+    labelHTML = '<div style="margin-bottom:10px;">' +
+      HENSEI_LABELS[name].map(function(l){
+        return '<span style="display:inline-block;margin:2px 3px;padding:4px 10px;border-radius:12px;font-size:12px;background:rgba(180,100,180,0.12);color:var(--text);border:1px solid rgba(180,100,180,0.25);">' + l + '</span>';
+      }).join('') + '</div>';
+  }
+  // 詳細内容（折りたたみ）
   var html = '<p style="font-size:12px;line-height:1.8;color:var(--text);">'+d.desc+'</p>';
   if(d.tenkan){
     html += '<div style="margin-top:10px;padding:8px 10px;background:rgba(184,150,46,0.08);border-radius:8px;border-left:2px solid var(--sk-gold);">'
@@ -15724,7 +15732,7 @@ function openHenseiPanel(name, context){
         '<div>' + buildFriendBadgeHTML(hFriends, isDayHensei) + '</div></div>';
     }
   }
-  document.getElementById('hjDesc').innerHTML = hFriendHTML + html;
+  document.getElementById('hjDesc').innerHTML = hFriendHTML + labelHTML + '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">詳細</summary>' + html + '</details>';
   document.getElementById('hjContext').innerHTML = '<span style="font-size:12px;color:var(--sk-silver-dim);">' + context + '</span>';
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
