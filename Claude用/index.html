@@ -14414,7 +14414,8 @@ function buildFriendBadgeHTML(names, showUnknown) {
     var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
     var isUnknown = !!(fd && (!fd.time || fd.timeUnknown));
     var lbl = n + (showUnknown && isUnknown ? '（？）' : '');
-    return '<span style="display:inline-block;background:rgba(168,154,255,0.15);color:#b8a8ff;font-size:11px;padding:2px 8px;border-radius:10px;margin:2px;">' + lbl + '</span>';
+    var safeName = n.replace(/"/g,'&quot;');
+    return '<span onclick="showFriendMeishiki(this.dataset.n, ' + isUnknown + ')" data-n="' + safeName + '" style="display:inline-block;background:rgba(168,154,255,0.15);color:#b8a8ff;font-size:11px;padding:2px 8px;border-radius:10px;margin:2px;cursor:pointer;">' + lbl + '</span>';
   }).join('');
 }
 
