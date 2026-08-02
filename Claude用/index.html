@@ -14993,7 +14993,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
       const dayEx = i===2 ? ' day' : '';
       const kanName = KAN10[p.kan];
       return `<td class="${cols[i]} kan${dayEx} ${kc}">
-        <span class="kan-pill" onclick="openKanPanel('${kanName}',${i})">${kanName}</span>
+        <span class="kan-pill" onclick="openKanPanel('${kanName}',${i},'${month_p ? SHI12[month_p.shi] : ""}')">${kanName}</span>
       </td>`;
     }).join('')}
   </tr>`;
@@ -15836,7 +15836,7 @@ function closeHjPanel(){
 }
 
 // 天干タップ → 中央ポップアップ
-function openKanPanel(kanName, colIdx){
+function openKanPanel(kanName, colIdx, monthShi){
   var nd = NICHIKAN_DESC[kanName];
   if(!nd) return;
   var pd = PILLAR_KAN_DESC[kanName];
@@ -15885,8 +15885,21 @@ function openKanPanel(kanName, colIdx){
 
   // ラベル表示（KAN_LABELS）
   var kanLabelHTML = '';
+  // 日柱（colIdx=2）のとき：日干×月支の組み合わせを大きく表示
+  if(colIdx === 2 && typeof MOON_SHI_LABEL !== 'undefined') {
+    // 月支を取得
+    var moonShi2 = monthShi || '';
+    if(kanName && moonShi2 && MOON_SHI_LABEL[kanName] && MOON_SHI_LABEL[kanName][moonShi2]) {
+      var msl2 = MOON_SHI_LABEL[kanName][moonShi2];
+      kanLabelHTML += '<div style="margin-bottom:12px;text-align:center;padding:10px;background:rgba(61,184,86,0.06);border-radius:10px;border:1px solid rgba(61,184,86,0.2);">' +
+        '<div style="font-size:20px;font-weight:300;color:var(--sk-gold-light);letter-spacing:0.1em;">' + kanName + ' × ' + moonShi2 + '</div>' +
+        '<div style="font-size:13px;font-weight:700;color:var(--sk-gold-light);margin-top:4px;">【' + msl2.label + '】</div>' +
+        (msl2.detail ? '<details style="margin-top:6px;text-align:left;"><summary style="font-size:10px;color:var(--muted);cursor:pointer;">詳細</summary><p style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6;">' + msl2.detail + '</p></details>' : '') +
+        '</div>';
+    }
+  }
   if(typeof KAN_LABELS !== 'undefined' && KAN_LABELS[kanName]) {
-    kanLabelHTML = '<div style="margin-bottom:10px;">' +
+    kanLabelHTML += '<div style="margin-bottom:10px;">' +
       KAN_LABELS[kanName].map(function(l){
         return '<span style="display:inline-block;margin:2px 3px;padding:4px 10px;border-radius:12px;font-size:12px;background:rgba(61,184,86,0.12);color:var(--text);border:1px solid rgba(61,184,86,0.25);">' + l + '</span>';
       }).join('') + '</div>';
