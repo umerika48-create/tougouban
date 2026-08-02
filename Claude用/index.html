@@ -16044,13 +16044,25 @@ function openShiPanel(shiName, colIdx){
   }
   // ラベル表示（SHI_LABELS）
   var shiLabelHTML = '';
+  // 月支のとき：MOON_SHI_LABELの季節ラベルを一番上に表示
+  if(colIdx2 === 1 && typeof MOON_SHI_LABEL !== 'undefined') {
+    var nichikanEl2 = document.querySelector('.nichikan-name');
+    var nichi2 = nichikanEl2 ? nichikanEl2.textContent.trim().charAt(0) : '';
+    if(nichi2 && MOON_SHI_LABEL[nichi2] && MOON_SHI_LABEL[nichi2][shiName]) {
+      var msl = MOON_SHI_LABEL[nichi2][shiName];
+      shiLabelHTML += '<div style="margin-bottom:8px;padding:6px 10px;background:rgba(184,150,46,0.08);border-radius:8px;border-left:3px solid var(--sk-gold-light);">' +
+        '<span style="font-size:12px;font-weight:700;color:var(--sk-gold-light);">【' + msl.label + '】</span>' +
+        (msl.detail ? '<details style="margin-top:4px;"><summary style="font-size:10px;color:var(--muted);cursor:pointer;">詳細</summary><p style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6;">' + msl.detail + '</p></details>' : '') +
+        '</div>';
+    }
+  }
   if(typeof SHI_LABELS !== 'undefined' && SHI_LABELS[shiName]) {
-    shiLabelHTML = '<div style="margin-bottom:10px;">' +
+    shiLabelHTML += '<div style="margin-bottom:10px;">' +
       SHI_LABELS[shiName].map(function(l){
         return '<span style="display:inline-block;margin:2px 3px;padding:4px 10px;border-radius:12px;font-size:12px;background:rgba(184,150,46,0.12);color:var(--text);border:1px solid rgba(184,150,46,0.25);">' + l + '</span>';
       }).join('') + '</div>';
   }
-  var shiDetailHTML = mainDesc ? '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">詳細</summary><p style="font-size:12px;line-height:1.8;color:var(--text);margin-top:6px;">' + mainDesc + '</p>' + seasonHTML + chokoShiHTML + '</details>' : seasonHTML + chokoShiHTML;
+  var shiDetailHTML = mainDesc ? '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">詳細</summary><p style="font-size:12px;line-height:1.8;color:var(--text);margin-top:6px;">' + mainDesc + '</p>' + chokoShiHTML + '</details>' : chokoShiHTML;
   document.getElementById('hjDesc').innerHTML = shiFriendHTML + shiLabelHTML + shiDetailHTML;
   document.getElementById('hjContext').innerHTML = '';
   document.getElementById('hjTitle').dataset.memoKey = 'memo_shi_' + shiName + '_' + colIdx2;
