@@ -15508,24 +15508,31 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan, hensei) {
       friendBadges(moonKanFriends, false) +
       '</div>' : '') +
       (noteText ? '<div style="font-size:11px;color:var(--sk-silver-dim);margin-top:4px;">' + noteText + '</div>' : '') +
-      // 通変星ラベル
+      // 通変星ラベル（柱別）
       (function(){
         if(!hensei || typeof HENSEI_LABELS === 'undefined') return '';
-        // 重複を除いた通変星を収集
+        var colNames = ['年柱', '月柱', '日柱', '時柱'];
+        var sections = [];
         var seen = {};
-        var tags = [];
-        hensei.forEach(function(h){
-          if(h && h !== '—' && !seen[h] && HENSEI_LABELS[h]) {
-            seen[h] = true;
-            HENSEI_LABELS[h].forEach(function(lbl){
-              tags.push('<span style="display:inline-block;margin:2px 3px 2px 0;padding:3px 8px;border-radius:12px;font-size:11px;background:rgba(180,100,180,0.15);color:var(--text);border:1px solid rgba(180,100,180,0.2);">' + lbl + '</span>');
-            });
-          }
+        hensei.forEach(function(h, i){
+          if(!h || h === '—' || !HENSEI_LABELS[h]) return;
+          var key = colNames[i] + '・' + h;
+          if(seen[key]) return;
+          seen[key] = true;
+          var tags = HENSEI_LABELS[h].map(function(lbl){
+            return '<span style="display:inline-block;margin:2px 3px 2px 0;padding:3px 8px;border-radius:12px;font-size:11px;background:rgba(180,100,180,0.15);color:var(--text);border:1px solid rgba(180,100,180,0.2);">' + lbl + '</span>';
+          }).join('');
+          sections.push(
+            '<div style="margin-bottom:8px;">' +
+            '<div style="font-size:11px;color:rgba(180,100,180,0.9);font-weight:700;margin-bottom:4px;">【' + key + '】</div>' +
+            '<div>' + tags + '</div>' +
+            '</div>'
+          );
         });
-        if(!tags.length) return '';
+        if(!sections.length) return '';
         return '<div style="margin-top:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);">' +
-          '<div style="font-size:12px;color:rgba(180,100,180,0.8);font-weight:700;margin-bottom:6px;padding-left:8px;border-left:2px solid rgba(180,100,180,0.6);">通変星</div>' +
-          '<div>' + tags.join('') + '</div></div>';
+          '<div style="font-size:12px;color:rgba(180,100,180,0.8);font-weight:700;margin-bottom:8px;padding-left:8px;border-left:2px solid rgba(180,100,180,0.6);">通変星</div>' +
+          sections.join('') + '</div>';
       })();
 
     var html = '<div style="margin-bottom:10px;">' +
@@ -15622,8 +15629,7 @@ function openHenseiPanel(name, context){
       +'<div style="font-size:10px;color:#6af;margin-bottom:4px;">💼 仕事・才能</div>'
       +'<p style="font-size:12px;line-height:1.7;color:var(--text);">'+d.work+'</p></div>';
   }
-  document.getElementById('hjDesc').innerHTML = html;
-  // Friend表示
+  // Friend表示（一番上）
   var colIdxH = -1;
   if(context){
     if(context.indexOf('年柱')!==-1) colIdxH=0;
@@ -15633,14 +15639,16 @@ function openHenseiPanel(name, context){
   }
   var hFriendHTML = '';
   if(colIdxH !== -1){
+    var isDayHensei = (colIdxH === 2 || colIdxH === 3);
     var hFriends = getFriendsWithHensei(name, colIdxH);
     if(hFriends.length > 0){
-      hFriendHTML = '<div style="margin-top:8px;padding:8px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);">' +
-        '<div style="font-size:10px;color:#b8a8ff;margin-bottom:6px;">👥 この通変星を持つ友達</div>' +
-        '<div>' + buildFriendBadgeHTML(hFriends) + '</div></div>';
+      hFriendHTML = '<div style="margin-bottom:10px;padding:6px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);">' +
+        '<div style="font-size:10px;color:#b8a8ff;margin-bottom:4px;">👥 この通変星を持つ友達</div>' +
+        '<div>' + buildFriendBadgeHTML(hFriends, isDayHensei) + '</div></div>';
     }
   }
-  document.getElementById('hjContext').innerHTML = '<span style="font-size:12px;color:var(--sk-silver-dim);">' + context + '</span>' + hFriendHTML;
+  document.getElementById('hjDesc').innerHTML = hFriendHTML + html;
+  document.getElementById('hjContext').innerHTML = '<span style="font-size:12px;color:var(--sk-silver-dim);">' + context + '</span>';
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
 }
