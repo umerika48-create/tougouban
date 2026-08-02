@@ -7002,10 +7002,6 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
       hourVal=parseInt(timeStr4.slice(0,2));
       minVal=parseInt(timeStr4.slice(2,4));
     }
-    // タブのデフォルト状態を時刻に合わせて更新
-    if(typeof updateYakodokiDefault === 'function'){
-      updateYakodokiDefault(timeStr4, unknownTime);
-    }
 
     // 地方時補正（calculateShichuuと同じ）
     var _cityData=optCityData!==undefined?optCityData:window._normalCityData;
@@ -8085,7 +8081,7 @@ function buildPersonalCardsHTML(birthdate, honmei, kYear, kMonth, isPartner) {
           '<span class="accordion-arrow">▼</span>'+
         '</button>'+
         '<div class="accordion-body" id="abody-shichuu-card">'+
-          '<div id="shichuu-card-body">'+buildShichuuCardHTML(birthdate)+'</div>'+
+          '<div id="shichuu-card-body">'+(function(){   var _ts = (window._normalBirthTime||'').replace(':','').replace(/[^0-9]/g,'');   var _unk = !_ts;   if(typeof updateYakodokiDefault==='function') updateYakodokiDefault(_ts, _unk);   return buildShichuuCardHTML(birthdate); })()+'</div>'+
         '</div>'+
       '</div>';
     })() +
@@ -8728,7 +8724,7 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
           '<span class="accordion-arrow">▼</span>'+
         '</button>'+
         '<div class="accordion-body" id="abody-shichuu-card">'+
-          '<div id="shichuu-card-body">'+buildShichuuCardHTML(birthdate)+'</div>'+
+          '<div id="shichuu-card-body">'+(function(){   var _ts = (window._normalBirthTime||'').replace(':','').replace(/[^0-9]/g,'');   var _unk = !_ts;   if(typeof updateYakodokiDefault==='function') updateYakodokiDefault(_ts, _unk);   return buildShichuuCardHTML(birthdate); })()+'</div>'+
         '</div>'+
       '</div>';
     })() +
@@ -9720,7 +9716,7 @@ function calculate() {
         '<span class="accordion-arrow">▼</span>'+
       '</button>'+
       '<div class="accordion-body" id="abody-shichuu-card">'+
-        '<div id="shichuu-card-body">'+buildShichuuCardHTML(birthdate)+'</div>'+
+        '<div id="shichuu-card-body">'+(function(){   var _ts = (window._normalBirthTime||'').replace(':','').replace(/[^0-9]/g,'');   var _unk = !_ts;   if(typeof updateYakodokiDefault==='function') updateYakodokiDefault(_ts, _unk);   return buildShichuuCardHTML(birthdate); })()+'</div>'+
       '</div>'+
     '</div>';
   })();
