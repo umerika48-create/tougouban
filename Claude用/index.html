@@ -4980,6 +4980,61 @@ function runShichuu() {
 }
 
 
+
+function showHenseiTagPopup(tagKey) {
+  var data = window._henseiTagData && window._henseiTagData[tagKey];
+  if(!data) return;
+  var titleEl = document.getElementById('hjTitle');
+  var descEl = document.getElementById('hjDesc');
+  var ctxEl = document.getElementById('hjContext');
+  if(!titleEl || !descEl) return;
+  titleEl.textContent = data.label + ' の友達';
+  document.getElementById('hjYomi').textContent = '';
+  document.getElementById('hjBadge').textContent = '';
+  if(ctxEl) ctxEl.innerHTML = '';
+  var html = '';
+  data.friends.forEach(function(n){
+    var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
+    var isUnknown = !!(fd && (!fd.time || fd.timeUnknown)) && data.isDayCol;
+    var lbl = n + (isUnknown ? '（？）' : '');
+    if(isUnknown) {
+      var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+      var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+      var meishikis = getFriendMeishiki();
+      var fMei = meishikis.find(function(m){ return m.name === n; });
+      var todayKan = fMei && fMei.day_p ? KAN10[fMei.day_p.kan] : '?';
+      var todayShi = fMei && fMei.day_p ? SHI12[fMei.day_p.shi] : '?';
+      var parts = fd.date.split('-');
+      var yr=parseInt(parts[0]),mo=parseInt(parts[1]),da=parseInt(parts[2]);
+      var day23 = calcNicchu(new Date(yr,mo-1,da+1,0,30,0,0));
+      var nextKan = day23 ? KAN10[day23.kan] : '?';
+      var nextShi = day23 ? SHI12[day23.shi] : '?';
+      html += '<div style="padding:10px 14px;margin-bottom:6px;border-radius:10px;background:rgba(184,150,46,0.06);border:1px solid rgba(184,150,46,0.2);">'
+        + '<div style="font-size:13px;color:var(--text);margin-bottom:8px;">' + lbl + '</div>'
+        + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">時刻不明のため2つの可能性があります</div>'
+        + '<div style="display:flex;gap:6px;">'
+        + '<button class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="flex:1;padding:8px;border-radius:8px;background:rgba(184,150,46,0.1);border:1px solid rgba(184,150,46,0.3);color:var(--sk-gold-light);cursor:pointer;font-size:11px;">当日（' + todayKan + todayShi + '）</button>'
+        + '<button class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="true" style="flex:1;padding:8px;border-radius:8px;background:rgba(120,120,200,0.1);border:1px solid rgba(120,120,200,0.3);color:#b8a8ff;cursor:pointer;font-size:11px;">翌日（' + nextKan + nextShi + '）</button>'
+        + '</div>'
+        + '</div>';
+    } else {
+      html += '<div class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="padding:10px 14px;margin-bottom:6px;border-radius:10px;background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);cursor:pointer;font-size:14px;color:var(--text);">' + lbl + '</div>';
+    }
+  });
+  descEl.innerHTML = html;
+  descEl.querySelectorAll('.sfp-item').forEach(function(el){
+    el.addEventListener('click', function(){
+      var name = this.getAttribute('data-name');
+      var isUnk = this.getAttribute('data-unknown') === 'true';
+      document.getElementById('hjPanel').classList.remove('open');
+      document.getElementById('hjOverlay').classList.remove('open');
+      showFriendMeishiki(name, isUnk);
+    });
+  });
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
+
 function showShichuuFriendPopup(key) {
   var data = window._shichuuTagData && window._shichuuTagData[key];
   if(!data) return;
@@ -15519,12 +15574,32 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan, hensei) {
           var key = colNames[i] + '・' + h;
           if(seen[key]) return;
           seen[key] = true;
+          var isDayCol = (i === 2 || i === 3);
+          // この通変星を持つ友達
+          var hFriends = (typeof getFriendsWithHensei === 'function') ? getFriendsWithHensei(h, i) : [];
+          var hFriends_f = hFriends.filter(function(n){
+            var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
+            return !fd || !fd.hidden;
+          });
+          // 友達タグボタン
+          var friendBtn = '';
+          if(hFriends_f.length > 0) {
+            var safeKey = key.replace(/'/g, "\\'");
+            var friendData = JSON.stringify(hFriends_f.map(function(n){
+              var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
+              return { name: n, unknown: !!(fd && (!fd.time || fd.timeUnknown)) && isDayCol };
+            }));
+            window._henseiTagData = window._henseiTagData || {};
+            var tagKey = 'hensei_' + i + '_' + h;
+            window._henseiTagData[tagKey] = { label: key, friends: hFriends_f, isDayCol: isDayCol };
+            friendBtn = '<button onclick="showHenseiTagPopup(\'' + tagKey + '\')" style="margin-left:6px;padding:1px 8px;border-radius:10px;font-size:10px;background:rgba(168,154,255,0.15);border:1px solid rgba(168,154,255,0.3);color:#b8a8ff;cursor:pointer;vertical-align:middle;">👥 ' + hFriends_f.length + '</button>';
+          }
           var tags = HENSEI_LABELS[h].map(function(lbl){
             return '<span style="display:inline-block;margin:2px 3px 2px 0;padding:3px 8px;border-radius:12px;font-size:11px;background:rgba(180,100,180,0.15);color:var(--text);border:1px solid rgba(180,100,180,0.2);">' + lbl + '</span>';
           }).join('');
           sections.push(
             '<div style="margin-bottom:8px;">' +
-            '<div style="font-size:11px;color:rgba(180,100,180,0.9);font-weight:700;margin-bottom:4px;">【' + key + '】</div>' +
+            '<div style="font-size:11px;color:rgba(180,100,180,0.9);font-weight:700;margin-bottom:4px;">【' + key + '】' + friendBtn + '</div>' +
             '<div>' + tags + '</div>' +
             '</div>'
           );
