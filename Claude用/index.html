@@ -15883,9 +15883,16 @@ function openKanPanel(kanName, colIdx){
     '<div style="font-size:10px;color:#b8a8ff;margin-bottom:4px;">👥 同じ' + colLabels[colIdx] + 'の友達</div>' +
     '<div>' + autoHTML + '</div></div>' : '';
 
-  document.getElementById('hjDesc').innerHTML =
-    friendTopHTML +
-    '<p style="font-size:12px;line-height:1.8;color:var(--text);">' + mainDesc + '</p>' + chokoBaseHTML;
+  // ラベル表示（KAN_LABELS）
+  var kanLabelHTML = '';
+  if(typeof KAN_LABELS !== 'undefined' && KAN_LABELS[kanName]) {
+    kanLabelHTML = '<div style="margin-bottom:10px;">' +
+      KAN_LABELS[kanName].map(function(l){
+        return '<span style="display:inline-block;margin:2px 3px;padding:4px 10px;border-radius:12px;font-size:12px;background:rgba(61,184,86,0.12);color:var(--text);border:1px solid rgba(61,184,86,0.25);">' + l + '</span>';
+      }).join('') + '</div>';
+  }
+  var kanDetailHTML = mainDesc ? '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">詳細</summary><p style="font-size:12px;line-height:1.8;color:var(--text);margin-top:6px;">' + mainDesc + '</p>' + chokoBaseHTML + '</details>' : chokoBaseHTML;
+  document.getElementById('hjDesc').innerHTML = friendTopHTML + kanLabelHTML + kanDetailHTML;
 
   document.getElementById('hjContext').innerHTML = '';
 
@@ -16035,7 +16042,16 @@ function openShiPanel(shiName, colIdx){
       shiFriendHTML = '<div style="margin-bottom:10px;padding:6px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);"><div style="font-size:10px;color:#b8a8ff;margin-bottom:4px;">👥 同じ地支の友達</div><div>' + buildFriendBadgeHTML(shiFriends, isDayShi) + '</div></div>';
     }
   }
-  document.getElementById('hjDesc').innerHTML = shiFriendHTML + '<p style="font-size:12px;line-height:1.8;color:var(--text);">' + mainDesc + '</p>' + seasonHTML + chokoShiHTML;
+  // ラベル表示（SHI_LABELS）
+  var shiLabelHTML = '';
+  if(typeof SHI_LABELS !== 'undefined' && SHI_LABELS[shiName]) {
+    shiLabelHTML = '<div style="margin-bottom:10px;">' +
+      SHI_LABELS[shiName].map(function(l){
+        return '<span style="display:inline-block;margin:2px 3px;padding:4px 10px;border-radius:12px;font-size:12px;background:rgba(184,150,46,0.12);color:var(--text);border:1px solid rgba(184,150,46,0.25);">' + l + '</span>';
+      }).join('') + '</div>';
+  }
+  var shiDetailHTML = mainDesc ? '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">詳細</summary><p style="font-size:12px;line-height:1.8;color:var(--text);margin-top:6px;">' + mainDesc + '</p>' + seasonHTML + chokoShiHTML + '</details>' : seasonHTML + chokoShiHTML;
+  document.getElementById('hjDesc').innerHTML = shiFriendHTML + shiLabelHTML + shiDetailHTML;
   document.getElementById('hjContext').innerHTML = '';
   document.getElementById('hjTitle').dataset.memoKey = 'memo_shi_' + shiName + '_' + colIdx2;
   document.getElementById('hjPanel').classList.add('open');
