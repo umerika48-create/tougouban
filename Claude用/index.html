@@ -5018,8 +5018,25 @@ function showHenseiTagPopup(tagKey) {
         + '</div>'
         + '</div>';
     } else {
-      var itemStyle = seasonStyle || 'background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);color:var(--text);';
-      html += '<div class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="padding:10px 14px;margin-bottom:6px;border-radius:10px;' + itemStyle + 'cursor:pointer;font-size:14px;">' + lbl + '</div>';
+      // 季節カラー取得（月干・日干のみ）
+      var hSeasonStyle = '';
+      var hSeasonSuffix = '';
+      if(data.isDayCol !== undefined && typeof SHI_SEASON_COLORS !== 'undefined') {
+        var hMeishikis = getFriendMeishiki();
+        var hFm = hMeishikis.find(function(x){ return x.name === n; });
+        if(hFm && hFm.month_p) {
+          var hSHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+          var hMShi = hSHI12[hFm.month_p.shi];
+          var hSc = SHI_SEASON_COLORS[hMShi];
+          if(hSc) {
+            hSeasonStyle = 'background:' + hSc.bg + ';border:1px solid ' + hSc.border + ';color:' + hSc.color + ';';
+            hSeasonSuffix = '（' + hSc.label + '）';
+          }
+        }
+      }
+      var hLbl = n + hSeasonSuffix;
+      var hItemStyle = hSeasonStyle || 'background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);color:var(--text);';
+      html += '<div class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="padding:10px 14px;margin-bottom:6px;border-radius:10px;' + hItemStyle + 'cursor:pointer;font-size:14px;">' + hLbl + '</div>';
     }
   });
   descEl.innerHTML = html;
