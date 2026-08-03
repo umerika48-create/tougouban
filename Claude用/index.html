@@ -1740,18 +1740,14 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
 
   <!-- 入力フォーム -->
   <div class="card">
-    <!-- ALL（Date of Birthラベルのすぐ上） -->
-    <div style="display:flex;justify-content:flex-end;margin-bottom:-16px;">
-      <button type="button" onclick="resetAllBirthdates()" style="padding:3px 14px;border-radius:12px;border:1px solid #f87171;background:rgba(248,113,113,.12);color:#f87171;font-size:10px;font-weight:700;letter-spacing:.1em;cursor:pointer;">ALL</button>
-      <button type="button" onclick="showFriendSearchPopup('me')" style="padding:3px 14px;border-radius:12px;border:1px solid rgba(168,154,255,0.6);background:rgba(168,154,255,0.12);color:#b8a8ff;font-size:10px;font-weight:700;letter-spacing:.05em;cursor:pointer;">🔍 検索</button>
-    </div>
     <label style="margin-bottom:4px;">Date of Birth</label>
     <input type="text" id="bd-text"
       placeholder="例）19860430 または 19860430 1317 福岡"
       value="198604301317福岡"
       inputmode="text" oninput="syncBirthdate()" style="margin-bottom:4px;">
-    <!-- あなた用RESET（あなたの入力欄のすぐ下） -->
-    <div style="display:flex;justify-content:flex-end;margin-top:0;">
+    <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:0;">
+      <button type="button" onclick="resetAllBirthdates()" style="padding:3px 14px;border-radius:12px;border:1px solid #f87171;background:rgba(248,113,113,.12);color:#f87171;font-size:10px;font-weight:700;letter-spacing:.1em;cursor:pointer;">ALL</button>
+      <button type="button" onclick="showFriendSearchPopup('me')" style="padding:3px 14px;border-radius:12px;border:1px solid rgba(168,154,255,0.6);background:rgba(168,154,255,0.12);color:#b8a8ff;font-size:10px;font-weight:700;letter-spacing:.05em;cursor:pointer;">🔍 検索</button>
       <button type="button" onclick="resetMyBirthdate()" style="padding:3px 14px;border-radius:12px;border:1px solid #60a5fa;background:rgba(96,165,250,.12);color:#60a5fa;font-size:10px;font-weight:700;letter-spacing:.05em;cursor:pointer;">RESET</button>
     </div>
     <div id="bd-error"></div>
@@ -5071,7 +5067,6 @@ function showHenseiTagPopup(tagKey) {
 
 
 function showFriendSearchPopup(target) {
-  // 友達一覧をhjPanelで表示
   var titleEl = document.getElementById('hjTitle');
   var descEl = document.getElementById('hjDesc');
   var ctxEl = document.getElementById('hjContext');
@@ -5080,76 +5075,92 @@ function showFriendSearchPopup(target) {
   titleEl.textContent = target === 'me' ? 'あなたの生年月日を選択' : '相手の生年月日を選択';
   document.getElementById('hjYomi').textContent = '';
   document.getElementById('hjBadge').textContent = '';
-  if(ctxEl) ctxEl.innerHTML = '<span style="font-size:11px;color:var(--muted);">タップすると自動入力されます</span>';
 
-  // カテゴリー順にソート（本人を先頭に）
-  var sorted = FRIEND_DATA.filter(function(f){ return !f.hidden && f.date; });
-  sorted.sort(function(a, b){
-    var order = ['本人','親しい友人','友達','友達（♂）','身内','先生','仕事関係','有名人','友達の子供','その他'];
-    var ai = order.indexOf(a.category);
-    var bi = order.indexOf(b.category);
-    if(ai === -1) ai = 99;
-    if(bi === -1) bi = 99;
-    return ai - bi;
-  });
+  // カテゴリー一覧
+  var cats = ['すべて','本人','親しい友人','友達','友達（♂）','身内','先生','仕事関係','有名人','友達の子供','その他'];
+  var currentCat = 'すべて';
 
-  var html = '';
-  var currentCat = '';
-  sorted.forEach(function(f){
-    if(f.category !== currentCat) {
-      currentCat = f.category;
-      html += '<div style="font-size:10px;color:var(--muted);margin:8px 0 4px;padding-left:4px;font-weight:700;">' + currentCat + '</div>';
-    }
-    // 生年月日をフォーマット
-    var dateStr = f.date.replace(/-/g, '');
-    var timeStr = f.time ? f.time.replace(':', '') : '';
-    var inputVal = dateStr + (timeStr ? timeStr : '') + (f.place ? f.place : '');
-    var displayDate = f.date + (f.time ? ' ' + f.time : '（時刻不明）');
+  function buildList(filterCat) {
+    var sorted = FRIEND_DATA.filter(function(f){
+      return !f.hidden && f.date && (filterCat === 'すべて' || f.category === filterCat);
+    });
+    sorted.sort(function(a, b){
+      var order = ['本人','親しい友人','友達','友達（♂）','身内','先生','仕事関係','有名人','友達の子供','その他'];
+      var ai = order.indexOf(a.category); var bi = order.indexOf(b.category);
+      if(ai===-1) ai=99; if(bi===-1) bi=99;
+      return ai - bi;
+    });
 
-    // 季節カラー取得
-    var sc = null;
-    if(typeof SHI_SEASON_COLORS !== 'undefined') {
-      // 月支を簡易計算（生年月日から）
+    var html = '';
+    var prevCat = '';
+    sorted.forEach(function(f){
+      if(filterCat === 'すべて' && f.category !== prevCat) {
+        prevCat = f.category;
+        html += '<div style="font-size:10px;color:var(--muted);margin:8px 0 4px;padding-left:4px;font-weight:700;">' + f.category + '</div>';
+      }
+      var sc = null;
       try {
         var parts = f.date.split('-');
-        var yr = parseInt(parts[0]), mo = parseInt(parts[1]), da = parseInt(parts[2]);
-        // 節入りから月支を取得
-        if(typeof calcGetschu === 'function') {
-          var tempDT = new Date(yr, mo-1, da, 12, 0);
-          var mp = calcGetschu(tempDT, null);
-          if(mp !== null && mp !== undefined) {
-            var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
-            var mShi = SHI12[mp.shi];
-            sc = SHI_SEASON_COLORS[mShi];
-          }
+        var yr=parseInt(parts[0]),mo=parseInt(parts[1]),da=parseInt(parts[2]);
+        var tempDT = new Date(yr,mo-1,da,12,0);
+        var mp = calcGetschu(tempDT, null);
+        if(mp !== null && mp !== undefined) {
+          var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+          sc = SHI_SEASON_COLORS[SHI12[mp.shi]];
         }
-      } catch(e) {}
-    }
-
-    var bgStyle = sc ? 'background:' + sc.bg + ';border:1px solid ' + sc.border + ';' : 'background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);';
-    var colorStyle = sc ? 'color:' + sc.color + ';' : 'color:var(--text);';
-
-    html += '<div class="fsp-friend-item" data-target="' + target + '" data-date="' + f.date + '" data-time="' + (f.time||'') + '" data-place="' + (f.place||'').replace(/"/g,'&quot;') + '" style="padding:8px 12px;margin-bottom:5px;border-radius:10px;' + bgStyle + 'cursor:pointer;">' +
-      '<div style="font-size:13px;font-weight:700;' + colorStyle + '">' + f.name + '</div>' +
-      '<div style="font-size:10px;color:var(--muted);margin-top:2px;">' + displayDate + (f.place ? '　' + f.place : '') + '</div>' +
-      '</div>';
-  });
-
-  descEl.innerHTML = html;
-  // data属性でクリック処理
-  descEl.querySelectorAll('.fsp-friend-item').forEach(function(el){
-    el.addEventListener('click', function(){
-      selectFriendForInput(
-        this.getAttribute('data-target'),
-        this.getAttribute('data-date'),
-        this.getAttribute('data-time'),
-        this.getAttribute('data-place')
-      );
+      } catch(e){}
+      var bgStyle = sc ? 'background:' + sc.bg + ';border:1px solid ' + sc.border + ';' : 'background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);';
+      var colorStyle = sc ? 'color:' + sc.color + ';' : 'color:var(--text);';
+      var displayDate = f.date + (f.time ? ' ' + f.time : '（時刻不明）') + (f.place ? '　' + f.place : '');
+      html += '<div class="fsp-friend-item" data-target="' + target + '" data-date="' + f.date + '" data-time="' + (f.time||'') + '" data-place="' + (f.place||'').replace(/"/g,'&quot;') + '" style="padding:8px 12px;margin-bottom:5px;border-radius:10px;' + bgStyle + 'cursor:pointer;">' +
+        '<div style="font-size:13px;font-weight:700;' + colorStyle + '">' + f.name + '</div>' +
+        '<div style="font-size:10px;color:var(--muted);margin-top:2px;">' + displayDate + '</div>' +
+        '</div>';
     });
-  });
+    return html || '<div style="color:var(--muted);font-size:12px;padding:10px;">該当なし</div>';
+  }
+
+  // カテゴリータブHTML
+  function buildTabs(active) {
+    return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:10px;">' +
+      cats.map(function(cat){
+        var count = cat === 'すべて'
+          ? FRIEND_DATA.filter(function(f){ return !f.hidden && f.date; }).length
+          : FRIEND_DATA.filter(function(f){ return !f.hidden && f.date && f.category === cat; }).length;
+        if(count === 0 && cat !== 'すべて') return '';
+        var isActive = cat === active;
+        return '<button class="fsp-cat-btn" data-cat="' + cat + '" style="padding:2px 10px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (isActive ? 'rgba(184,150,46,0.8)' : 'rgba(255,255,255,0.15)') + ';background:' + (isActive ? 'rgba(184,150,46,0.2)' : 'transparent') + ';color:' + (isActive ? 'var(--sk-gold-light)' : 'var(--muted)') + ';font-weight:' + (isActive ? '700' : '400') + ';">' + cat + ' ' + count + '</button>';
+      }).join('') +
+    '</div>';
+  }
+
+  function render(cat) {
+    descEl.innerHTML = buildTabs(cat) + '<div id="fsp-list">' + buildList(cat) + '</div>';
+    // カテゴリータブのクリック
+    descEl.querySelectorAll('.fsp-cat-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        render(this.getAttribute('data-cat'));
+      });
+    });
+    // 友達アイテムのクリック
+    descEl.querySelectorAll('.fsp-friend-item').forEach(function(el){
+      el.addEventListener('click', function(){
+        selectFriendForInput(
+          this.getAttribute('data-target'),
+          this.getAttribute('data-date'),
+          this.getAttribute('data-time'),
+          this.getAttribute('data-place')
+        );
+      });
+    });
+  }
+
+  if(ctxEl) ctxEl.innerHTML = '<span style="font-size:11px;color:var(--muted);">タップすると自動入力されます</span>';
+  render('すべて');
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
 }
+
 
 function selectFriendForInput(target, date, time, place) {
   // 入力値を作成
