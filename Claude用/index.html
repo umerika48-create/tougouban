@@ -4950,7 +4950,7 @@ function runShichuu() {
       var friends = isKan ? getFriendsByKan(i, colIdx) : getFriendsByShi(i, colIdx);
       var count = friends.length;
       var key = 'tag_' + colIdx + '_' + (isKan ? 'kan' : 'shi') + '_' + i;
-      window._shichuuTagData[key] = { label: item, friends: friends };
+      window._shichuuTagData[key] = { label: item, friends: friends, colIdx: colIdx };
       return '<div style="display:inline-block;margin:3px;position:relative;">'
         + '<button onclick="showShichuuFriendPopup(\'' + key + '\')" style="padding:8px 16px;border-radius:14px;font-size:22px;font-weight:300;border:1px solid rgba(184,150,46,0.4);background:rgba(184,150,46,0.08);color:var(--sk-gold-light);cursor:pointer;min-width:52px;position:relative;">'
         + item
@@ -5018,7 +5018,8 @@ function showHenseiTagPopup(tagKey) {
         + '</div>'
         + '</div>';
     } else {
-      html += '<div class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="padding:10px 14px;margin-bottom:6px;border-radius:10px;background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);cursor:pointer;font-size:14px;color:var(--text);">' + lbl + '</div>';
+      var itemStyle = seasonStyle || 'background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);color:var(--text);';
+      html += '<div class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="padding:10px 14px;margin-bottom:6px;border-radius:10px;' + itemStyle + 'cursor:pointer;font-size:14px;">' + lbl + '</div>';
     }
   });
   descEl.innerHTML = html;
@@ -5084,7 +5085,8 @@ function showShichuuFriendPopup(key) {
           + '</div>'
           + '</div>';
       } else {
-        html += '<div class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="padding:10px 14px;margin-bottom:6px;border-radius:10px;background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);cursor:pointer;font-size:14px;color:var(--text);">' + lbl + '</div>';
+        var itemStyle = seasonStyle || 'background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);color:var(--text);';
+      html += '<div class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="padding:10px 14px;margin-bottom:6px;border-radius:10px;' + itemStyle + 'cursor:pointer;font-size:14px;">' + lbl + '</div>';
       }
     });
     descEl.innerHTML = html;
@@ -13363,6 +13365,21 @@ const JYU12_DESC = {
 
 
 /* ======= 月支×日干の季節ラベル・詳細データ ======= */
+const SHI_SEASON_COLORS = {
+  '寅': {bg:'rgba(255,158,181,0.18)', border:'rgba(255,105,135,0.5)', color:'#ff6b9d', label:'春の初め'},
+  '卯': {bg:'rgba(255,107,157,0.18)', border:'rgba(255,70,130,0.5)', color:'#ff4081', label:'春の真ん中'},
+  '辰': {bg:'rgba(165,214,167,0.18)', border:'rgba(100,180,100,0.5)', color:'#66bb6a', label:'春の終わり'},
+  '巳': {bg:'rgba(255,138,101,0.18)', border:'rgba(230,100,60,0.5)', color:'#ff7043', label:'夏の初め'},
+  '午': {bg:'rgba(229,57,53,0.18)', border:'rgba(200,40,40,0.5)', color:'#e53935', label:'真夏'},
+  '未': {bg:'rgba(255,160,0,0.18)', border:'rgba(220,130,0,0.5)', color:'#ff8f00', label:'晩夏'},
+  '申': {bg:'rgba(161,136,127,0.18)', border:'rgba(130,100,90,0.5)', color:'#a1887f', label:'秋の初め'},
+  '酉': {bg:'rgba(141,110,99,0.18)', border:'rgba(110,80,70,0.5)', color:'#8d6e63', label:'秋の真ん中'},
+  '戌': {bg:'rgba(188,170,164,0.18)', border:'rgba(150,130,120,0.5)', color:'#a08878', label:'晩秋'},
+  '亥': {bg:'rgba(92,133,214,0.18)', border:'rgba(70,110,200,0.5)', color:'#5c85d6', label:'冬の初め'},
+  '子': {bg:'rgba(21,101,192,0.18)', border:'rgba(15,80,160,0.5)', color:'#1565c0', label:'冬の真ん中'},
+  '丑': {bg:'rgba(121,134,203,0.18)', border:'rgba(90,100,180,0.5)', color:'#7986cb', label:'冬の終わり'},
+};
+
 const CHOKO_SEASON_DESC = {
   '甲': {
     '子': {label: '「雪の下で根を張っている大木」', summary: '準備の人', desc: '甲の大木が冬の地中に根を張っている状態。外からは止まって見えるけど、根の中でエネルギーを蓄えまくっている。準備が整ったとき、誰よりも速く動き出す。'},
@@ -14406,14 +14423,47 @@ function getFriendsWithHensei(henseiName, colIdx) {
 }
 
 /* Friend表示用HTML生成 */
-function buildFriendBadgeHTML(names, showUnknown) {
+
+function getFriendMoonShi(friendName) {
+  // 友達の月支を取得
+  var meishikis = getFriendMeishiki();
+  var m = meishikis.find(function(x){ return x.name === friendName; });
+  if(!m || !m.month_p) return null;
+  var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  return SHI12[m.month_p.shi];
+}
+
+function getSeasonBadge(friendName, colIdx) {
+  // 月干(1)・日干(2)の場合のみ色付きバッジ
+  if(colIdx !== 1 && colIdx !== 2) return null;
+  var shi = getFriendMoonShi(friendName);
+  if(!shi || !SHI_SEASON_COLORS[shi]) return null;
+  return {shi: shi, ...SHI_SEASON_COLORS[shi]};
+}
+
+function buildFriendBadgeHTML(names, showUnknown, colIdx) {
   if(!names || names.length === 0) return '<span style="font-size:11px;color:var(--sk-silver-dim);">なし</span>';
   return names.map(function(n){
     var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
     var isUnknown = !!(fd && (!fd.time || fd.timeUnknown));
     var lbl = n + (showUnknown && isUnknown ? '（？）' : '');
     var safeName = n.replace(/"/g,'&quot;');
-    return '<span onclick="showFriendMeishiki(this.dataset.n, ' + isUnknown + ')" data-n="' + safeName + '" style="display:inline-block;background:rgba(168,154,255,0.15);color:#b8a8ff;font-size:11px;padding:2px 8px;border-radius:10px;margin:2px;cursor:pointer;">' + lbl + '</span>';
+    // 月干(1)・日干(2)の場合は季節カラーバッジ
+    var style = 'display:inline-block;background:rgba(168,154,255,0.15);color:#b8a8ff;font-size:11px;padding:2px 8px;border-radius:10px;margin:2px;cursor:pointer;';
+    if((colIdx === 1 || colIdx === 2) && typeof SHI_SEASON_COLORS !== 'undefined') {
+      var meishikis = getFriendMeishiki();
+      var m = meishikis.find(function(x){ return x.name === n; });
+      if(m && m.month_p) {
+        var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+        var moonShi = SHI12[m.month_p.shi];
+        var sc = SHI_SEASON_COLORS[moonShi];
+        if(sc) {
+          lbl = n + '（' + sc.label + '）' + (showUnknown && isUnknown ? '（？）' : '');
+          style = 'display:inline-block;background:' + sc.bg + ';color:' + sc.color + ';font-size:11px;padding:2px 8px;border-radius:10px;margin:2px;cursor:pointer;border:1px solid ' + sc.border + ';';
+        }
+      }
+    }
+    return '<span onclick="showFriendMeishiki(this.dataset.n, ' + isUnknown + ')" data-n="' + safeName + '" style="' + style + '">' + lbl + '</span>';
   }).join('');
 }
 
@@ -15671,12 +15721,12 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan, hensei) {
     var nikFriends = (typeof getFriendsWithKan === 'function') ? getFriendsWithKan(kanIdx, 2) : [];
     var moonKanFriends = (typeof getFriendsWithKan === 'function' && moonKanIdx >= 0) ? getFriendsWithKan(moonKanIdx, 1) : [];
 
-    function friendBadges(names, showUnknown, sectionLabel) {
+    function friendBadges(names, showUnknown, sectionLabel, colIdx) {
       if(!names||!names.length) return '';
       // ポップアップ形式
       var tagKey = 'basic_' + (sectionLabel||'').replace(/[^a-zA-Z0-9　-鿿]/g,'_') + '_' + Date.now();
       window._henseiTagData = window._henseiTagData || {};
-      window._henseiTagData[tagKey] = { label: sectionLabel || '友達', friends: names, isDayCol: !!showUnknown };
+      window._henseiTagData[tagKey] = { label: sectionLabel || '友達', friends: names, isDayCol: !!showUnknown, colIdx: colIdx };
       return '<div style="margin-top:4px;">' +
         '<button onclick="showHenseiTagPopup(\'' + tagKey + '\')" style="padding:2px 10px;border-radius:10px;font-size:10px;background:rgba(168,154,255,0.15);border:1px solid rgba(168,154,255,0.3);color:#b8a8ff;cursor:pointer;">👥 ' + names.length + '人</button>' +
         '</div>';
@@ -15686,7 +15736,7 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan, hensei) {
       '<div style="margin-bottom:8px;">' +
       '<div style="font-size:12px;color:var(--sk-gold-light);font-weight:700;margin-bottom:6px;padding-left:8px;border-left:2px solid var(--sk-gold-light);">日干：' + kan + '</div>' +
       '<div>' + makeTags(kanLabels, 'rgba(61,184,86,0.15)') + '</div>' +
-      friendBadges(nikFriends, true, '日干：' + kan) +
+      friendBadges(nikFriends, true, '日干：' + kan, 2) +
       '</div>' +
       '<div style="margin-bottom:8px;">' +
       '<div style="font-size:12px;color:var(--sk-gold-light);font-weight:700;margin-bottom:6px;padding-left:8px;border-left:2px solid var(--sk-gold-light);">月支：' + moon_shi + moonShiLabelHTML + '</div>' +
@@ -15704,7 +15754,7 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan, hensei) {
       '<div style="margin-bottom:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);">' +
       '<div style="font-size:12px;color:var(--sk-gold-light);font-weight:700;margin-bottom:6px;padding-left:8px;border-left:2px solid var(--sk-gold-light);">月干：' + moon_kan + '（社会・仕事での才能）</div>' +
       '<div>' + makeTags((typeof KAN_LABELS !== 'undefined' && KAN_LABELS[moon_kan]) ? KAN_LABELS[moon_kan] : [], 'rgba(184,150,46,0.12)') + '</div>' +
-      friendBadges(moonKanFriends, false, '月干：' + moon_kan) +
+      friendBadges(moonKanFriends, false, '月干：' + moon_kan, 1) +
       '</div>' : '') +
       (noteText ? '<div style="font-size:11px;color:var(--sk-silver-dim);margin-top:4px;">' + noteText + '</div>' : '') +
       // 通変星ラベル（柱別）
@@ -16017,7 +16067,7 @@ function openKanPanel(kanName, colIdx, monthShi){
   var kanIdx = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'].indexOf(kanName);
   var autoFriends = (kanIdx !== -1) ? getFriendsWithKan(kanIdx, colIdx) : [];
   var isDayKan = (colIdx === 2);
-  var autoHTML = buildFriendBadgeHTML(autoFriends, isDayKan);
+  var autoHTML = buildFriendBadgeHTML(autoFriends, isDayKan, colIdx);
 
   // 友達名を一番上に表示
   var friendTopHTML = autoFriends.length ? 
@@ -16199,7 +16249,7 @@ function openShiPanel(shiName, colIdx){
     var shiFriends = getFriendsWithShi(shiIdx, colIdx);
     if(shiFriends.length > 0){
       var isDayShi = (colIdx === 2);
-      shiFriendHTML = '<div style="margin-bottom:10px;padding:6px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);"><div style="font-size:10px;color:#b8a8ff;margin-bottom:4px;">👥 同じ地支の友達</div><div>' + buildFriendBadgeHTML(shiFriends, isDayShi) + '</div></div>';
+      shiFriendHTML = '<div style="margin-bottom:10px;padding:6px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);"><div style="font-size:10px;color:#b8a8ff;margin-bottom:4px;">👥 同じ地支の友達</div><div>' + buildFriendBadgeHTML(shiFriends, isDayShi, colIdx) + '</div></div>';
     }
   }
   // ラベル表示（SHI_LABELS）
