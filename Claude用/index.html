@@ -1098,11 +1098,24 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   .kan-jin  { color: #3a7abf !important; } /* 壬：濃い青 */
   .kan-ki2  { color: #7ab8e0 !important; } /* 癸：水色 */
   /* 地支 colors（五行別） */
-  .shi-moku { color: #3db856 !important; }  /* 寅・卯：木 */
-  .shi-ka   { color: #e05c40 !important; }  /* 巳・午：火 */
-  .shi-do   { color: #c8a030 !important; }  /* 丑・辰・未・戌：土 */
-  .shi-kin  { color: #a8b8c8 !important; }  /* 申・酉：金 */
-  .shi-sui  { color: #3a7abf !important; }  /* 亥・子：水 */
+  .shi-moku { color: #3db856 !important; }
+  .shi-ka   { color: #e05c40 !important; }
+  .shi-do   { color: #c8a030 !important; }
+  .shi-kin  { color: #a8b8c8 !important; }
+  .shi-sui  { color: #3a7abf !important; }
+  /* 12種類・季節カラー */
+  .shi-tora   { color: #ff6b9d !important; }  /* 寅：春の初め */
+  .shi-u      { color: #ff4081 !important; }  /* 卯：春の真ん中 */
+  .shi-tatsu  { color: #66bb6a !important; }  /* 辰：春の終わり */
+  .shi-mi     { color: #ff7043 !important; }  /* 巳：夏の初め */
+  .shi-uma    { color: #e53935 !important; }  /* 午：真夏 */
+  .shi-hitsuji{ color: #ff8f00 !important; }  /* 未：晩夏 */
+  .shi-saru   { color: #a1887f !important; }  /* 申：秋の初め */
+  .shi-tori   { color: #8d6e63 !important; }  /* 酉：秋の真ん中 */
+  .shi-inu    { color: #a08878 !important; }  /* 戌：晩秋 */
+  .shi-i      { color: #5c85d6 !important; }  /* 亥：冬の初め */
+  .shi-ne     { color: #1565c0 !important; }  /* 子：冬の真ん中 */
+  .shi-ushi   { color: #7986cb !important; }  /* 丑：冬の終わり */
 
   /* 旧クラス互換 */
   .kan-moku { color: #3db856 !important; }
@@ -15124,17 +15137,13 @@ function kanClass(kan_idx){
 }
 
 function shiClass(shi_name){
-  var moku = ['寅','卯'];
-  var ka   = ['巳','午'];
-  var do_  = ['丑','辰','未','戌'];
-  var kin  = ['申','酉'];
-  var sui  = ['亥','子'];
-  if(moku.indexOf(shi_name)!==-1) return 'shi-moku';
-  if(ka.indexOf(shi_name)!==-1)   return 'shi-ka';
-  if(do_.indexOf(shi_name)!==-1)  return 'shi-do';
-  if(kin.indexOf(shi_name)!==-1)  return 'shi-kin';
-  if(sui.indexOf(shi_name)!==-1)  return 'shi-sui';
-  return '';
+  var map = {
+    '寅':'shi-tora','卯':'shi-u','辰':'shi-tatsu',
+    '巳':'shi-mi','午':'shi-uma','未':'shi-hitsuji',
+    '申':'shi-saru','酉':'shi-tori','戌':'shi-inu',
+    '亥':'shi-i','子':'shi-ne','丑':'shi-ushi'
+  };
+  return map[shi_name] || '';
 }
 function kanClassByName(kan_name){
   const idx = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'].indexOf(kan_name);
