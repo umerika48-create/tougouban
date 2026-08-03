@@ -16901,6 +16901,11 @@ function showMoonShiDetail(kan, moonShi) {
   var html = 
     '<div style="margin-bottom:10px;padding:8px 10px;background:rgba(184,150,46,0.08);border-radius:8px;">' +
     '<div style="font-size:10px;color:var(--sk-gold-light);margin-bottom:6px;font-weight:700;">🌸 ' + entry.label + '</div>' +
+    (typeof SHI_SEASON_THEME !== 'undefined' && SHI_SEASON_THEME[moonShi] ? 
+      '<div style="margin-bottom:6px;padding:4px 8px;background:rgba(255,255,255,0.04);border-radius:6px;border-left:2px solid ' + (SHI_SEASON_COLORS && SHI_SEASON_COLORS[moonShi] ? SHI_SEASON_COLORS[moonShi].color : 'var(--sk-gold-light)') + ';">' +
+      '<span style="font-size:10px;color:var(--muted);">💡 ' + SHI_SEASON_THEME[moonShi].season + 'が表すもの　</span>' +
+      '<span style="font-size:11px;font-weight:700;color:' + (SHI_SEASON_COLORS && SHI_SEASON_COLORS[moonShi] ? SHI_SEASON_COLORS[moonShi].color : 'var(--sk-gold-light)') + ';">【' + SHI_SEASON_THEME[moonShi].theme + '】</span>' +
+      '</div>' : '') +
     '<p style="font-size:12px;line-height:1.8;color:var(--text);margin:0;">' + entry.detail + '</p>' +
     '</div>' +
     (seasonDesc ? 
