@@ -5066,6 +5066,56 @@ function showHenseiTagPopup(tagKey) {
   document.getElementById('hjOverlay').classList.add('open');
 }
 
+
+function showChokoDetail(key) {
+  var data = window._henseiTagData && window._henseiTagData[key];
+  if(!data) return;
+  var titleEl = document.getElementById('hjTitle');
+  var descEl = document.getElementById('hjDesc');
+  var ctxEl = document.getElementById('hjContext');
+  if(!titleEl || !descEl) return;
+
+  var kan = data.kan;
+  var shi = data.shi;
+  var type = data._type;
+
+  // 季節カラー
+  var sc = (typeof SHI_SEASON_COLORS !== 'undefined' && SHI_SEASON_COLORS[shi]) ? SHI_SEASON_COLORS[shi] : null;
+  var color = sc ? sc.color : 'var(--sk-gold-light)';
+  var bg = sc ? sc.bg : 'rgba(184,150,46,0.06)';
+  var border = sc ? sc.border : 'rgba(184,150,46,0.2)';
+  var seasonLabel = sc ? sc.label : '';
+
+  // データ取得
+  var desc_data = null;
+  if(type === 'choko' && typeof CHOKO_SEASON_DESC !== 'undefined') {
+    desc_data = CHOKO_SEASON_DESC[kan] && CHOKO_SEASON_DESC[kan][shi];
+  } else if(type === 'moonkan' && typeof MOON_KAN_DESC !== 'undefined') {
+    desc_data = MOON_KAN_DESC[kan] && MOON_KAN_DESC[kan][shi];
+  }
+
+  titleEl.textContent = kan + ' × ' + shi;
+  document.getElementById('hjYomi').textContent = '';
+  document.getElementById('hjBadge').textContent = '';
+  if(ctxEl) ctxEl.innerHTML = seasonLabel ? '<span style="font-size:11px;color:' + color + ';">【' + seasonLabel + '】</span>' : '';
+
+  var html = '<div style="padding:10px;background:' + bg + ';border-radius:10px;border:1px solid ' + border + ';margin-bottom:10px;">';
+  if(desc_data) {
+    html += '<div style="font-size:15px;font-weight:700;color:var(--text);margin-bottom:8px;">' + desc_data.label + '</div>';
+    if(desc_data.summary) {
+      html += '<div style="display:inline-block;margin-bottom:8px;padding:3px 12px;border-radius:20px;background:rgba(255,255,255,0.08);font-size:12px;color:' + color + ';font-weight:700;">' + desc_data.summary + '</div><br>';
+    }
+    html += '<p style="font-size:12px;color:var(--muted);line-height:1.7;margin:0;">' + desc_data.desc + '</p>';
+  } else {
+    html += '<p style="font-size:12px;color:var(--muted);">データがありません</p>';
+  }
+  html += '</div>';
+
+  descEl.innerHTML = html;
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
+
 function showShichuuFriendPopup(key) {
   var data = window._shichuuTagData && window._shichuuTagData[key];
   if(!data) return;
@@ -15954,7 +16004,16 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan, hensei) {
       (function(){
         var kanColors = {'甲':'#3db856','乙':'#7dcf6e','丙':'#e05c40','丁':'#f0a0b0','戊':'#c8a030','己':'#d4b896','庚':'#a8b8c8','辛':'#d8e8f0','壬':'#3a7abf','癸':'#7ab8e0'};
         var kc = kanColors[kan] || 'var(--sk-gold-light)';
-        return '<div style="font-size:12px;color:' + kc + ';font-weight:700;margin-bottom:6px;padding:4px 8px;border-left:3px solid ' + kc + ';background:rgba(255,255,255,0.03);border-radius:0 6px 6px 0;">日干：' + kan + '</div>';
+        var nikDetailKey = 'nikDetail_' + kan + '_' + moon_shi + '_' + Date.now();
+        window._henseiTagData = window._henseiTagData || {};
+        window._henseiTagData[nikDetailKey] = {
+          label: '日干：' + kan + ' × ' + moon_shi,
+          _type: 'choko',
+          kan: kan,
+          shi: moon_shi,
+          colIdx: 2
+        };
+        return '<div style="font-size:12px;color:' + kc + ';font-weight:700;margin-bottom:6px;padding:4px 8px;border-left:3px solid ' + kc + ';background:rgba(255,255,255,0.03);border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:space-between;">日干：' + kan + '<button onclick="showChokoDetail(\'' + nikDetailKey + '\')" style="font-size:9px;padding:1px 7px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:var(--muted);cursor:pointer;font-weight:400;">詳細</button></div>';
       })() +
       '<div>' + makeTags(kanLabels, 'rgba(61,184,86,0.15)') + '</div>' +
       friendBadges(nikFriends, true, '日干：' + kan, 2) +
@@ -15988,7 +16047,16 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan, hensei) {
       (function(){
         var kanColors2 = {'甲':'#3db856','乙':'#7dcf6e','丙':'#e05c40','丁':'#f0a0b0','戊':'#c8a030','己':'#d4b896','庚':'#a8b8c8','辛':'#d8e8f0','壬':'#3a7abf','癸':'#7ab8e0'};
         var mkc = kanColors2[moon_kan] || 'var(--sk-gold-light)';
-        return '<div style="font-size:12px;color:' + mkc + ';font-weight:700;margin-bottom:6px;padding:4px 8px;border-left:3px solid ' + mkc + ';background:rgba(255,255,255,0.03);border-radius:0 6px 6px 0;">月干：' + moon_kan + '（社会・仕事での才能）</div>';
+        var moonDetailKey = 'moonDetail_' + moon_kan + '_' + moon_shi + '_' + Date.now();
+        window._henseiTagData = window._henseiTagData || {};
+        window._henseiTagData[moonDetailKey] = {
+          label: '月干：' + moon_kan + ' × ' + moon_shi,
+          _type: 'moonkan',
+          kan: moon_kan,
+          shi: moon_shi,
+          colIdx: 1
+        };
+        return '<div style="font-size:12px;color:' + mkc + ';font-weight:700;margin-bottom:6px;padding:4px 8px;border-left:3px solid ' + mkc + ';background:rgba(255,255,255,0.03);border-radius:0 6px 6px 0;display:flex;align-items:center;justify-content:space-between;">月干：' + moon_kan + '（社会・仕事での才能）<button onclick="showChokoDetail(\'' + moonDetailKey + '\')" style="font-size:9px;padding:1px 7px;border-radius:8px;background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:var(--muted);cursor:pointer;font-weight:400;">詳細</button></div>';
       })() +
       '<div>' + makeTags((typeof KAN_LABELS !== 'undefined' && KAN_LABELS[moon_kan]) ? KAN_LABELS[moon_kan] : [], 'rgba(184,150,46,0.12)') + '</div>' +
       friendBadges(moonKanFriends, false, '月干：' + moon_kan, 1) +
