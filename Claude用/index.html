@@ -15783,25 +15783,45 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan, hensei) {
 
     var selfSection =
       '<div style="margin-bottom:8px;">' +
-      '<div style="font-size:12px;color:var(--sk-gold-light);font-weight:700;margin-bottom:6px;padding-left:8px;border-left:2px solid var(--sk-gold-light);">日干：' + kan + '</div>' +
+      (function(){
+        var kanColors = {'甲':'#3db856','乙':'#7dcf6e','丙':'#e05c40','丁':'#f0a0b0','戊':'#c8a030','己':'#d4b896','庚':'#a8b8c8','辛':'#d8e8f0','壬':'#3a7abf','癸':'#7ab8e0'};
+        var kc = kanColors[kan] || 'var(--sk-gold-light)';
+        return '<div style="font-size:12px;color:' + kc + ';font-weight:700;margin-bottom:6px;padding:4px 8px;border-left:3px solid ' + kc + ';background:rgba(255,255,255,0.03);border-radius:0 6px 6px 0;">日干：' + kan + '</div>';
+      })() +
       '<div>' + makeTags(kanLabels, 'rgba(61,184,86,0.15)') + '</div>' +
       friendBadges(nikFriends, true, '日干：' + kan, 2) +
       '</div>' +
       '<div style="margin-bottom:8px;">' +
-      '<div style="font-size:12px;color:var(--sk-gold-light);font-weight:700;margin-bottom:6px;padding-left:8px;border-left:2px solid var(--sk-gold-light);">月支：' + moon_shi + moonShiLabelHTML + '</div>' +
+      (function(){
+        var msc = (typeof SHI_SEASON_COLORS !== 'undefined' && SHI_SEASON_COLORS[moon_shi]) ? SHI_SEASON_COLORS[moon_shi] : null;
+        var mc = msc ? msc.color : 'var(--sk-gold-light)';
+        var mbg = msc ? msc.bg : 'rgba(255,255,255,0.03)';
+        var mb = msc ? msc.border : 'var(--sk-gold-light)';
+        return '<div style="font-size:12px;color:' + mc + ';font-weight:700;margin-bottom:6px;padding:4px 8px;border-left:3px solid ' + mb + ';background:' + mbg + ';border-radius:0 6px 6px 0;">月支：' + moon_shi + moonShiLabelHTML + '</div>';
+      })() +
       '<div>' + makeTags(shiLabels, 'rgba(184,150,46,0.15)') + '</div>' +
       friendBadges((typeof getFriendsWithShi === 'function') ? getFriendsWithShi(['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'].indexOf(moon_shi), 1) : [], false, '月支：' + moon_shi) +
       '</div>' +
       (dayShiLabels.length ? 
       '<div style="margin-bottom:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);">' +
-      '<div style="font-size:12px;color:var(--sk-silver-dim);font-weight:700;margin-bottom:6px;padding-left:8px;border-left:2px solid var(--sk-silver-dim);">日支：' + day_shi + '（内面・近い人への素顔）</div>' +
+      (function(){
+        var dsc = (typeof SHI_SEASON_COLORS !== 'undefined' && SHI_SEASON_COLORS[day_shi]) ? SHI_SEASON_COLORS[day_shi] : null;
+        var dc = dsc ? dsc.color : 'var(--sk-silver-dim)';
+        var dbg = dsc ? dsc.bg : 'rgba(255,255,255,0.03)';
+        var db = dsc ? dsc.border : 'var(--sk-silver-dim)';
+        return '<div style="font-size:12px;color:' + dc + ';font-weight:700;margin-bottom:6px;padding:4px 8px;border-left:3px solid ' + db + ';background:' + dbg + ';border-radius:0 6px 6px 0;">日支：' + day_shi + '（内面・近い人への素顔）</div>';
+      })() +
       '<div>' + makeTags(dayShiLabels, 'rgba(120,120,180,0.15)') + '</div>' +
       friendBadges((typeof getFriendsWithShi === 'function') ? getFriendsWithShi(['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'].indexOf(day_shi), 2) : [], true, '日支：' + day_shi) +
       '</div>' : '') +
       // 月干ラベル＋友達
       (moon_kan ? 
       '<div style="margin-bottom:8px;padding-top:6px;border-top:1px solid rgba(255,255,255,0.06);">' +
-      '<div style="font-size:12px;color:var(--sk-gold-light);font-weight:700;margin-bottom:6px;padding-left:8px;border-left:2px solid var(--sk-gold-light);">月干：' + moon_kan + '（社会・仕事での才能）</div>' +
+      (function(){
+        var kanColors2 = {'甲':'#3db856','乙':'#7dcf6e','丙':'#e05c40','丁':'#f0a0b0','戊':'#c8a030','己':'#d4b896','庚':'#a8b8c8','辛':'#d8e8f0','壬':'#3a7abf','癸':'#7ab8e0'};
+        var mkc = kanColors2[moon_kan] || 'var(--sk-gold-light)';
+        return '<div style="font-size:12px;color:' + mkc + ';font-weight:700;margin-bottom:6px;padding:4px 8px;border-left:3px solid ' + mkc + ';background:rgba(255,255,255,0.03);border-radius:0 6px 6px 0;">月干：' + moon_kan + '（社会・仕事での才能）</div>';
+      })() +
       '<div>' + makeTags((typeof KAN_LABELS !== 'undefined' && KAN_LABELS[moon_kan]) ? KAN_LABELS[moon_kan] : [], 'rgba(184,150,46,0.12)') + '</div>' +
       friendBadges(moonKanFriends, false, '月干：' + moon_kan, 1) +
       '</div>' : '') +
