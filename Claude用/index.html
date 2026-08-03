@@ -13420,6 +13420,21 @@ const SHI_SEASON_COLORS = {
   '丑': {bg:'rgba(121,134,203,0.18)', border:'rgba(90,100,180,0.5)', color:'#7986cb', label:'冬の終わり'},
 };
 
+const SHI_SEASON_THEME = {
+  '寅': {season: '春', theme: '純粋・発展性・創造性'},
+  '卯': {season: '春', theme: '純粋・発展性・創造性'},
+  '辰': {season: '春', theme: '純粋・発展性・創造性'},
+  '巳': {season: '夏', theme: '情熱・表現力・自己主張'},
+  '午': {season: '夏', theme: '情熱・表現力・自己主張'},
+  '未': {season: '夏', theme: '情熱・表現力・自己主張'},
+  '申': {season: '秋', theme: '知性・決断力・洗練'},
+  '酉': {season: '秋', theme: '知性・決断力・洗練'},
+  '戌': {season: '秋', theme: '知性・決断力・洗練'},
+  '亥': {season: '冬', theme: '本能・洞察力・潜在意識'},
+  '子': {season: '冬', theme: '本能・洞察力・潜在意識'},
+  '丑': {season: '冬', theme: '本能・洞察力・潜在意識'},
+};
+
 const CHOKO_SEASON_DESC = {
   '甲': {
     '子': {label: '「雪の下で根を張っている大木」', summary: '準備の人', desc: '甲の大木が冬の地中に根を張っている状態。外からは止まって見えるけど、根の中でエネルギーを蓄えまくっている。準備が整ったとき、誰よりも速く動き出す。'},
@@ -16290,7 +16305,16 @@ function openShiPanel(shiName, colIdx){
   }
   // ラベル表示（SHI_LABELS）
   var shiLabelHTML = '';
-  // 月支のとき：MOON_SHI_LABELの季節ラベルを一番上に表示
+  // 季節テーマを一番上に表示（全地支共通）
+  if(typeof SHI_SEASON_THEME !== 'undefined' && SHI_SEASON_THEME[shiName]) {
+    var st = SHI_SEASON_THEME[shiName];
+    var stColor = (typeof SHI_SEASON_COLORS !== 'undefined' && SHI_SEASON_COLORS[shiName]) ? SHI_SEASON_COLORS[shiName].color : 'var(--sk-gold-light)';
+    shiLabelHTML += '<div style="margin-bottom:10px;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;border-left:3px solid ' + stColor + ';">' +
+      '<div style="font-size:10px;color:var(--muted);margin-bottom:2px;">💡 ' + st.season + 'が表すもの</div>' +
+      '<div style="font-size:13px;font-weight:700;color:' + stColor + ';">【' + st.theme + '】</div>' +
+      '</div>';
+  }
+  // 月支のとき：MOON_SHI_LABELの季節ラベルを表示
   if(colIdx2 === 1 && typeof MOON_SHI_LABEL !== 'undefined') {
     var nichikanEl2 = document.querySelector('.nichikan-name');
     var nichi2 = nichikanEl2 ? nichikanEl2.textContent.trim().charAt(0) : '';
@@ -16308,7 +16332,17 @@ function openShiPanel(shiName, colIdx){
         return '<span style="display:inline-block;margin:2px 3px;padding:4px 10px;border-radius:12px;font-size:12px;background:rgba(184,150,46,0.12);color:var(--text);border:1px solid rgba(184,150,46,0.25);">' + l + '</span>';
       }).join('') + '</div>';
   }
-  var shiDetailHTML = mainDesc ? '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">詳細</summary><p style="font-size:12px;line-height:1.8;color:var(--text);margin-top:6px;">' + mainDesc + '</p>' + chokoShiHTML + '</details>' : chokoShiHTML;
+  // 詳細の一番上に季節テーマ
+  var shiThemeHTML = '';
+  if(typeof SHI_SEASON_THEME !== 'undefined' && SHI_SEASON_THEME[shiName]) {
+    var st2 = SHI_SEASON_THEME[shiName];
+    var stColor2 = (typeof SHI_SEASON_COLORS !== 'undefined' && SHI_SEASON_COLORS[shiName]) ? SHI_SEASON_COLORS[shiName].color : 'var(--sk-gold-light)';
+    shiThemeHTML = '<div style="margin-bottom:8px;padding:6px 10px;background:rgba(255,255,255,0.04);border-radius:8px;border-left:3px solid ' + stColor2 + ';">' +
+      '<div style="font-size:10px;color:var(--muted);margin-bottom:2px;">💡 ' + st2.season + 'が表すもの</div>' +
+      '<div style="font-size:12px;font-weight:700;color:' + stColor2 + ';">【' + st2.theme + '】</div>' +
+      '</div>';
+  }
+  var shiDetailHTML = mainDesc ? '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">詳細</summary>' + shiThemeHTML + '<p style="font-size:12px;line-height:1.8;color:var(--text);margin-top:6px;">' + mainDesc + '</p>' + chokoShiHTML + '</details>' : shiThemeHTML + chokoShiHTML;
   document.getElementById('hjDesc').innerHTML = shiFriendHTML + shiLabelHTML + shiDetailHTML;
   document.getElementById('hjContext').innerHTML = '';
   document.getElementById('hjTitle').dataset.memoKey = 'memo_shi_' + shiName + '_' + colIdx2;
