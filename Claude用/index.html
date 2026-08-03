@@ -5056,82 +5056,79 @@ function showHenseiTagPopup(tagKey) {
 function showShichuuFriendPopup(key) {
   var data = window._shichuuTagData && window._shichuuTagData[key];
   if(!data) return;
-  var label = data.label;
-  var friends = data.friends;
   var titleEl = document.getElementById('hjTitle');
   var descEl = document.getElementById('hjDesc');
   var ctxEl = document.getElementById('hjContext');
   if(!titleEl || !descEl) return;
-  titleEl.textContent = label + ' の友達';
+  titleEl.textContent = data.label + ' の友達';
   document.getElementById('hjYomi').textContent = '';
   document.getElementById('hjBadge').textContent = '';
-  if(!friends || friends.length === 0) {
-    descEl.innerHTML = '<p style="color:var(--muted);text-align:center;padding:10px;">該当する友達はいません</p>';
-  } else {
-    var html = '';
-    var isDayKanPopup = (data.colIdx === 1 || data.colIdx === 2);
-    friends.forEach(function(n){
-      var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
-      if(fd && fd.hidden) return;
-      var isUnknown = !!(fd && (!fd.time || fd.timeUnknown));
-      var colIdx = parseInt(key.split('_')[1]);
-      var isDayCol = (colIdx === 2) && key.indexOf('_kan_') !== -1 || (colIdx === 2) && key.indexOf('_shi_') !== -1;
-      // 季節カラー（常に初期化）
-      var seasonStyle = '';
-      var seasonSuffix = '';
-      if(isDayKanPopup && typeof SHI_SEASON_COLORS !== 'undefined') {
-        var meishikis2 = getFriendMeishiki();
-        var fm2 = meishikis2.find(function(x){ return x.name === n; });
-        if(fm2 && fm2.month_p) {
-          var SHI12p = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
-          var mShi2 = SHI12p[fm2.month_p.shi];
-          var sc2 = SHI_SEASON_COLORS[mShi2];
-          if(sc2) {
-            seasonStyle = 'background:' + sc2.bg + ';border:1px solid ' + sc2.border + ';color:' + sc2.color + ';';
-            seasonSuffix = '（' + sc2.label + '）';
-          }
+  if(ctxEl) ctxEl.innerHTML = '';
+
+  var isDayKanPopup = (data.colIdx === 1 || data.colIdx === 2);
+  var isDayCol = (data.colIdx === 2);
+
+  var html = '';
+  data.friends.forEach(function(n){
+    var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
+    if(fd && fd.hidden) return;
+    var isUnknown = !!(fd && (!fd.time || fd.timeUnknown));
+
+    // 季節カラー取得（月干・日干のみ）
+    var seasonStyle = '';
+    var seasonSuffix = '';
+    if(isDayKanPopup && typeof SHI_SEASON_COLORS !== 'undefined') {
+      var meishikis2 = getFriendMeishiki();
+      var fm2 = meishikis2.find(function(x){ return x.name === n; });
+      if(fm2 && fm2.month_p) {
+        var SHI12c = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+        var mShi2 = SHI12c[fm2.month_p.shi];
+        var sc2 = SHI_SEASON_COLORS[mShi2];
+        if(sc2) {
+          seasonStyle = 'background:' + sc2.bg + ';border:1px solid ' + sc2.border + ';color:' + sc2.color + ';';
+          seasonSuffix = '（' + sc2.label + '）';
         }
       }
-      var lbl = n + seasonSuffix + (isUnknown && isDayCol ? '（？）' : '');
-      if(isUnknown && isDayCol) {
-        var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
-        var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
-        var meishikis = getFriendMeishiki();
-        var fMei = meishikis.find(function(m){ return m.name === n; });
-        var todayKan = fMei && fMei.day_p ? KAN10[fMei.day_p.kan] : '?';
-        var todayShi = fMei && fMei.day_p ? SHI12[fMei.day_p.shi] : '?';
-        var parts = fd.date.split('-');
-        var yr=parseInt(parts[0]),mo=parseInt(parts[1]),da=parseInt(parts[2]);
-        var birthDT23 = new Date(yr,mo-1,da,23,30);
-        var nicchi23 = new Date(birthDT23.getTime()+24*60*60*1000);
-        var day23 = calcNicchu(nicchi23);
-        var nextKan = day23 ? KAN10[day23.kan] : '?';
-        var nextShi = day23 ? SHI12[day23.shi] : '?';
-        html += '<div style="padding:10px 14px;margin-bottom:6px;border-radius:10px;' + (seasonStyle||'background:rgba(184,150,46,0.06);border:1px solid rgba(184,150,46,0.2);') + '">'
-          + '<div style="font-size:13px;color:var(--text);margin-bottom:8px;">' + lbl + '</div>'
-          + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">時刻不明のため2つの可能性があります</div>'
-          + '<div style="display:flex;gap:6px;">'
-          + '<button class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="flex:1;padding:8px;border-radius:8px;background:rgba(184,150,46,0.1);border:1px solid rgba(184,150,46,0.3);color:var(--sk-gold-light);cursor:pointer;font-size:11px;">当日（' + todayKan + todayShi + '）</button>'
-          + '<button class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="true" style="flex:1;padding:8px;border-radius:8px;background:rgba(120,120,200,0.1);border:1px solid rgba(120,120,200,0.3);color:#b8a8ff;cursor:pointer;font-size:11px;">翌日（' + nextKan + nextShi + '）</button>'
-          + '</div>'
-          + '</div>';
-      } else {
-        var itemStyle = seasonStyle || 'background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);color:var(--text);';
-        html += '<div class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="padding:10px 14px;margin-bottom:6px;border-radius:10px;' + itemStyle + 'cursor:pointer;font-size:14px;">' + lbl + '</div>';
-      }
+    }
+
+    var lbl = n + seasonSuffix + (isUnknown && isDayCol ? '（？）' : '');
+
+    if(isUnknown && isDayCol) {
+      var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+      var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+      var meishikis = getFriendMeishiki();
+      var fMei = meishikis.find(function(m){ return m.name === n; });
+      var todayKan = fMei && fMei.day_p ? KAN10[fMei.day_p.kan] : '?';
+      var todayShi = fMei && fMei.day_p ? SHI12[fMei.day_p.shi] : '?';
+      var parts = fd.date.split('-');
+      var yr=parseInt(parts[0]),mo=parseInt(parts[1]),da=parseInt(parts[2]);
+      var day23 = calcNicchu(new Date(yr,mo-1,da+1,0,30,0,0));
+      var nextKan = day23 ? KAN10[day23.kan] : '?';
+      var nextShi = day23 ? SHI12[day23.shi] : '?';
+      var unkBaseStyle = seasonStyle || 'background:rgba(184,150,46,0.06);border:1px solid rgba(184,150,46,0.2);';
+      html += '<div style="padding:10px 14px;margin-bottom:6px;border-radius:10px;' + unkBaseStyle + '">'
+        + '<div style="font-size:13px;color:var(--text);margin-bottom:8px;">' + lbl + '</div>'
+        + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">時刻不明のため2つの可能性があります</div>'
+        + '<div style="display:flex;gap:6px;">'
+        + '<button class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="flex:1;padding:8px;border-radius:8px;background:rgba(184,150,46,0.1);border:1px solid rgba(184,150,46,0.3);color:var(--sk-gold-light);cursor:pointer;font-size:11px;">当日（' + todayKan + todayShi + '）</button>'
+        + '<button class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="true" style="flex:1;padding:8px;border-radius:8px;background:rgba(120,120,200,0.1);border:1px solid rgba(120,120,200,0.3);color:#b8a8ff;cursor:pointer;font-size:11px;">翌日（' + nextKan + nextShi + '）</button>'
+        + '</div>'
+        + '</div>';
+    } else {
+      var itemStyle = seasonStyle || 'background:rgba(184,150,46,0.08);border:1px solid rgba(184,150,46,0.2);color:var(--text);';
+      html += '<div class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="padding:10px 14px;margin-bottom:6px;border-radius:10px;' + itemStyle + 'cursor:pointer;font-size:14px;">' + lbl + '</div>';
+    }
+  });
+  descEl.innerHTML = html;
+  descEl.querySelectorAll('.sfp-item').forEach(function(el){
+    el.addEventListener('click', function(){
+      var name = this.getAttribute('data-name');
+      var isUnk = this.getAttribute('data-unknown') === 'true';
+      document.getElementById('hjPanel').classList.remove('open');
+      document.getElementById('hjOverlay').classList.remove('open');
+      showFriendMeishiki(name, isUnk);
     });
-    descEl.innerHTML = html;
-    descEl.querySelectorAll('.sfp-item').forEach(function(el){
-      el.addEventListener('click', function(){
-        var name = this.getAttribute('data-name');
-        var isUnk = this.getAttribute('data-unknown') === 'true';
-        document.getElementById('hjPanel').classList.remove('open');
-        document.getElementById('hjOverlay').classList.remove('open');
-        showFriendMeishiki(name, isUnk);
-      });
-    });
-  }
-  if(ctxEl) ctxEl.innerHTML = '';
+  });
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
 }
