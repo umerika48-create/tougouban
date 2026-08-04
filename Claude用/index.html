@@ -4694,6 +4694,29 @@ var NICHISHU_DETAIL = {
    ・日主と同じ五行、日主を生む五行 → 身強を強める要素
    ・それ以外 → 身弱に傾ける要素
    身強なら「日主を剋す・抑える五行」、身弱なら「日主を支える五行」が用神 */
+
+/* 通変星の吉凶カラー（身強・身弱考慮） */
+function getHenseiColor(henseiName, isShinkyou) {
+  // 身強：官星・財星・食傷が吉、印星・比劫は中立〜要注意
+  // 身弱：印星・比劫が吉、官星・財星は要注意
+  var colors = {
+    shinkyou: { // 身強
+      good:    ['正官','偏官','正財','偏財','食神','傷官'],
+      neutral: ['比肩','劫財'],
+      caution: ['印綬','偏印']
+    },
+    mijaku: { // 身弱
+      good:    ['印綬','偏印','比肩','劫財'],
+      neutral: ['食神','傷官'],
+      caution: ['正官','偏官','正財','偏財']
+    }
+  };
+  var set = isShinkyou ? colors.shinkyou : colors.mijaku;
+  if(set.good.indexOf(henseiName) !== -1)    return {color:'#c8a030', bg:'rgba(184,150,46,0.15)', border:'rgba(184,150,46,0.4)', label:'吉'};
+  if(set.caution.indexOf(henseiName) !== -1) return {color:'#e05c40', bg:'rgba(224,92,64,0.12)', border:'rgba(224,92,64,0.35)', label:'注意'};
+  return {color:'#a8b8c8', bg:'rgba(168,184,200,0.12)', border:'rgba(168,184,200,0.3)', label:'中立'};
+}
+
 function getShichuuShinYoujin(birthdate) {
   var meishiki = getSanmeiMeishiki(birthdate);
   var dayStem = meishiki.day[0];
@@ -7321,6 +7344,32 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
     var birthForDaun=new Date(yr,mo-1,da,12,0);
     var dauResult=calcDaun(birthForDaun,year_p.kan,year_p.shi,month_p.kan,month_p.shi,isFemale);
     if(dauResult) dauResult.birthYear=yr;
+
+    // 身強・身弱判定
+    (function() {
+      if(!day_p) { window._lastIsShinkyou = true; return; }
+      var KAN10b = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+      var stemElb = {'甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水'};
+      var branchElb = {'子':'水','丑':'土','寅':'木','卯':'木','辰':'土','巳':'火','午':'火','未':'土','申':'金','酉':'金','戌':'土','亥':'水'};
+      var genByb = {'木':'水','火':'木','土':'火','金':'土','水':'金'};
+      var dayElb = stemElb[KAN10b[day_p.kan]];
+      var supportElsb = [dayElb, genByb[dayElb]];
+      var SHI12b = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+      var supportb = 0, drainb = 0;
+      [[year_p,false],[month_p,false],[day_p,true],[hour_p,false]].forEach(function(arr){
+        var p = arr[0], isDayPillar = arr[1];
+        if(!p) return;
+        var pStemEl = stemElb[KAN10b[p.kan]];
+        var pBrEl = branchElb[SHI12b[p.shi]];
+        if(isDayPillar) {
+          if(supportElsb.indexOf(pBrEl) >= 0) supportb++; else drainb++;
+          return;
+        }
+        if(supportElsb.indexOf(pStemEl) >= 0) supportb++; else drainb++;
+        if(supportElsb.indexOf(pBrEl) >= 0) supportb++; else drainb++;
+      });
+      window._lastIsShinkyou = supportb > drainb;
+    })();
 
     return renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime,hideTabs)
       + buildUnseiHTML(dauResult,yr,day_p?day_p.kan:0);
@@ -15859,7 +15908,11 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
       const ctx = pillarLabels[i] + 'の通変星';
       if(i===2) return `<td class="${cols[i]} hensei-cell" style="${dayStyle}"><span style="font-size:0.65rem;color:var(--sk-gold-dark);display:block;">日 主</span></td>`;
       return `<td class="${cols[i]} hensei-cell">
-        <span class="hj-pill" onclick="openHenseiPanel('${h}','${ctx}')">${h}</span>
+        <span class="hj-pill" onclick="openHenseiPanel('${h}','${ctx}')" style="${(function(){
+          if(typeof getHenseiColor !== 'function' || typeof window._lastIsShinkyou === 'undefined') return '';
+          var hc = getHenseiColor(h, window._lastIsShinkyou);
+          return 'color:' + hc.color + ';background:' + hc.bg + ';border:1px solid ' + hc.border + ';border-radius:8px;padding:1px 6px;';
+        })()}">${h}</span>
       </td>`;
     }).join('')}
   </tr>`;
@@ -16245,6 +16298,34 @@ function calculateShichuu(opts){
   const dauResult = calcDaun(birthForDaun, year_p.kan, year_p.shi, month_p.kan, month_p.shi, isFemale);
   if(dauResult) dauResult.birthYear = yr;
 
+  // 身強・身弱判定
+  (function() {
+    if(!day_p) { window._lastIsShinkyou = true; return; }
+    var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+    var stemEl = {'甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水'};
+    var branchEl = {'子':'水','丑':'土','寅':'木','卯':'木','辰':'土','巳':'火','午':'火','未':'土','申':'金','酉':'金','戌':'土','亥':'水'};
+    var genBy = {'木':'水','火':'木','土':'火','金':'土','水':'金'};
+    var dayKan = KAN10[day_p.kan];
+    var dayEl = stemEl[dayKan];
+    var supportEls = [dayEl, genBy[dayEl]];
+    var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+    var support = 0, drain = 0;
+    [[year_p,false],[month_p,false],[day_p,true],[hour_p,false]].forEach(function(arr){
+      var p = arr[0], isDayPillar = arr[1];
+      if(!p) return;
+      var pKan = KAN10[p.kan], pShi = SHI12[p.shi];
+      var pStemEl = stemEl[pKan], pBrEl = branchEl[pShi];
+      if(!isDayPillar) {
+        if(supportEls.indexOf(pStemEl) >= 0) support++; else drain++;
+      } else {
+        // 日柱は支のみ
+        if(supportEls.indexOf(pBrEl) >= 0) support++; else drain++;
+        return;
+      }
+      if(supportEls.indexOf(pBrEl) >= 0) support++; else drain++;
+    });
+    window._lastIsShinkyou = support > drain;
+  })();
   const html = renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime);
   const resultDiv=document.getElementById('shichuu-result')||document.getElementById('result');
   resultDiv.innerHTML = html + buildUnseiHTML(dauResult, yr, day_p ? day_p.kan : 0);
@@ -16473,8 +16554,12 @@ function getNikkanMessage(kan, moon_shi, day_shi, moon_kan, hensei) {
             window._henseiTagData[tagKey] = { label: key, friends: hFriends_f, isDayCol: isDayCol };
             friendBtn = '<button onclick="showHenseiTagPopup(\'' + tagKey + '\')" style="margin-left:6px;padding:1px 8px;border-radius:10px;font-size:10px;background:rgba(168,154,255,0.15);border:1px solid rgba(168,154,255,0.3);color:#b8a8ff;cursor:pointer;vertical-align:middle;">👥 ' + hFriends_f.length + '</button>';
           }
+          var henseiClr = (typeof getHenseiColor === 'function') ? getHenseiColor(h, window._lastIsShinkyou) : null;
+          var hBg = henseiClr ? henseiClr.bg : 'rgba(180,100,180,0.15)';
+          var hBorder = henseiClr ? henseiClr.border : 'rgba(180,100,180,0.2)';
+          var hColor = henseiClr ? henseiClr.color : 'var(--text)';
           var tags = HENSEI_LABELS[h].map(function(lbl){
-            return '<span style="display:inline-block;margin:2px 3px 2px 0;padding:3px 8px;border-radius:12px;font-size:11px;background:rgba(180,100,180,0.15);color:var(--text);border:1px solid rgba(180,100,180,0.2);">' + lbl + '</span>';
+            return '<span style="display:inline-block;margin:2px 3px 2px 0;padding:3px 8px;border-radius:12px;font-size:11px;background:' + hBg + ';color:' + hColor + ';border:1px solid ' + hBorder + ';">' + lbl + '</span>';
           }).join('');
           sections.push(
             '<div style="margin-bottom:8px;">' +
