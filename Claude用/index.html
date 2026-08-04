@@ -8003,6 +8003,17 @@ function buildCompatResult(bdA, bdB) {
   h += '</div>';
   h += '<!--PURPLE_TAB_END-->';
 
+  // 四柱推命相性カード（アコーディオン）
+  h += (function(){
+    var shichuuCompatHTML = buildShichuuCompatHTML(bdA, bdB);
+    if(!shichuuCompatHTML) return '';
+    return makeAccordion(
+      'shichuu-compat-card',
+      '✦ 四柱推命 相性',
+      shichuuCompatHTML
+    );
+  })();
+
   return h;
 }
 
@@ -13752,6 +13763,275 @@ const MOON_KAN_DESC = {
     '亥': {label: '「深い地下水の才能」', desc: '深い感受性と洞察力がある。表面に出ない力を持っている。'},
   },
 };
+
+
+/* ======= 四柱推命 地支関係データ ======= */
+const SHI_RELATIONS = {
+  // 三合（さんごう）
+  sango: [
+    {group: ['寅','午','戌'], name: '三合火局', desc: '情熱・行動力で引き合う関係', score: 5},
+    {group: ['申','子','辰'], name: '三合水局', desc: '知性・洞察力で深く共鳴する関係', score: 5},
+    {group: ['亥','卯','未'], name: '三合木局', desc: '成長・発展を共に目指す関係', score: 5},
+    {group: ['巳','酉','丑'], name: '三合金局', desc: '意志・決断力が共鳴する関係', score: 5},
+  ],
+  // 六合（りくごう）
+  rikugo: [
+    {pair: ['子','丑'], name: '六合', desc: '自然に引き合い、安定する関係', score: 4},
+    {pair: ['寅','亥'], name: '六合', desc: '互いを高め合う関係', score: 4},
+    {pair: ['卯','戌'], name: '六合', desc: '情緒的に深く結びつく関係', score: 4},
+    {pair: ['辰','酉'], name: '六合', desc: '互いの才能を引き出す関係', score: 4},
+    {pair: ['巳','申'], name: '六合', desc: '刺激し合いながら成長する関係', score: 4},
+    {pair: ['午','未'], name: '六合', desc: '温かく包み合う関係', score: 4},
+  ],
+  // 冲（ちゅう）
+  chu: [
+    {pair: ['子','午'], name: '冲', desc: '互いに刺激し合う、緊張感のある関係', score: 1},
+    {pair: ['丑','未'], name: '冲', desc: '価値観がぶつかりやすい関係', score: 1},
+    {pair: ['寅','申'], name: '冲', desc: '互いに揺さぶり合う関係', score: 1},
+    {pair: ['卯','酉'], name: '冲', desc: '対立しやすいが刺激的な関係', score: 1},
+    {pair: ['辰','戌'], name: '冲', desc: 'ぶつかり合いながら高め合う関係', score: 1},
+    {pair: ['巳','亥'], name: '冲', desc: '根本的に異なるエネルギーを持つ関係', score: 1},
+  ],
+  // 刑（けい）
+  kei: [
+    {group: ['寅','巳','申'], name: '三刑', desc: '互いに強いプレッシャーを与え合う', score: 1},
+    {group: ['丑','戌','未'], name: '三刑', desc: '摩擦が生じやすいが成長につながる', score: 1},
+    {pair: ['子','卯'], name: '相刑', desc: '礼儀・ルールでぶつかりやすい', score: 1},
+    {pair: ['辰','辰'], name: '自刑', desc: '同じ価値観ゆえに対立しやすい', score: 2},
+    {pair: ['午','午'], name: '自刑', desc: '似すぎているために衝突しやすい', score: 2},
+    {pair: ['酉','酉'], name: '自刑', desc: 'こだわりがぶつかりやすい', score: 2},
+    {pair: ['亥','亥'], name: '自刑', desc: '同じ弱点を持つ', score: 2},
+  ],
+  // 害（がい）
+  gai: [
+    {pair: ['子','未'], name: '害', desc: '互いに消耗しやすい関係', score: 1},
+    {pair: ['丑','午'], name: '害', desc: 'すれ違いが生じやすい関係', score: 1},
+    {pair: ['寅','巳'], name: '害', desc: '互いを傷つけやすい関係', score: 1},
+    {pair: ['卯','辰'], name: '害', desc: '近すぎてぶつかりやすい', score: 1},
+    {pair: ['申','亥'], name: '害', desc: '意見がかみ合いにくい関係', score: 1},
+    {pair: ['酉','戌'], name: '害', desc: '互いの良さを消しやすい関係', score: 1},
+  ],
+  // 破（は）
+  ha: [
+    {pair: ['子','酉'], name: '破', desc: '計画が崩れやすい関係', score: 2},
+    {pair: ['丑','辰'], name: '破', desc: '約束・信頼が壊れやすい', score: 2},
+    {pair: ['寅','亥'], name: '破', desc: '期待がすれ違いやすい', score: 2},
+    {pair: ['卯','午'], name: '破', desc: 'タイミングがずれやすい', score: 2},
+    {pair: ['巳','申'], name: '破', desc: '互いの意図が伝わりにくい', score: 2},
+    {pair: ['未','戌'], name: '破', desc: '感情的にすれ違いやすい', score: 2},
+  ],
+  // 相生（そうしょう）- 五行の生の関係
+  sogo: [
+    {pair: ['木','火'], name: '木生火', desc: '才能を引き出し合い、自然に補い合う', score: 4},
+    {pair: ['火','土'], name: '火生土', desc: '情熱が安定を生む、温かい関係', score: 4},
+    {pair: ['土','金'], name: '土生金', desc: '地に足のついた信頼関係', score: 4},
+    {pair: ['金','水'], name: '金生水', desc: '知性と感性が高め合う関係', score: 4},
+    {pair: ['水','木'], name: '水生木', desc: '深い理解が成長を促す関係', score: 4},
+  ],
+  // 相剋（そうこく）
+  sokoku: [
+    {pair: ['木','土'], name: '木剋土', desc: 'どちらかが主導権を持ちやすい', score: 2},
+    {pair: ['土','水'], name: '土剋水', desc: '感情面でぶつかりやすい', score: 2},
+    {pair: ['水','火'], name: '水剋火', desc: 'エネルギーの方向性が対立しやすい', score: 2},
+    {pair: ['火','金'], name: '火剋金', desc: '価値観の違いが出やすい', score: 2},
+    {pair: ['金','木'], name: '金剋木', desc: '強いが一方的になりやすい', score: 2},
+  ],
+};
+
+/* 地支の五行 */
+
+/* 十神の恋愛説明 */
+const HENSEI_COMPAT_DESC = {
+  '比肩': {label:'比肩（同志）', love:'対等なパートナー。競い合いながら共に成長できる関係。'},
+  '劫財': {label:'劫財（ライバル）', love:'刺激し合う関係。お互いに触発されるが、意地の張り合いも。'},
+  '食神': {label:'食神（才能を引き出す人）', love:'あなたの才能を自然に引き出してくれる存在。一緒にいると楽しい。'},
+  '傷官': {label:'傷官（感性の共鳴）', love:'感性が深く共鳴する関係。強い引力があるが、衝突もある。'},
+  '偏財': {label:'偏財（楽しい仲間）', love:'一緒にいると楽しく、自然に好意が湧く関係。'},
+  '正財': {label:'正財（安定したパートナー）', love:'誠実で安定した関係。長く付き合えるタイプ。'},
+  '偏官': {label:'偏官（強い引力）', love:'強いときめきを感じる相手。情熱的だが緊張感もある。'},
+  '正官': {label:'正官（理想のパートナー）', love:'あなたを高めてくれる理想的な存在。信頼できる相手。'},
+  '偏印': {label:'偏印（刺激的な存在）', love:'知的な刺激を与えてくれる。独特な魅力を感じる関係。'},
+  '印綬': {label:'印綬（包んでくれる存在）', love:'包容力があり、安心できる相手。精神的なつながりが深い。'},
+};
+
+function buildShichuuCompatHTML(bdA, bdB) {
+  if(!bdA || !bdB) return '';
+  
+  var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+
+  // 命式取得
+  function getMeishiki(bd) {
+    var parts = bd.split('-');
+    if(parts.length < 3) return null;
+    var yr = parseInt(parts[0]), mo = parseInt(parts[1]), da = parseInt(parts[2]);
+    var dt = new Date(yr, mo-1, da, 12, 0);
+    var year_p = calcNenchu(dt);
+    var month_p = calcGetschu(dt, null);
+    var day_p = calcNicchu(dt);
+    return { year_p, month_p, day_p,
+      nikkan: day_p ? KAN10[day_p.kan] : null,
+      nisshi: day_p ? SHI12[day_p.shi] : null,
+      getsshi: month_p ? SHI12[month_p.shi] : null,
+    };
+  }
+
+  var mA = getMeishiki(bdA);
+  var mB = getMeishiki(bdB);
+  if(!mA || !mB || !mA.day_p || !mB.day_p) return '';
+
+  var nikA = mA.nikkan, nikB = mB.nikkan;
+  var nisshiA = mA.nisshi, nisshiB = mB.nisshi;
+  var getsshiA = mA.getsshi, getsshiB = mB.getsshi;
+
+  // 十神計算
+  var henseiAtoB = calcHensei(KAN10.indexOf(nikA), KAN10.indexOf(nikB));
+  var henseiBtoA = calcHensei(KAN10.indexOf(nikB), KAN10.indexOf(nikA));
+  var hNameAB = henseiAtoB || '—';
+  var hNameBA = henseiBtoA || '—';
+
+  // 地支関係チェック
+  function checkShi(shiA, shiB) {
+    var results = [];
+    // 三合
+    for(var sg of SHI_RELATIONS.sango) {
+      if(sg.group.includes(shiA) && sg.group.includes(shiB)) {
+        results.push({type:'三合', name:sg.name, desc:sg.desc, score:sg.score, color:'#ff6b9d'});
+      }
+    }
+    // 六合
+    for(var rl of SHI_RELATIONS.rikugo) {
+      if((rl.pair[0]===shiA&&rl.pair[1]===shiB)||(rl.pair[0]===shiB&&rl.pair[1]===shiA)) {
+        results.push({type:'六合', name:rl.name, desc:rl.desc, score:rl.score, color:'#66bb6a'});
+      }
+    }
+    // 冲
+    for(var ch of SHI_RELATIONS.chu) {
+      if((ch.pair[0]===shiA&&ch.pair[1]===shiB)||(ch.pair[0]===shiB&&ch.pair[1]===shiA)) {
+        results.push({type:'冲', name:ch.name, desc:ch.desc, score:ch.score, color:'#e53935'});
+      }
+    }
+    // 刑
+    for(var ke of SHI_RELATIONS.kei) {
+      if(ke.pair) {
+        if((ke.pair[0]===shiA&&ke.pair[1]===shiB)||(ke.pair[0]===shiB&&ke.pair[1]===shiA)) {
+          results.push({type:'刑', name:ke.name, desc:ke.desc, score:ke.score, color:'#ff7043'});
+        }
+      } else if(ke.group && ke.group.includes(shiA) && ke.group.includes(shiB) && shiA!==shiB) {
+        results.push({type:'刑', name:ke.name, desc:ke.desc, score:ke.score, color:'#ff7043'});
+      }
+    }
+    // 害
+    for(var ga of SHI_RELATIONS.gai) {
+      if((ga.pair[0]===shiA&&ga.pair[1]===shiB)||(ga.pair[0]===shiB&&ga.pair[1]===shiA)) {
+        results.push({type:'害', name:ga.name, desc:ga.desc, score:ga.score, color:'#a1887f'});
+      }
+    }
+    // 破
+    for(var ha of SHI_RELATIONS.ha) {
+      if((ha.pair[0]===shiA&&ha.pair[1]===shiB)||(ha.pair[0]===shiB&&ha.pair[1]===shiA)) {
+        results.push({type:'破', name:ha.name, desc:ha.desc, score:ha.score, color:'#7986cb'});
+      }
+    }
+    // 同じ
+    if(shiA === shiB && results.length === 0) {
+      results.push({type:'比和', name:'比和', desc:'同じエネルギーを持つ。共感しやすいが似すぎる面も', score:3, color:'#ffd700'});
+    }
+    return results;
+  }
+
+  // 五行相性チェック
+  function checkGogyo(shiA, shiB) {
+    var goA = SHI_GOGYO[shiA], goB = SHI_GOGYO[shiB];
+    if(!goA || !goB) return null;
+    for(var sg of SHI_RELATIONS.sogo) {
+      if((sg.pair[0]===goA&&sg.pair[1]===goB)||(sg.pair[0]===goB&&sg.pair[1]===goA)) {
+        return {name:sg.name, desc:sg.desc, score:sg.score, color:'#66bb6a', goA, goB};
+      }
+    }
+    for(var sk of SHI_RELATIONS.sokoku) {
+      if((sk.pair[0]===goA&&sk.pair[1]===goB)||(sk.pair[0]===goB&&sk.pair[1]===goA)) {
+        return {name:sk.name, desc:sk.desc, score:sk.score, color:'#ff7043', goA, goB};
+      }
+    }
+    if(goA === goB) return {name:'比和', desc:'同じ五行。共鳴しやすい', score:3, color:'#ffd700', goA, goB};
+    return null;
+  }
+
+  var nisshiRel = checkShi(nisshiA, nisshiB);
+  var getsshiRel = checkGogyo(getsshiA, getsshiB);
+
+  // スコア計算
+  var score = 3; // 基準
+  // 十神スコア
+  var hScores = {'比肩':3,'劫財':2,'食神':4,'傷官':3,'偏財':4,'正財':5,'偏官':3,'正官':5,'偏印':3,'印綬':4};
+  var hScoreAB = hScores[hNameAB] || 3;
+  var hScoreBA = hScores[hNameBA] || 3;
+  score = Math.round((hScoreAB + hScoreBA) / 2);
+  // 日支スコア
+  if(nisshiRel.length > 0) score = Math.round((score + nisshiRel[0].score) / 2);
+  // 月支五行スコア
+  if(getsshiRel) score = Math.round((score + getsshiRel.score) / 2);
+  score = Math.max(1, Math.min(5, score));
+  var stars = '★'.repeat(score) + '☆'.repeat(5-score);
+
+  // HTML生成
+  var hdA = HENSEI_COMPAT_DESC[hNameAB] || {label: hNameAB, love: ''};
+  var hdB = HENSEI_COMPAT_DESC[hNameBA] || {label: hNameBA, love: ''};
+
+  var html = '';
+
+  // 十神セクション
+  html += '<div style="margin-bottom:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.08);">';
+  html += '<div style="font-size:11px;color:var(--sk-gold-light);font-weight:700;margin-bottom:8px;padding-left:6px;border-left:2px solid var(--sk-gold-light);">十神関係</div>';
+  html += '<div style="margin-bottom:8px;">';
+  html += '<div style="font-size:11px;color:var(--muted);margin-bottom:2px;">あなた（' + nikA + '）→ 相手（' + nikB + '）</div>';
+  html += '<div style="font-size:14px;font-weight:700;color:var(--text);">' + hdA.label + '</div>';
+  if(hdA.love) html += '<div style="font-size:11px;color:var(--muted);margin-top:3px;">' + hdA.love + '</div>';
+  html += '</div>';
+  html += '<div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">';
+  html += '<div style="font-size:11px;color:var(--muted);margin-bottom:2px;">相手（' + nikB + '）→ あなた（' + nikA + '）</div>';
+  html += '<div style="font-size:14px;font-weight:700;color:var(--text);">' + hdB.label + '</div>';
+  if(hdB.love) html += '<div style="font-size:11px;color:var(--muted);margin-top:3px;">' + hdB.love + '</div>';
+  html += '</div></div>';
+
+  // 日支セクション
+  html += '<div style="margin-bottom:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.08);">';
+  html += '<div style="font-size:11px;color:var(--sk-gold-light);font-weight:700;margin-bottom:8px;padding-left:6px;border-left:2px solid var(--sk-gold-light);">日支の関係（内面・素顔の相性）</div>';
+  html += '<div style="font-size:13px;margin-bottom:6px;color:var(--text);">' + nisshiA + ' × ' + nisshiB + '</div>';
+  if(nisshiRel.length > 0) {
+    nisshiRel.forEach(function(r) {
+      html += '<div style="display:inline-block;margin:2px 4px 2px 0;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;background:rgba(255,255,255,0.06);color:' + r.color + ';border:1px solid ' + r.color + '40;">' + r.type + '：' + r.name + '</div>';
+    });
+    html += '<div style="font-size:11px;color:var(--muted);margin-top:6px;">' + nisshiRel[0].desc + '</div>';
+  } else {
+    html += '<div style="font-size:11px;color:var(--muted);">特別な関係なし（中立）</div>';
+  }
+  html += '</div>';
+
+  // 月支セクション
+  html += '<div style="margin-bottom:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.08);">';
+  html += '<div style="font-size:11px;color:var(--sk-gold-light);font-weight:700;margin-bottom:8px;padding-left:6px;border-left:2px solid var(--sk-gold-light);">月支の関係（価値観・仕事の相性）</div>';
+  html += '<div style="font-size:13px;margin-bottom:6px;color:var(--text);">' + getsshiA + '（' + (SHI_GOGYO[getsshiA]||'') + '） × ' + getsshiB + '（' + (SHI_GOGYO[getsshiB]||'') + '）</div>';
+  if(getsshiRel) {
+    html += '<div style="display:inline-block;margin-bottom:6px;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;background:rgba(255,255,255,0.06);color:' + getsshiRel.color + ';border:1px solid ' + getsshiRel.color + '40;">' + getsshiRel.name + '</div>';
+    html += '<div style="font-size:11px;color:var(--muted);margin-top:4px;">' + getsshiRel.desc + '</div>';
+  } else {
+    html += '<div style="font-size:11px;color:var(--muted);">中立の関係</div>';
+  }
+  html += '</div>';
+
+  // 総合スコア
+  html += '<div style="padding:12px;background:rgba(184,150,46,0.08);border-radius:10px;border:1px solid rgba(184,150,46,0.25);text-align:center;">';
+  html += '<div style="font-size:11px;color:var(--muted);margin-bottom:4px;">総合相性</div>';
+  html += '<div style="font-size:24px;color:var(--sk-gold-light);letter-spacing:4px;">' + stars + '</div>';
+  var scoreLabels = {1:'要注意の関係', 2:'刺激的な関係', 3:'中立の関係', 4:'相性の良い関係', 5:'最良の相性'};
+  html += '<div style="font-size:12px;color:var(--sk-gold-light);font-weight:700;margin-top:4px;">' + (scoreLabels[score]||'') + '</div>';
+  html += '</div>';
+
+  return html;
+}
+
 
 const CHOKO_SEASON_DESC = {
   '甲': {
