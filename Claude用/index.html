@@ -7651,8 +7651,8 @@ function calculateCompat() {
   html = _purpleTopTab + html;
 
   html += '<div id="compat-card-body" style="display:block;">';
-  html += '<div id="compat-result-wrap">' + _scoreHTML + '</div>';
-  html += _pinkHTML; /* ピンクタブ：カード内最下部（スコアのみ切替） */
+  html += makeAccordion('kyusei-compat', '✦ 九星気学 相性', '<div id="compat-result-wrap">' + _scoreHTML + '</div>' + _pinkHTML);
+  html += makeAccordion('synastry-card', '✦ シナストリー', buildSynastryHTML(window._compatBdA, window._compatBdB));
   html += '</div>';
   html += '</div>'; /* card end */
   html += _purpleHTML; /* パープルタブ + 本命星カード本体：カードの外（下） */
@@ -7957,12 +7957,6 @@ function buildCompatResult(bdA, bdB) {
   h += '<div style="text-align:right;margin-top:8px;">';
 
   h += '</div>';
-  /* シナストリー */
-  h += '<div style="padding:12px;border-radius:10px;background:rgba(255,255,255,.04);margin-top:8px;">';
-  h += '<div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px;">🔭 シナストリー</div>';
-  h += buildSynastryHTML(bdA, bdB);
-  h += '</div>';
-
   /* 内容終了 */
 
   /* ── タブ：あなた / 相手の個人鑑定 ── */
