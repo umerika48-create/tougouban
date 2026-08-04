@@ -7011,6 +7011,11 @@ function resetPartnerBirthdate() {
   if (compatText) compatText.value = '';
   if (compatHidden) compatHidden.value = '';
   if (compatError) compatError.textContent = '';
+  // グローバル変数もクリア
+  window._compatBdB = null;
+  window._compatBirthTime = null;
+  window._compatBirthPlace = null;
+  window._compatCityData = null;
   clearResultCards();
 }
 
