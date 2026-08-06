@@ -16111,31 +16111,32 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
       '<button onclick="setYakodoki(false)" id="yak-btn-0" style="padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (window._yakodoki === false ? 'var(--sk-gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (window._yakodoki === false ? 'var(--sk-gold)' : 'transparent') + ';color:' + (window._yakodoki === false ? '#000' : 'var(--sk-silver-dim)') + ';font-weight:' + (window._yakodoki === false ? '700' : '400') + ';">0時</button>' +
     '</div>' +
   '</div>';
-  // 生年月日表示文字列を生成
+  // 生年月日表示文字列を生成（birthStrは既に「1986年4月30日 13:17 福岡」形式）
   const _bsParts = birthStr.trim().split(/\s+/);
-  const _bsDate = _bsParts[0] || '';
   let _bsPlace = '';
-  for(let _pi=1; _pi<_bsParts.length; _pi++){
-    if(!/^\d{4}$/.test(_bsParts[_pi])){ _bsPlace = _bsParts[_pi]; break; }
-  }
   let _bsTime = '';
-  for(let _ti=1; _ti<_bsParts.length; _ti++){
-    if(/^\d{4}$/.test(_bsParts[_ti])){ _bsTime = _bsParts[_ti]; break; }
+  // 時刻（HH:MM形式）と出生地を抽出
+  for(let _pi=1; _pi<_bsParts.length; _pi++){
+    const _p = _bsParts[_pi];
+    if(/^\d{1,2}:\d{2}$/.test(_p)) { _bsTime = _p; }
+    else if(_p && !/^\d+$/.test(_p)) { _bsPlace = _p; }
   }
-  const _bsYr = parseInt(_bsDate.slice(0,4));
-  const _bsMo = parseInt(_bsDate.slice(4,6));
-  const _bsDa = parseInt(_bsDate.slice(6,8));
+  // 年齢計算（birthStrから年月日を抽出）
+  const _bsYrM = birthStr.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
   let _bsAge = '';
-  if(!isNaN(_bsYr)){
+  if(_bsYrM){
     const _now = new Date();
-    let _a = _now.getFullYear() - _bsYr;
+    let _a = _now.getFullYear() - parseInt(_bsYrM[1]);
+    const _bsMo = parseInt(_bsYrM[2]), _bsDa = parseInt(_bsYrM[3]);
     if(_now.getMonth()+1 < _bsMo || (_now.getMonth()+1 === _bsMo && _now.getDate() < _bsDa)) _a--;
     _bsAge = _a + '歳';
   }
-  let _birthDisplay = _bsDate.slice(0,4)+'年'+_bsDate.slice(4,6)+'月'+_bsDate.slice(6,8)+'日';
-  if(_bsTime) _birthDisplay += ' '+_bsTime.slice(0,2)+':'+_bsTime.slice(2,4);
-  if(_bsPlace) _birthDisplay += '（'+_bsPlace+'）';
-  if(_bsAge) _birthDisplay += '（'+_bsAge+'）';
+  // 表示文字列：日付部分 + 時刻 + 出生地 + 年齢
+  const _bsDatePart = _bsYrM ? `${_bsYrM[1]}年${_bsYrM[2]}月${_bsYrM[3]}日` : _bsParts[0];
+  let _birthDisplay = _bsDatePart;
+  if(_bsTime) _birthDisplay += ' ' + _bsTime;
+  if(_bsPlace) _birthDisplay += '（' + _bsPlace + '）';
+  if(_bsAge) _birthDisplay += '（' + _bsAge + '）';
 
   const html = (hideTabs ? '' : _toggleHTML) + `
   <div class="result-title fade-in">
