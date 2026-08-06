@@ -7274,6 +7274,14 @@ function toggleAccordion(id) {
   btn.classList.toggle('open', !isOpen);
   body.classList.toggle('open', !isOpen);
   if(!isOpen) {
+    // 四柱推命カードを開いたとき、中身が空なら初期化
+    if(id === 'shichuu-card') {
+      var cardBody = document.getElementById('shichuu-card-body');
+      if(cardBody && cardBody.innerHTML.trim() === '') {
+        var view = window._currentShichuuView || 'me';
+        if(typeof switchShichuuCard === 'function') switchShichuuCard(view);
+      }
+    }
     setTimeout(function(){ body.scrollIntoView({behavior:'smooth', block:'nearest'}); }, 50);
   }
 }
