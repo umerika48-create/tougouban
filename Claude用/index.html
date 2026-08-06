@@ -3372,7 +3372,7 @@ var ROKKU_UNMEISU = {
   1983:[26,57,25,56,26,57,27,58,29,59,30,60],
   1984:[31,2,31,2,32,3,33,4,35,5,36,6],
   1985:[37,8,36,7,37,8,38,9,40,10,41,11],
-  1986:[42,13,41,12,42,13,43,14,45,15,46,16],
+  1986:[[1,6,6,7],[2,4,12,9],[3,6,6,10],[4,5,11,26],[5,6,5,11],[6,6,8,26],[7,7,18,46],[8,8,4,22],[9,8,7,8],[10,8,22,25],[11,7,18,56],[12,7,22,28]],
   1987:[47,18,46,17,47,18,48,19,50,20,51,21],
   1988:[52,23,52,23,53,24,54,25,56,26,57,27],
   1989:[58,29,57,28,58,29,59,30,1,31,2,32],
@@ -14830,11 +14830,14 @@ function getFriendMeishiki() {
         if(cd && cd.lon) placeOffset = Math.round((cd.lon-135)*4);
       }
       var adjMin = minVal - placeOffset;
-      var birthDT;
+      var birthDT;      // 地方時補正あり（日支・時支用）
+      var birthDTraw;   // 補正なし（月支・年支用）
       if(unknownTime){
-        birthDT = new Date(yr,mo-1,da,12,0,0,0);
+        birthDT    = new Date(yr,mo-1,da,12,0,0,0);
+        birthDTraw = new Date(yr,mo-1,da,12,0,0,0);
       } else {
-        birthDT = new Date(yr,mo-1,da,hourVal,adjMin,0,0);
+        birthDT    = new Date(yr,mo-1,da,hourVal,adjMin,0,0);
+        birthDTraw = new Date(yr,mo-1,da,hourVal,minVal,0,0); // 補正なし
       }
       var _yakodoki2 = (typeof window._yakodoki !== 'undefined') ? window._yakodoki : true;
       // 夜子時判定：元の時刻が23時以降かつbirthDTが既に翌日になっていない場合のみ+1日
@@ -14844,11 +14847,9 @@ function getFriendMeishiki() {
         if(birthDT.getDate() === da){
           nicchiDate = new Date(birthDT.getTime()+86400000);
         }
-        // birthDTが既に翌日なら日柱はbithDTの日付がすでに翌日分
-        // nicchiDate = birthDT のまま
       }
-      var year_p  = calcNenchu(birthDT);
-      var month_p = calcGetschu(birthDT,year_p.kan);
+      var year_p  = calcNenchu(birthDTraw);   // 補正なしで年支計算
+      var month_p = calcGetschu(birthDTraw, year_p.kan); // 補正なしで月支計算
       var day_p   = calcNicchu(nicchiDate);
       var hour_p  = null;
       if(!unknownTime){
