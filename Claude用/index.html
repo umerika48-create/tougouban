@@ -9467,6 +9467,14 @@ function switchCompatTab(tab, source) {
 
   wrap.innerHTML = buildPersonalHTML(bd, kYear, kMonth, isPartner);
 
+  // 四柱推命カードのビューも同期
+  window._currentShichuuView = isPartner ? 'partner' : 'me';
+  // 四柱推命カードが既に開いている場合は即切替
+  var shichuuBody = document.getElementById('shichuu-card-body');
+  if(shichuuBody && document.getElementById('abody-shichuu-card') && document.getElementById('abody-shichuu-card').classList.contains('open')) {
+    if(typeof switchShichuuCard === 'function') switchShichuuCard(isPartner ? 'partner' : 'me');
+  }
+
   /* 表示されたwrapが画面に見えるようスクロール */
   setTimeout(function(){ wrap.scrollIntoView({behavior:'smooth', block:'start'}); }, 30);
 
