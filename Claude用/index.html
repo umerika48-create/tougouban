@@ -17184,7 +17184,6 @@ function setYakodoki(enabled) {
   if(cardBody && bd && typeof buildShichuuCardHTML === 'function') {
     cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner, false);
   } else if(bd && typeof buildShichuuCardHTML === 'function') {
-    // shichuu-card-bodyがない場合もcalculateShichuuで再計算
     if(typeof calculateShichuu === 'function'){
       calculateShichuu({
         dateStr: bd.replace(/-/g,''),
@@ -17193,7 +17192,8 @@ function setYakodoki(enabled) {
         isFemale: true
       });
     }
-  } else {
+  } else if(!isPartner) {
+    // あなたのデータのみ再計算（相手アクティブ時はautoCalculateしない）
     autoCalculate();
   }
 }
