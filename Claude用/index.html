@@ -7289,7 +7289,15 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
     var yr=parseInt(parts[0]),mo=parseInt(parts[1]),da=parseInt(parts[2]);
 
     // 時刻処理（calculateShichuuと同じロジック）
-    var timeVal=(optTime!==undefined?optTime:window._normalBirthTime)||'';
+    var timeVal;
+    if(optTime !== undefined && optTime !== null) {
+      timeVal = optTime;
+    } else if(isPartner) {
+      timeVal = ''; // 相手の時刻不明時はあなたの時刻を使わない
+    } else {
+      timeVal = window._normalBirthTime || '';
+    }
+    timeVal = timeVal || '';
     var timeStr4=timeVal.replace(':','').replace(/[^0-9]/g,'');
     var unknownTime=!timeStr4;
     var hourVal=0,minVal=0;
@@ -8392,7 +8400,7 @@ function buildPersonalCardsHTML(birthdate, honmei, kYear, kMonth, isPartner) {
           '<span class="accordion-arrow">▼</span>'+
         '</button>'+
         '<div class="accordion-body" id="abody-shichuu-card">'+
-          '<div id="shichuu-card-body">'+(function(){   var _ts = (window._normalBirthTime||'').replace(':','').replace(/[^0-9]/g,'');   var _unk = !_ts;   if(typeof updateYakodokiDefault==='function') updateYakodokiDefault(_ts, _unk);   return buildShichuuCardHTML(birthdate); })()+'</div>'+
+          '<div id="shichuu-card-body">'+(function(){   var _isp = (birthdate === bdB);   var _bt = _isp ? window._compatBirthTime : window._normalBirthTime;   var _bcd = _isp ? window._compatCityData : window._normalCityData;   var _ts = (_bt||'').replace(':','').replace(/[^0-9]/g,'');   var _unk = !_ts;   if(typeof updateYakodokiDefault==='function') updateYakodokiDefault(_ts, _unk);   return buildShichuuCardHTML(birthdate, _bt, _bcd, _isp); })()+'</div>'+
         '</div>'+
       '</div>';
     })() +
@@ -9035,7 +9043,7 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
           '<span class="accordion-arrow">▼</span>'+
         '</button>'+
         '<div class="accordion-body" id="abody-shichuu-card">'+
-          '<div id="shichuu-card-body">'+(function(){   var _ts = (window._normalBirthTime||'').replace(':','').replace(/[^0-9]/g,'');   var _unk = !_ts;   if(typeof updateYakodokiDefault==='function') updateYakodokiDefault(_ts, _unk);   return buildShichuuCardHTML(birthdate); })()+'</div>'+
+          '<div id="shichuu-card-body">'+(function(){   var _isp = (birthdate === bdB);   var _bt = _isp ? window._compatBirthTime : window._normalBirthTime;   var _bcd = _isp ? window._compatCityData : window._normalCityData;   var _ts = (_bt||'').replace(':','').replace(/[^0-9]/g,'');   var _unk = !_ts;   if(typeof updateYakodokiDefault==='function') updateYakodokiDefault(_ts, _unk);   return buildShichuuCardHTML(birthdate, _bt, _bcd, _isp); })()+'</div>'+
         '</div>'+
       '</div>';
     })() +
@@ -10027,7 +10035,7 @@ function calculate() {
         '<span class="accordion-arrow">▼</span>'+
       '</button>'+
       '<div class="accordion-body" id="abody-shichuu-card">'+
-        '<div id="shichuu-card-body">'+(function(){   var _ts = (window._normalBirthTime||'').replace(':','').replace(/[^0-9]/g,'');   var _unk = !_ts;   if(typeof updateYakodokiDefault==='function') updateYakodokiDefault(_ts, _unk);   return buildShichuuCardHTML(birthdate); })()+'</div>'+
+        '<div id="shichuu-card-body">'+(function(){   var _isp = (birthdate === bdB);   var _bt = _isp ? window._compatBirthTime : window._normalBirthTime;   var _bcd = _isp ? window._compatCityData : window._normalCityData;   var _ts = (_bt||'').replace(':','').replace(/[^0-9]/g,'');   var _unk = !_ts;   if(typeof updateYakodokiDefault==='function') updateYakodokiDefault(_ts, _unk);   return buildShichuuCardHTML(birthdate, _bt, _bcd, _isp); })()+'</div>'+
       '</div>'+
     '</div>';
   })();
