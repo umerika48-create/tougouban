@@ -16111,40 +16111,36 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
       '<button onclick="setYakodoki(false)" id="yak-btn-0" style="padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (window._yakodoki === false ? 'var(--sk-gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (window._yakodoki === false ? 'var(--sk-gold)' : 'transparent') + ';color:' + (window._yakodoki === false ? '#000' : 'var(--sk-silver-dim)') + ';font-weight:' + (window._yakodoki === false ? '700' : '400') + ';">0時</button>' +
     '</div>' +
   '</div>';
+  // 生年月日表示文字列を生成
+  const _bsParts = birthStr.trim().split(/\s+/);
+  const _bsDate = _bsParts[0] || '';
+  let _bsPlace = '';
+  for(let _pi=1; _pi<_bsParts.length; _pi++){
+    if(!/^\d{4}$/.test(_bsParts[_pi])){ _bsPlace = _bsParts[_pi]; break; }
+  }
+  let _bsTime = '';
+  for(let _ti=1; _ti<_bsParts.length; _ti++){
+    if(/^\d{4}$/.test(_bsParts[_ti])){ _bsTime = _bsParts[_ti]; break; }
+  }
+  const _bsYr = parseInt(_bsDate.slice(0,4));
+  const _bsMo = parseInt(_bsDate.slice(4,6));
+  const _bsDa = parseInt(_bsDate.slice(6,8));
+  let _bsAge = '';
+  if(!isNaN(_bsYr)){
+    const _now = new Date();
+    let _a = _now.getFullYear() - _bsYr;
+    if(_now.getMonth()+1 < _bsMo || (_now.getMonth()+1 === _bsMo && _now.getDate() < _bsDa)) _a--;
+    _bsAge = _a + '歳';
+  }
+  let _birthDisplay = _bsDate.slice(0,4)+'年'+_bsDate.slice(4,6)+'月'+_bsDate.slice(6,8)+'日';
+  if(_bsTime) _birthDisplay += ' '+_bsTime.slice(0,2)+':'+_bsTime.slice(2,4);
+  if(_bsPlace) _birthDisplay += '（'+_bsPlace+'）';
+  if(_bsAge) _birthDisplay += '（'+_bsAge+'）';
+
   const html = (hideTabs ? '' : _toggleHTML) + `
   <div class="result-title fade-in">
     <h2>命 式 表</h2>
-    <div class="person-name">${(function(){
-      // birthStrから出生地と年齢を取得
-      var parts = '${birthStr}'.trim().split(/\s+/);
-      var dateStr = parts[0] || '';
-      var place = '';
-      // 時刻らしくないもの（数字4桁以外）を出生地とみなす
-      for(var pi=1; pi<parts.length; pi++){
-        if(!/^\d{4}$/.test(parts[pi])) { place = parts[pi]; break; }
-      }
-      // 年齢計算
-      var yr = parseInt(dateStr.slice(0,4));
-      var mo = parseInt(dateStr.slice(4,6));
-      var da = parseInt(dateStr.slice(6,8));
-      var age = '';
-      if(!isNaN(yr)){
-        var now = new Date();
-        var a = now.getFullYear() - yr;
-        if(now.getMonth()+1 < mo || (now.getMonth()+1 === mo && now.getDate() < da)) a--;
-        age = a + '歳';
-      }
-      // 表示文字列組み立て
-      var display = dateStr.slice(0,4)+'年'+dateStr.slice(4,6)+'月'+dateStr.slice(6,8)+'日';
-      var timeStr4 = '';
-      for(var ti=1; ti<parts.length; ti++){
-        if(/^\d{4}$/.test(parts[ti])){ timeStr4 = parts[ti]; break; }
-      }
-      if(timeStr4) display += ' '+timeStr4.slice(0,2)+':'+timeStr4.slice(2,4);
-      if(place) display += '（'+place+'）';
-      if(age) display += '（'+age+'）';
-      return display;
-    })()}生</div>
+    <div class="person-name">${_birthDisplay}生</div>
   </div>
 
   <div class="meishiki-wrapper fade-in">
