@@ -7306,10 +7306,13 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
 
     // birthDT（calculateShichuuと同じ）
     var birthDT;
+    var birthDTraw; // 補正なし（月支・年支用）
     if(unknownTime){
-      birthDT=new Date(yr,mo-1,da,12,0,0,0);
+      birthDT    = new Date(yr,mo-1,da,12,0,0,0);
+      birthDTraw = new Date(yr,mo-1,da,12,0,0,0);
     } else {
-      birthDT=new Date(yr,mo-1,da,hourVal,minVal-offsetMin,0,0);
+      birthDT    = new Date(yr,mo-1,da,hourVal,minVal-offsetMin,0,0);
+      birthDTraw = new Date(yr,mo-1,da,hourVal,minVal,0,0);
     }
 
     // 夜子時対応（_yakodokiの設定に従う）
@@ -7326,8 +7329,8 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
     }
 
     // 四柱計算（calculateShichuuと同じ）
-    var year_p=calcNenchu(birthDT);
-    var month_p=calcGetschu(birthDT,year_p.kan);
+    var year_p=calcNenchu(birthDTraw);
+    var month_p=calcGetschu(birthDTraw,year_p.kan);
     var day_p=calcNicchu(nicchiDate);
     var hour_p=null;
     if(!unknownTime){
@@ -16259,10 +16262,13 @@ function calculateShichuu(opts){
   // 補正後の時刻（ローカルからJSTに変換して計算）
   // birth DateTime for sekki comparison (use adjusted time, local noon if unknown)
   let birthDT;
+  let birthDTraw; // 補正なし（月支・年支用）
   if(unknownTime){
-    birthDT = new Date(yr, mo-1, da, 12, 0, 0, 0);
+    birthDT    = new Date(yr, mo-1, da, 12, 0, 0, 0);
+    birthDTraw = new Date(yr, mo-1, da, 12, 0, 0, 0);
   } else {
-    birthDT = new Date(yr, mo-1, da, hourVal, minVal - offsetMin, 0, 0);
+    birthDT    = new Date(yr, mo-1, da, hourVal, minVal - offsetMin, 0, 0);
+    birthDTraw = new Date(yr, mo-1, da, hourVal, minVal, 0, 0);
   }
 
   // 夜子時対応: _yakodokiの設定に従う（23時タブ選択時のみ翌日の日柱）
@@ -16278,9 +16284,9 @@ function calculateShichuu(opts){
   }
 
   // 年柱
-  const year_p = calcNenchu(birthDT);
+  const year_p = calcNenchu(birthDTraw);
   // 月柱
-  const month_p = calcGetschu(birthDT, year_p.kan);
+  const month_p = calcGetschu(birthDTraw, year_p.kan);
   // 日柱（夜子時は翌日の日柱）
   const day_p = calcNicchu(nicchiDate);
   // 時柱
