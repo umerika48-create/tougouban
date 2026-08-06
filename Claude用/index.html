@@ -16114,7 +16114,37 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   const html = (hideTabs ? '' : _toggleHTML) + `
   <div class="result-title fade-in">
     <h2>命 式 表</h2>
-    <div class="person-name">${birthStr}生</div>
+    <div class="person-name">${(function(){
+      // birthStrから出生地と年齢を取得
+      var parts = '${birthStr}'.trim().split(/\s+/);
+      var dateStr = parts[0] || '';
+      var place = '';
+      // 時刻らしくないもの（数字4桁以外）を出生地とみなす
+      for(var pi=1; pi<parts.length; pi++){
+        if(!/^\d{4}$/.test(parts[pi])) { place = parts[pi]; break; }
+      }
+      // 年齢計算
+      var yr = parseInt(dateStr.slice(0,4));
+      var mo = parseInt(dateStr.slice(4,6));
+      var da = parseInt(dateStr.slice(6,8));
+      var age = '';
+      if(!isNaN(yr)){
+        var now = new Date();
+        var a = now.getFullYear() - yr;
+        if(now.getMonth()+1 < mo || (now.getMonth()+1 === mo && now.getDate() < da)) a--;
+        age = a + '歳';
+      }
+      // 表示文字列組み立て
+      var display = dateStr.slice(0,4)+'年'+dateStr.slice(4,6)+'月'+dateStr.slice(6,8)+'日';
+      var timeStr4 = '';
+      for(var ti=1; ti<parts.length; ti++){
+        if(/^\d{4}$/.test(parts[ti])){ timeStr4 = parts[ti]; break; }
+      }
+      if(timeStr4) display += ' '+timeStr4.slice(0,2)+':'+timeStr4.slice(2,4);
+      if(place) display += '（'+place+'）';
+      if(age) display += '（'+age+'）';
+      return display;
+    })()}生</div>
   </div>
 
   <div class="meishiki-wrapper fade-in">
