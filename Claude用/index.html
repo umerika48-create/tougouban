@@ -7279,7 +7279,21 @@ function toggleAccordion(id) {
       var cardBody = document.getElementById('shichuu-card-body');
       if(cardBody && cardBody.innerHTML.trim() === '') {
         var view = window._currentShichuuView || 'me';
-        if(typeof switchShichuuCard === 'function') switchShichuuCard(view);
+        var scBtnMe = document.getElementById('sc-btn-me');
+        if(scBtnMe && typeof switchShichuuCard === 'function') {
+          // あなた・相手タブがある場合（相性鑑定）
+          switchShichuuCard(view);
+        } else {
+          // タブなし（通常鑑定）→ calculateShichuuで直接表示
+          var bd = window._nyBirthdateMe || (document.getElementById('birthdate') ? document.getElementById('birthdate').value : '');
+          if(bd && typeof buildShichuuCardHTML === 'function') {
+            var _t = window._normalBirthTime;
+            var _cd = window._normalCityData;
+            var _ts = (_t||'').replace(':','').replace(/[^0-9]/g,'');
+            if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(_ts, !_ts);
+            cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, false);
+          }
+        }
       }
     }
     setTimeout(function(){ body.scrollIntoView({behavior:'smooth', block:'nearest'}); }, 50);
