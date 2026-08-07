@@ -13912,6 +13912,16 @@ const MOON_KAN_DESC = {
 
 
 /* ======= 四柱推命 地支関係データ ======= */
+var SHICHUU_REL_LABELS = {
+  '三合': {icon:'🌟', catch:'チームになると強い相性'},
+  '六合': {icon:'🤝', catch:'自然に引き合う相性'},
+  '冲': {icon:'⚡', catch:'正反対で変化をもたらす相性'},
+  '刑': {icon:'⚖️', catch:'価値観のズレから傷つけ合いやすい相性'},
+  '害': {icon:'🌿', catch:'じわじわ消耗しやすい相性'},
+  '破': {icon:'💥', catch:'信頼やペースが崩れやすい相性'},
+  '比和': {icon:'🪞', catch:'よく似た者同士の相性'},
+};
+
 const SHI_RELATIONS = {
   // 三合（さんごう）
   sango: [
@@ -14146,10 +14156,20 @@ function buildShichuuCompatHTML(bdA, bdB) {
   html += '<div style="font-size:11px;color:var(--sk-gold-light);font-weight:700;margin-bottom:8px;padding-left:6px;border-left:2px solid var(--sk-gold-light);">日支の関係（内面・素顔の相性）</div>';
   html += '<div style="font-size:13px;margin-bottom:6px;color:var(--text);">' + nisshiA + ' × ' + nisshiB + '</div>';
   if(nisshiRel.length > 0) {
+    html += '<div style="margin-bottom:6px;">';
     nisshiRel.forEach(function(r) {
-      html += '<div style="display:inline-block;margin:2px 4px 2px 0;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;background:rgba(255,255,255,0.06);color:' + r.color + ';border:1px solid ' + r.color + '40;">' + r.type + '：' + r.name + '</div>';
+      var rl = (typeof SHICHUU_REL_LABELS !== 'undefined') ? SHICHUU_REL_LABELS[r.type] : null;
+      // ラベル1：関係タイプ名
+      html += '<span style="display:inline-block;margin:2px 4px 2px 0;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;background:rgba(255,255,255,0.06);color:' + r.color + ';border:1px solid ' + r.color + '40;">' + r.type + '</span>';
+      // ラベル2：関係の説明（descから「関係」を除いたもの）
+      html += '<span style="display:inline-block;margin:2px 4px 2px 0;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;background:rgba(255,255,255,0.06);color:' + r.color + ';border:1px solid ' + r.color + '40;">' + r.desc.replace(/の関係$/,'').replace(/関係$/,'') + '</span>';
     });
-    html += '<div style="font-size:11px;color:var(--muted);margin-top:6px;">' + nisshiRel[0].desc + '</div>';
+    html += '</div>';
+    // キャッチコピーラベル
+    var firstRel = nisshiRel[0];
+    var catchLabel = (typeof SHICHUU_REL_LABELS !== 'undefined' && SHICHUU_REL_LABELS[firstRel.type])
+      ? SHICHUU_REL_LABELS[firstRel.type].icon + ' ' + SHICHUU_REL_LABELS[firstRel.type].catch : '';
+    if(catchLabel) html += '<div style="display:inline-block;margin-top:4px;padding:4px 12px;border-radius:12px;font-size:12px;font-weight:700;background:rgba(255,255,255,0.06);color:' + firstRel.color + ';border:1px solid ' + firstRel.color + '40;">' + catchLabel + '</div>';
   } else {
     html += '<div style="font-size:11px;color:var(--muted);">特別な関係なし（中立）</div>';
   }
