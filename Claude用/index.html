@@ -5238,11 +5238,71 @@ function showYearHenseiDetail(key) {
   var hd = (typeof YEAR_HENSEI_DESC!=='undefined' && YEAR_HENSEI_DESC[data.hensei]) || {trend:'', detail:''};
   var hCols = {'比肩':'#a8c8ff','劫財':'#ff9999','食神':'#98e698','傷官':'#ffd700','偏財':'#ffb347','正財':'#90ee90','偏官':'#ff6b6b','正官':'#7ec8e3','偏印':'#c8a0e0','印綬':'#ffb6c1'};
   var hCol = hCols[data.hensei]||'#b8a8ff';
-  var html = '<div style="padding:12px;background:rgba(180,140,220,.08);border-radius:10px;border:1px solid rgba(180,140,220,.25);">';
+  var html = '<div style="padding:12px;background:rgba(180,140,220,.08);border-radius:10px;border:1px solid rgba(180,140,220,.25);margin-bottom:12px;">';
   html += '<div style="font-size:20px;font-weight:700;color:'+hCol+';margin-bottom:8px;">【'+data.hensei+'】</div>';
   html += '<div style="font-size:13px;color:var(--sk-gold-light);font-weight:700;margin-bottom:8px;">✦ '+hd.trend+'</div>';
   html += '<p style="font-size:12px;color:var(--muted);line-height:1.8;margin:0;">'+hd.detail+'</p>';
   html += '</div>';
+
+  // 流月（月運）を計算して表示
+  if(data.birthdate && typeof calcNenchu === 'function' && typeof calcGetschu === 'function' && typeof calcHensei === 'function') {
+    try {
+      var KAN10m = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+      var SHI12m = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+      var shi_offsetM = [1,2,3,4,5,6,7,8,9,10,11,0];
+      var base_kanM = [2,4,6,8,0];
+
+      // 日干を取得
+      var bpts = data.birthdate.split('-');
+      var bdt = new Date(parseInt(bpts[0]),parseInt(bpts[1])-1,parseInt(bpts[2]),12,0);
+      var dayP = calcNicchu(bdt);
+      if(!dayP) throw new Error('dayP null');
+      var nikkan = dayP.kan;
+
+      // その年の年干
+      var yrDT = new Date(data.yr, 4, 1, 12, 0);
+      var ryuNen = calcNenchu(yrDT);
+      var nk = ryuNen.kan % 5;
+
+      // 今月を取得（現在表示月のハイライト用）
+      var nowMonth = new Date().getMonth(); // 0-11
+      var nowYear = new Date().getFullYear();
+
+      // 月名（節入り月）
+      var monthLabels = ['2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月','1月'];
+      var sekki_months = [1,2,3,4,5,6,7,8,9,10,11,0]; // 各monthIdxに対応する実際の月(0-11)
+
+      html += '<div style="font-size:11px;color:var(--sk-gold-light);font-weight:700;margin-bottom:8px;padding-left:4px;border-left:2px solid var(--sk-gold-light);">流月（月運）</div>';
+      html += '<div style="display:flex;flex-wrap:wrap;gap:6px;">';
+
+      for(var mi = 0; mi < 12; mi++) {
+        var offset = (mi - 1 + 12) % 12;
+        var mKan = (base_kanM[nk] + offset) % 10;
+        var mShi = shi_offsetM[mi];
+        var mHensei = calcHensei(nikkan, mKan);
+        var mCol = hCols[mHensei] || '#b8a8ff';
+        var mLabel = monthLabels[mi];
+
+        // 今月のハイライト
+        var actualMonth = sekki_months[mi];
+        var isCurrentMonth = (data.yr === nowYear && actualMonth === nowMonth) ||
+                             (data.yr === nowYear + 1 && mi === 11 && nowMonth === 0);
+        var bgStyle = isCurrentMonth
+          ? 'background:rgba(255,215,0,0.15);border:1px solid rgba(255,215,0,0.5);'
+          : 'background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);';
+
+        html += '<div style="'+bgStyle+'border-radius:8px;padding:6px 8px;min-width:70px;text-align:center;">';
+        html += '<div style="font-size:9px;color:var(--muted);margin-bottom:2px;">'+mLabel+'節</div>';
+        html += '<div style="font-size:12px;font-weight:700;color:var(--text);">'+KAN10m[mKan]+SHI12m[mShi]+'</div>';
+        if(mHensei) {
+          html += '<div style="font-size:10px;color:'+mCol+';margin-top:2px;">【'+mHensei+'】</div>';
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+    } catch(e) {}
+  }
+
   descEl.innerHTML = html;
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
@@ -6789,7 +6849,29 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
       ? ROKKU_CYCLE[rokkuPos].name+'('+ROKKU_CYCLE[rokkuPos].score+')' + (rf2.reigo ? '/'+ROKKU_CYCLE[rokkuSubPos].name+'('+ROKKU_CYCLE[rokkuSubPos].score+')' : '')
       : '';
     var pmNum    = birthdate ? getPersonalMonth(birthdate, kYear, mo) : '';
-    months.push({ mo:mo, palace:palace, d:d, judgment:judgment, rokkuNm:rokkuNm, pmNum:pmNum, isCurrent:(mo===kMonth) });
+    // 四柱推命 流月通変星
+    var ryugetsuHensei = '';
+    var ryugetsuKanStr = '';
+    if(birthdate && typeof calcNenchu === 'function' && typeof calcNicchu === 'function' && typeof calcHensei === 'function') {
+      try {
+        var KAN10rg = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+        var SHI12rg = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+        var rgYear = (mo === 1) ? kYear + 1 : kYear;
+        var rgDT = new Date(rgYear, mo - 1, 15, 12, 0);
+        var rgNen = calcNenchu(rgDT);
+        var rgMon = calcGetschu(rgDT, rgNen.kan);
+        var bpts = birthdate.split('-');
+        var bdt = new Date(parseInt(bpts[0]), parseInt(bpts[1])-1, parseInt(bpts[2]), 12, 0);
+        var dayP = calcNicchu(bdt);
+        if(rgMon && dayP) {
+          var rgKan = KAN10rg[rgMon.kan];
+          var rgShi = SHI12rg[rgMon.shi];
+          var hns = calcHensei(dayP.kan, rgMon.kan);
+          if(hns) { ryugetsuHensei = hns; ryugetsuKanStr = rgKan + rgShi; }
+        }
+      } catch(e){}
+    }
+    months.push({ mo:mo, palace:palace, d:d, judgment:judgment, rokkuNm:rokkuNm, pmNum:pmNum, ryugetsuHensei:ryugetsuHensei, ryugetsuKanStr:ryugetsuKanStr, isCurrent:(mo===kMonth) });
   });
 
   /* 波グラフ（月版） */
@@ -6871,6 +6953,14 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
         '<div style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.07);">'+
           '<span class="rokku-popup-btn" onclick="toggleRokkuDetail(\''+rokkuDetailIdM+'\',event)">'+m.rokkuNm+'</span>'+
           '<span style="font-size:9px;color:var(--muted);margin-left:4px;">PM'+m.pmNum+'</span>'+
+          (m.ryugetsuHensei ? (function(){
+            var hCols={'比肩':'#a8c8ff','劫財':'#ff9999','食神':'#98e698','傷官':'#ffd700','偏財':'#ffb347','正財':'#90ee90','偏官':'#ff6b6b','正官':'#7ec8e3','偏印':'#c8a0e0','印綬':'#ffb6c1'};
+            var hCol = hCols[m.ryugetsuHensei]||'#b8a8ff';
+            var popKey = 'ryM_'+m.mo+'_'+kYear;
+            window._yearHenseiData = window._yearHenseiData||{};
+            window._yearHenseiData[popKey] = {hensei:m.ryugetsuHensei, kan:m.ryugetsuKanStr.slice(0,1), shi:m.ryugetsuKanStr.slice(1), yr:kYear+'年'+m.mo+'月'};
+            return '<span onclick="event.stopPropagation();showYearHenseiDetail(\''+popKey+'\')" style="display:inline-block;margin-left:4px;padding:1px 6px;border-radius:10px;font-size:8px;font-weight:700;background:rgba(180,140,220,.15);border:1px solid rgba(180,140,220,.3);color:'+hCol+';cursor:pointer;">'+m.ryugetsuKanStr+'【'+m.ryugetsuHensei+'】</span>';
+          })() : '')+
         '</div>'+
       '</div>';
 
