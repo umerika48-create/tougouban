@@ -17254,7 +17254,7 @@ function openKanPanel(kanName, colIdx, monthShi, ownShi){
       }).join('') + '</div>';
   }
   var kanDetailHTML = mainDesc ? '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">詳細</summary><p style="font-size:12px;line-height:1.8;color:var(--text);margin-top:6px;">' + mainDesc + '</p>' + chokoBaseHTML + '</details>' : chokoBaseHTML;
-  document.getElementById('hjDesc').innerHTML = friendTopHTML + kanLabelHTML + kanDetailHTML;
+  document.getElementById('hjDesc').innerHTML = kanLabelHTML + friendTopHTML + kanDetailHTML;
 
   document.getElementById('hjContext').innerHTML = '';
 
