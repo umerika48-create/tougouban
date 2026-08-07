@@ -17220,18 +17220,25 @@ function setYakodoki(enabled) {
   var bd, _t, _cd;
   if(isPartner) {
     bd = window._compatBdB;
-    _t = window._compatBirthTime;
+    // 23時モード(enabled=true)のときは時刻なしとして計算
+    _t = enabled ? null : window._compatBirthTime;
     _cd = window._compatCityData;
   } else {
     bd = window._nyBirthdateMe || document.getElementById('birthdate').value;
-    _t = window._normalBirthTime;
+    // 23時モード(enabled=true)のときは時刻なしとして計算
+    _t = enabled ? null : window._normalBirthTime;
     _cd = window._normalCityData;
   }
   var cardBody = document.getElementById('shichuu-card-body');
+  var accBody = document.getElementById('abody-shichuu-card');
+  var isAccOpen = accBody && accBody.classList.contains('open');
   if(cardBody && bd && typeof buildShichuuCardHTML === 'function') {
-    cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner, false);
+    if(isAccOpen || cardBody.innerHTML.trim() !== '') {
+      // アコーディオンが開いている or 中身がある → 再描画
+      cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner, false);
+    }
+    // 閉じていて空の場合は次回開いたとき（toggleAccordion）で初期化される
   } else if(bd && typeof buildShichuuCardHTML === 'function') {
-    // cardBodyがない場合はswitchShichuuCardで再構築
     if(typeof switchShichuuCard === 'function') {
       switchShichuuCard(isPartner ? 'partner' : 'me');
     }
