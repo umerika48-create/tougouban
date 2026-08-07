@@ -16170,7 +16170,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
       const dayEx = i===2 ? ' day' : '';
       const kanName = KAN10[p.kan];
       return `<td class="${cols[i]} kan${dayEx} ${kc}">
-        <span class="kan-pill" onclick="openKanPanel('${kanName}',${i},'${month_p ? SHI12[month_p.shi] : ""}')">${kanName}</span>
+        <span class="kan-pill" onclick="openKanPanel('${kanName}',${i},'${month_p ? SHI12[month_p.shi] : ""}','${[year_p,month_p,day_p,hour_p][i] ? SHI12[[year_p,month_p,day_p,hour_p][i].shi] : ""}')">${kanName}</span>
       </td>`;
     }).join('')}
   </tr>`;
@@ -17133,7 +17133,10 @@ function closeHjPanel(){
 }
 
 // 天干タップ → 中央ポップアップ
-function openKanPanel(kanName, colIdx, monthShi){
+function openKanPanel(kanName, colIdx, monthShi, ownShi){
+  // ownShi: その柱自身の地支（CHOKO_SERIF参照用）
+  // monthShi: 月支（MOON_KAN_DESC参照用）
+  var shiForSerif = ownShi || monthShi; // 自柱の地支優先
   var nd = NICHIKAN_DESC[kanName];
   if(!nd) return;
   var pd = PILLAR_KAN_DESC[kanName];
@@ -17151,6 +17154,16 @@ function openKanPanel(kanName, colIdx, monthShi){
 
   // 日柱（colIdx=2）のとき、CHOKO_DESCのbase文章を追加
   var chokoBaseHTML = '';
+  // CHOKO_SERIF（日干・月干共通）：自柱の地支で参照
+  if(shiForSerif && typeof CHOKO_SERIF !== 'undefined' && CHOKO_SERIF[kanName] && CHOKO_SERIF[kanName][shiForSerif] && colIdx === 2) {
+    var cs2 = CHOKO_SERIF[kanName][shiForSerif];
+    var ax2 = CHOKO_SERIF[kanName]._axis || '';
+    chokoBaseHTML += '<div style="margin-top:10px;padding:10px;background:rgba(255,255,255,0.04);border-radius:8px;">' +
+      (ax2 ? '<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">' + ax2 + '</div>' : '') +
+      '<div style="font-size:16px;letter-spacing:2px;color:var(--sk-gold-light);margin-bottom:6px;">' + cs2.stars + '</div>' +
+      '<div style="padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.06);font-size:12px;color:var(--muted);line-height:1.7;">' + cs2.serif + '</div>' +
+      '</div>';
+  }
   if(colIdx === 2 && typeof CHOKO_DESC !== 'undefined' && CHOKO_DESC[kanName]) {
     // 月支を取得（命式表から）
     var moonShiEl = document.querySelector('.meishiki-table td[data-col="1"][data-row="shi"]');
@@ -17196,6 +17209,13 @@ function openKanPanel(kanName, colIdx, monthShi){
         (mkSeasonLabel ? '<div style="font-size:12px;color:' + mkColor + ';margin-top:4px;text-align:center;">【' + mkSeasonLabel + '】</div>' : '') +
         '<div style="margin-top:8px;padding:8px;background:rgba(255,255,255,0.04);border-radius:8px;">' +
         '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;">' + mkd.label + '</div>' +
+        (typeof CHOKO_SERIF !== 'undefined' && CHOKO_SERIF[kanName] && CHOKO_SERIF[kanName][shiForSerif] ? (function(){
+          var cs = CHOKO_SERIF[kanName][shiForSerif];
+          var ax = CHOKO_SERIF[kanName]._axis || '';
+          return (ax ? '<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">' + ax + '</div>' : '') +
+            '<div style="font-size:16px;letter-spacing:2px;color:var(--sk-gold-light);margin-bottom:6px;">' + cs.stars + '</div>' +
+            '<div style="padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.06);font-size:12px;color:var(--muted);line-height:1.7;margin-bottom:6px;">' + cs.serif + '</div>';
+        })() : '') +
         '<p style="font-size:12px;color:var(--muted);line-height:1.7;margin:0;">' + mkd.desc + '</p>' +
         '</div></div>';
     }
