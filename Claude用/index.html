@@ -6197,7 +6197,7 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
             var popKey='ryH'+c.yr;
             window._yearHenseiData=window._yearHenseiData||{};
             window._yearHenseiData[popKey]={hensei:hns,kan:ryuKs,shi:ryuSs,yr:c.yr};
-            ryunenHTML='<span onclick="showYearHenseiDetail(\''+popKey+'\');" style="display:inline-block;margin-left:4px;padding:2px 8px;background:rgba(180,140,220,.12);border:1px solid rgba(180,140,220,.35);border-radius:14px;font-size:10px;color:'+hCol+';cursor:pointer;">'+ryuKs+ryuSs+' 【'+hns+'】</span>';
+            ryunenHTML='<span onclick="event.stopPropagation();showYearHenseiDetail(\''+popKey+'\');" style="display:inline-block;margin-left:4px;padding:2px 8px;background:rgba(180,140,220,.12);border:1px solid rgba(180,140,220,.35);border-radius:14px;font-size:10px;color:'+hCol+';cursor:pointer;">'+ryuKs+ryuSs+' 【'+hns+'】</span>';
           }
         }
       } catch(e){}
