@@ -4216,6 +4216,19 @@ var BAD_REASONS = {
 /* 宮別運気データ（本命星が年盤の各宮に入ったときの運気） */
 /** 宮名（宮番号→漢字、短縮版。年運/月運サイクルパネルでの表示用） */
 var KYU_NAME_SHORT = {1:'坎宮',2:'坤宮',3:'震宮',4:'巽宮',5:'中宮',6:'乾宮',7:'兌宮',8:'艮宮',9:'離宮'};
+var KYU_DIRECTION = {1:'北',2:'南西',3:'東',4:'東南',5:'中央',6:'北西',7:'西',8:'北東',9:'南'};
+var YEAR_HENSEI_DESC = {
+  '比肩': {trend:'エネルギー充電・自立心UP', detail:'独立・自分らしさが増す年。自分のペースで動くと吉。競争心が高まることも。'},
+  '劫財': {trend:'勝負・刺激・変化', detail:'動きが激しく変化が多い年。積極的に動くとチャンスあり。金銭管理に注意。'},
+  '食神': {trend:'才能開花・楽しむ年', detail:'自分の才能や個性が輝く年。楽しんで動くことで結果が出やすい。'},
+  '傷官': {trend:'改革・突破・表現', detail:'変化と改革の年。既存のルールを超えたいエネルギーが強まる。創造性が高まる。'},
+  '偏財': {trend:'人脈・チャンス・行動', detail:'人との縁が広がる年。アクティブに動くと金運・人運が開く。'},
+  '正財': {trend:'安定・着実・蓄積', detail:'堅実に積み上げる年。コツコツした努力が実を結ぶ。財運安定。'},
+  '偏官': {trend:'試練・成長・勝負', detail:'強いプレッシャーがかかる年。乗り越えると大きく成長できる。勝負の年。'},
+  '正官': {trend:'評価・責任・信頼', detail:'社会的評価が上がる年。責任ある立場に就くことも。信頼が積み上がる。'},
+  '偏印': {trend:'学び・直感・準備', detail:'知識を吸収する年。直感が冴える。新しいスキルや学びに向く。'},
+  '印綬': {trend:'守護・援助・安心', detail:'周囲からのサポートが得られる年。母性的な守りのエネルギーが強まる。'},
+};
 
 var PALACE_LUCK = {
   1:{ rank:'×', level:'low', score:70, label:'心のリセット', starName:'一白水星',
@@ -5210,6 +5223,31 @@ function selectFriendForInput(target, date, time, place) {
   document.getElementById('hjOverlay').classList.remove('open');
 }
 
+
+function showYearHenseiDetail(key) {
+  var data = window._yearHenseiData && window._yearHenseiData[key];
+  if(!data) return;
+  var titleEl = document.getElementById('hjTitle');
+  var descEl = document.getElementById('hjDesc');
+  var ctxEl = document.getElementById('hjContext');
+  if(!titleEl||!descEl) return;
+  titleEl.textContent = data.yr + '年 ' + data.kan + data.shi + '年';
+  document.getElementById('hjYomi').textContent = '';
+  document.getElementById('hjBadge').textContent = '';
+  if(ctxEl) ctxEl.innerHTML = '';
+  var hd = (typeof YEAR_HENSEI_DESC!=='undefined' && YEAR_HENSEI_DESC[data.hensei]) || {trend:'', detail:''};
+  var hCols = {'比肩':'#a8c8ff','劫財':'#ff9999','食神':'#98e698','傷官':'#ffd700','偏財':'#ffb347','正財':'#90ee90','偏官':'#ff6b6b','正官':'#7ec8e3','偏印':'#c8a0e0','印綬':'#ffb6c1'};
+  var hCol = hCols[data.hensei]||'#b8a8ff';
+  var html = '<div style="padding:12px;background:rgba(180,140,220,.08);border-radius:10px;border:1px solid rgba(180,140,220,.25);">';
+  html += '<div style="font-size:20px;font-weight:700;color:'+hCol+';margin-bottom:8px;">【'+data.hensei+'】</div>';
+  html += '<div style="font-size:13px;color:var(--sk-gold-light);font-weight:700;margin-bottom:8px;">✦ '+hd.trend+'</div>';
+  html += '<p style="font-size:12px;color:var(--muted);line-height:1.8;margin:0;">'+hd.detail+'</p>';
+  html += '</div>';
+  descEl.innerHTML = html;
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
+
 function showChokoDetail(key) {
   var data = window._henseiTagData && window._henseiTagData[key];
   if(!data) return;
@@ -6130,6 +6168,32 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
     var rokkuDetailId = 'nyrokku-detail-' + idx;
     var rSubCycle = (birthdate && rf.reigo) ? ROKKU_CYCLE[getRokkuSubPos(birthdate, c.yr)] : null;
 
+    // 流年通変星の計算
+    var ryunenHTML = '';
+    if(birthdate && typeof calcNenchu==='function' && typeof calcNicchu==='function' && typeof calcHensei==='function') {
+      try {
+        var KAN10ry=['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+        var SHI12ry=['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+        var ryuDT=new Date(c.yr,4,1,12,0);
+        var ryuNen=calcNenchu(ryuDT);
+        var bpts=birthdate.split('-');
+        var bdt=new Date(parseInt(bpts[0]),parseInt(bpts[1])-1,parseInt(bpts[2]),12,0);
+        var dayP=calcNicchu(bdt);
+        if(ryuNen&&dayP){
+          var ryuKs=KAN10ry[ryuNen.kan], ryuSs=SHI12ry[ryuNen.shi];
+          var hns=calcHensei(dayP.kan,ryuNen.kan);
+          if(hns){
+            var hCols={'比肩':'#a8c8ff','劫財':'#ff9999','食神':'#98e698','傷官':'#ffd700','偏財':'#ffb347','正財':'#90ee90','偏官':'#ff6b6b','正官':'#7ec8e3','偏印':'#c8a0e0','印綬':'#ffb6c1'};
+            var hCol=hCols[hns]||'#b8a8ff';
+            var popKey='ryH'+c.yr;
+            window._yearHenseiData=window._yearHenseiData||{};
+            window._yearHenseiData[popKey]={hensei:hns,kan:ryuKs,shi:ryuSs,yr:c.yr};
+            ryunenHTML='<span class="yr-hensei-btn" data-key="'+popKey+'" style="display:inline-block;margin-left:4px;padding:2px 8px;background:rgba(180,140,220,.12);border:1px solid rgba(180,140,220,.35);border-radius:14px;font-size:10px;color:'+hCol+';cursor:pointer;">'+ryuKs+ryuSs+' 【'+hns+'】</span>';
+          }
+        }
+      } catch(e){}
+    }
+
     /* セル */
     var birthYearNum = birthdate ? +(birthdate.split('-')[0]) : null;
     var ageAtYear = birthYearNum !== null ? (c.yr - birthYearNum) : null;
@@ -6141,6 +6205,9 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
         (c.isRecommended ? '<div style="position:absolute;top:4px;right:6px;font-size:6px;color:var(--gold);background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);border-radius:6px;padding:1px 4px;">★おすすめ</div>' : '')+
         '<div class="cycle-year" style="color:'+(c.isTarget?'var(--gold-light)':'var(--muted)')+'">'+c.yr+'</div>'+
         '<div class="cycle-rank '+c.level+'" style="display:flex;align-items:baseline;gap:4px;justify-content:center;cursor:pointer;" onclick="toggleScoreBreakdown(\'nyscore-'+idx+'\',event);">'+c.rank+'<span style="font-size:10px;font-weight:400;opacity:.7;">'+c.score+'</span></div>'+
+        '<div style="font-size:9px;text-align:center;letter-spacing:1px;margin-bottom:2px;color:'+(c.score>=60?'#ffd700':c.score>=42?'#b8a8ff':c.score>=28?'#80b8ff':'#ff9999')+';">'+
+        (c.score>=60?'★★★★★':c.score>=42?'★★★★☆':c.score>=28?'★★★☆☆':c.score>=14?'★★☆☆☆':'★☆☆☆☆')+
+        '</div>'+
         '<div class="core-num-detail" id="nyscore-'+idx+'">'+(c.breakdown?renderBreakdown(c.breakdown):'')+'</div>'+
         '<div class="cycle-label" onclick="toggleCycleLabel(\'nylabel-'+idx+'\',event)">'+c.label+
           (c.gokyoAdj && PALACE_LUCK[c.palace] && PALACE_LUCK[c.palace].labelSub ? '<span style="font-size:8px;color:var(--muted);display:block;">'+PALACE_LUCK[c.palace].labelSub+'</span>' : '')+
@@ -6149,11 +6216,12 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
           (c.gokyoAdj&&c.gokyoAdj.flags&&c.gokyoAdj.flags.indexOf('ankensatsu')>=0?renderAnkenNote('nylabel-ak-'+idx):'')+
           (c.gokyoAdj&&c.gokyoAdj.flags&&c.gokyoAdj.flags.indexOf('gokusatsu')>=0?renderGokusatsuNote('nylabel-gk-'+idx):'')+
         '</div>'+
-        '<div style="font-size:8px;color:rgba(255,255,255,.6);letter-spacing:.05em;margin-top:2px;">'+palDat.starName+'('+(KYU_NAME_SHORT[c.palace]||'')+')'+'</div>'+
+        '<div style="font-size:8px;color:rgba(255,255,255,.6);letter-spacing:.05em;margin-top:2px;">'+palDat.starName+'('+(KYU_NAME_SHORT[c.palace]||'')+(KYU_DIRECTION[c.palace]?'・'+KYU_DIRECTION[c.palace]:'')+')'+'</div>'+
         (birthdate ?
           '<div style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.07);">'+
             '<span class="rokku-popup-btn" onclick="toggleRokkuDetail(\''+rokkuDetailId+'\',event)">'+rLabel+'</span>'+
             '<span onclick="togglePYCard(this,'+pyNum+')" style="display:inline-block;margin-left:4px;padding:2px 10px;background:rgba(180,220,255,.1);border:1px solid rgba(180,220,255,.4);border-radius:14px;font-size:10px;color:#a0d4f0;cursor:pointer;">PY'+(pyNum===11?2:pyNum===22?4:pyNum===33?6:pyNum)+'</span>'+
+            ryunenHTML+
           '</div>'
         : '')+
       '</div>';
