@@ -5290,7 +5290,7 @@ function showChokoDetail(key) {
         (axisStr ? '<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">' + axisStr + '</div>' : '') +
         '<div style="font-size:16px;letter-spacing:2px;color:var(--sk-gold-light);">' + serifData.stars + '</div>' +
         '</div>';
-      html += '<div style="margin-bottom:8px;padding:6px 14px;border-radius:12px;background:rgba(255,255,255,0.06);font-size:12px;color:var(--muted);line-height:1.7;">' + serifData.serif + '</div>';
+      html += '<div style="margin-bottom:8px;padding:6px 14px;border-radius:12px;background:rgba(255,255,255,0.06);font-size:12px;color:var(--text);line-height:1.7;">' + serifData.serif + '</div>';
     }
     if(desc_data.summary) {
       html += '<div style="display:inline-block;margin-bottom:8px;padding:3px 12px;border-radius:20px;background:rgba(255,255,255,0.08);font-size:12px;color:' + color + ';font-weight:700;">' + desc_data.summary + '</div><br>';
@@ -17161,7 +17161,7 @@ function openKanPanel(kanName, colIdx, monthShi, ownShi){
     chokoBaseHTML += '<div style="margin-top:10px;padding:10px;background:rgba(255,255,255,0.04);border-radius:8px;">' +
       (ax2 ? '<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">' + ax2 + '</div>' : '') +
       '<div style="font-size:16px;letter-spacing:2px;color:var(--sk-gold-light);margin-bottom:6px;">' + cs2.stars + '</div>' +
-      '<div style="padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.06);font-size:12px;color:var(--muted);line-height:1.7;">' + cs2.serif + '</div>' +
+      '<div style="padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.06);font-size:12px;color:var(--text);line-height:1.7;">' + cs2.serif + '</div>' +
       '</div>';
   }
   if(colIdx === 2 && typeof CHOKO_DESC !== 'undefined' && CHOKO_DESC[kanName]) {
