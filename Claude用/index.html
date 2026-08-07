@@ -15244,8 +15244,9 @@ function showFriendMeishiki(name, isYakodoki) {
   }
 
   // 命式HTML生成
+  var fCityData = (f.place && typeof lookupCity === 'function') ? lookupCity(f.place) : null;
   var html2 = (typeof buildShichuuCardHTML === 'function')
-    ? buildShichuuCardHTML(f.date, timeStr, null, false, true)
+    ? buildShichuuCardHTML(f.date, timeStr, fCityData, false, true)
     : '<p style="color:var(--muted);">命式を計算できませんでした</p>';
 
   bodyEl.innerHTML = html2;
