@@ -17212,8 +17212,8 @@ function openKanPanel(kanName, colIdx, monthShi){
         (mslLabel ? '<div style="font-size:12px;font-weight:700;color:var(--sk-gold-light);margin-top:4px;text-align:center;">【' + mslLabel + '】</div>' : '') +
         (seasonData ? '<div style="margin-top:8px;padding:8px;background:rgba(255,255,255,0.04);border-radius:8px;">' +
           '<div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:6px;">' + seasonData.label + '</div>' +
-          (typeof CHOKO_SERIF !== 'undefined' && CHOKO_SERIF[kanName] && CHOKO_SERIF[kanName][shiName] ? (function(){
-            var cs = CHOKO_SERIF[kanName][shiName];
+          (typeof CHOKO_SERIF !== 'undefined' && CHOKO_SERIF[kanName] && CHOKO_SERIF[kanName][monthShi] ? (function(){
+            var cs = CHOKO_SERIF[kanName][monthShi];
             var ax = CHOKO_SERIF[kanName]._axis || '';
             return '<div style="margin-bottom:8px;">' +
               (ax ? '<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">' + ax + '</div>' : '') +
