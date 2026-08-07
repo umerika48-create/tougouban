@@ -7288,7 +7288,7 @@ function toggleAccordion(id) {
           var bd = window._nyBirthdateMe || (document.getElementById('birthdate') ? document.getElementById('birthdate').value : '');
           if(bd && typeof buildShichuuCardHTML === 'function') {
             // 23時モードのときは時刻を無視
-            var _t = (window._yakodoki === true) ? null : window._normalBirthTime;
+            var _t = (window._yakodoki === true) ? 'FORCE_UNKNOWN' : window._normalBirthTime;
             var _cd = window._normalCityData;
             var _ts = (_t||'').replace(':','').replace(/[^0-9]/g,'');
             if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(_ts, !_ts);
@@ -7313,14 +7313,14 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
 
     // 時刻処理（calculateShichuuと同じロジック）
     var timeVal;
-    if(optTime !== undefined && optTime !== null) {
-      timeVal = optTime;
-    } else if(optTime === null) {
-      timeVal = ''; // null明示 → 時刻なし（23時モード）
+    if(optTime === 'FORCE_UNKNOWN') {
+      timeVal = ''; // 23時モードで強制的に時刻なし
+    } else if(optTime !== undefined && optTime !== null) {
+      timeVal = optTime; // 時刻あり
     } else if(isPartner) {
       timeVal = ''; // 相手の時刻不明時はあなたの時刻を使わない
     } else {
-      timeVal = window._normalBirthTime || '';
+      timeVal = window._normalBirthTime || ''; // undefinedまたはnull → デフォルト
     }
     timeVal = timeVal || '';
     var timeStr4=timeVal.replace(':','').replace(/[^0-9]/g,'');
@@ -17226,12 +17226,12 @@ function setYakodoki(enabled) {
   if(isPartner) {
     bd = window._compatBdB;
     // 23時モード(enabled=true)のときは時刻なしとして計算
-    _t = enabled ? null : window._compatBirthTime;
+    _t = enabled ? 'FORCE_UNKNOWN' : window._compatBirthTime;
     _cd = window._compatCityData;
   } else {
     bd = window._nyBirthdateMe || document.getElementById('birthdate').value;
     // 23時モード(enabled=true)のときは時刻なしとして計算
-    _t = enabled ? null : window._normalBirthTime;
+    _t = enabled ? 'FORCE_UNKNOWN' : window._normalBirthTime;
     _cd = window._normalCityData;
   }
   var cardBody = document.getElementById('shichuu-card-body');
