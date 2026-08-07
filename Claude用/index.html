@@ -17754,6 +17754,19 @@ function toggleSakurakoText(btn) {
 }
 
 /* ======= 命の主星AI鑑定文・理由表示 END ======= */
+// ROKKU_UNMEISU汚染チェック（起動時）
+(function() {
+  if(typeof ROKKU_UNMEISU === 'undefined') return;
+  var problems = [];
+  Object.keys(ROKKU_UNMEISU).forEach(function(yr) {
+    var row = ROKKU_UNMEISU[yr];
+    if(!Array.isArray(row)) return;
+    if(Array.isArray(row[0])) problems.push(yr + '年(SEKKI汚染)');
+    else if(row.length !== 12) problems.push(yr + '年(長さ' + row.length + ')');
+  });
+  if(problems.length > 0) console.error('⚠ ROKKU_UNMEISU異常検出: ' + problems.join(', '));
+})();
+
 </script>
 
 <div class="hj-overlay" id="hjOverlay" onclick="closeHjPanel()"></div>
