@@ -16312,6 +16312,8 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
 //  メイン計算関数
 // ========================================================
 function calculateShichuu(opts){
+  // 再実行用にoptsを保存
+  if(opts) window._lastShichuuOpts = opts;
   const _dateStr = (opts&&opts.dateStr)||(document.getElementById('birthDateStr')?document.getElementById('birthDateStr').value:'');
   const dateStr = (_dateStr||'').replace(/\D/g,'');
   if(dateStr.length !== 8){ alert('生年月日を8桁で入力してください（例：19860430）'); return; }
@@ -17240,8 +17242,19 @@ function setYakodoki(enabled) {
     if(typeof switchShichuuCard === 'function') {
       switchShichuuCard(isPartner ? 'partner' : 'me');
     }
-  } else if(!isPartner) {
-    autoCalculate();
+  } else {
+    // shichuu-card-bodyがない場合（オプション四柱推命など）
+    // calculateShichuuを再実行して命式を再描画
+    if(!isPartner && typeof calculateShichuu === 'function') {
+      if(window._lastShichuuOpts) {
+        // 23時モードのとき時刻を上書き
+        var reOpts = Object.assign({}, window._lastShichuuOpts);
+        if(enabled) { reOpts.timeStr4 = ''; reOpts.placeOffset = 0; }
+        calculateShichuu(reOpts);
+      } else {
+        autoCalculate();
+      }
+    }
   }
 }
 
