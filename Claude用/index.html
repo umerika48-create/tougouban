@@ -7315,6 +7315,8 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
     var timeVal;
     if(optTime !== undefined && optTime !== null) {
       timeVal = optTime;
+    } else if(optTime === null) {
+      timeVal = ''; // null明示 → 時刻なし（23時モード）
     } else if(isPartner) {
       timeVal = ''; // 相手の時刻不明時はあなたの時刻を使わない
     } else {
