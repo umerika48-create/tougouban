@@ -7343,12 +7343,34 @@ function syncBirthdate() {
   /* 拡張形式: 198604301317福岡 または 19860430 1317 福岡 → 生年月日+時刻(4桁)+出生地 */
   var rawCompact=raw.replace(/\s+/g,'');
   var m3=rawCompact.match(/^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(.*)$/);
+  /* m4: 日付8桁+出生地のみ（時刻なし）例: 19860430福岡 */
+  var m4=rawCompact.match(/^(\d{4})(\d{2})(\d{2})([^\d].*)$/);
 
   window._normalBirthTime=null; window._normalBirthPlace=null; window._normalCityData=null;
   err.textContent='';
 
-  if(m1){ y=parseInt(m1[1]); m=parseInt(m1[2]); d=parseInt(m1[3]); }
+  if(m1){
+    y=parseInt(m1[1]); m=parseInt(m1[2]); d=parseInt(m1[3]);
+    /* m1の後ろに出生地があれば取得（例: 1986-04-30 福岡） */
+    var m1rest = raw.replace(/^\d{4}[\/\-\.]\d{1,2}[\/\-\.]\d{1,2}/, '').trim();
+    if(m1rest){
+      window._normalBirthPlace = m1rest;
+      window._normalCityData = lookupCity(m1rest);
+    }
+  }
   else if(m2){ y=parseInt(m2[1]); m=parseInt(m2[2]); d=parseInt(m2[3]); }
+  else if(m4 && !m3){
+    /* 日付8桁+出生地のみ（時刻なし）*/
+    y=parseInt(m4[1]); m=parseInt(m4[2]); d=parseInt(m4[3]);
+    var place4=m4[4].trim();
+    if(place4){
+      window._normalBirthPlace = place4;
+      window._normalCityData = lookupCity(place4);
+      if(!window._normalCityData){
+        err.textContent='⚠ 出生地が見つかりません。日付のみで計算します';
+      }
+    }
+  }
   else if(m3){
     y=parseInt(m3[1]); m=parseInt(m3[2]); d=parseInt(m3[3]);
     var hh=parseInt(m3[4]), mi=parseInt(m3[5]), place=m3[6].trim();
