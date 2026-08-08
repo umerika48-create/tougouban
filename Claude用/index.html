@@ -4218,16 +4218,16 @@ var BAD_REASONS = {
 var KYU_NAME_SHORT = {1:'坎宮',2:'坤宮',3:'震宮',4:'巽宮',5:'中宮',6:'乾宮',7:'兌宮',8:'艮宮',9:'離宮'};
 var KYU_DIRECTION = {1:'北',2:'南西',3:'東',4:'東南',5:'中央',6:'北西',7:'西',8:'北東',9:'南'};
 var YEAR_HENSEI_DESC = {
-  '比肩': {trend:'エネルギー充電・自立心UP', detail:'独立・自分らしさが増す年。自分のペースで動くと吉。競争心が高まることも。'},
-  '劫財': {trend:'勝負・刺激・変化', detail:'動きが激しく変化が多い年。積極的に動くとチャンスあり。金銭管理に注意。'},
-  '食神': {trend:'才能開花・楽しむ年', detail:'自分の才能や個性が輝く年。楽しんで動くことで結果が出やすい。'},
-  '傷官': {trend:'改革・突破・表現', detail:'変化と改革の年。既存のルールを超えたいエネルギーが強まる。創造性が高まる。'},
-  '偏財': {trend:'人脈・チャンス・行動', detail:'人との縁が広がる年。アクティブに動くと金運・人運が開く。'},
-  '正財': {trend:'安定・着実・蓄積', detail:'堅実に積み上げる年。コツコツした努力が実を結ぶ。財運安定。'},
-  '偏官': {trend:'試練・成長・勝負', detail:'強いプレッシャーがかかる年。乗り越えると大きく成長できる。勝負の年。'},
-  '正官': {trend:'評価・責任・信頼', detail:'社会的評価が上がる年。責任ある立場に就くことも。信頼が積み上がる。'},
-  '偏印': {trend:'学び・直感・準備', detail:'知識を吸収する年。直感が冴える。新しいスキルや学びに向く。'},
-  '印綬': {trend:'守護・援助・安心', detail:'周囲からのサポートが得られる年。母性的な守りのエネルギーが強まる。'},
+  '比肩': {trend:'エネルギー充電・自立心UP', detail:'独立・自分らしさが増す年。自分のペースで動くと吉。競争心が高まることも。', chara:'対等なライバル・仲間のような存在感'},
+  '劫財': {trend:'勝負・刺激・変化', detail:'動きが激しく変化が多い年。積極的に動くとチャンスあり。金銭管理に注意。', chara:'ちょっと油断できない、対等だけど癖のある相手のような存在感'},
+  '食神': {trend:'才能開花・楽しむ年', detail:'自分の才能や個性が輝く年。楽しんで動くことで結果が出やすい。', chara:'素直にかわいがれる後輩のような存在感'},
+  '傷官': {trend:'改革・突破・表現', detail:'変化と改革の年。既存のルールを超えたいエネルギーが強まる。創造性が高まる。', chara:'才能はあるけど反抗期の後輩のような存在感'},
+  '偏財': {trend:'人脈・チャンス・行動', detail:'人との縁が広がる年。アクティブに動くと金運・人運が開く。', chara:'自分で動かせる、気前よく使えるチャンスのような存在感'},
+  '正財': {trend:'安定・着実・蓄積', detail:'堅実に積み上げる年。コツコツした努力が実を結ぶ。財運安定。', chara:'コツコツ積み上げる、堅実な財産のような存在感'},
+  '偏官': {trend:'試練・成長・勝負', detail:'強いプレッシャーがかかる年。乗り越えると大きく成長できる。勝負の年。', chara:'厳しく鍛えてくる、荒っぽい上司のような存在感'},
+  '正官': {trend:'評価・責任・信頼', detail:'社会的評価が上がる年。責任ある立場に就くことも。信頼が積み上がる。', chara:'ちゃんとルールを教えてくれる、信頼できる上司のような存在感'},
+  '偏印': {trend:'学び・直感・準備', detail:'知識を吸収する年。直感が冴える。新しいスキルや学びに向く。', chara:'変わったことを教えてくれる、独特な先生のような存在感'},
+  '印綬': {trend:'守護・援助・安心', detail:'周囲からのサポートが得られる年。母性的な守りのエネルギーが強まる。', chara:'優しく守ってくれる、正統派の先生のような存在感'},
 };
 
 var PALACE_LUCK = {
@@ -5338,7 +5338,8 @@ function showYearHenseiDetail(key) {
   var html = '<div style="padding:12px;background:rgba(180,140,220,.08);border-radius:10px;border:1px solid rgba(180,140,220,.25);margin-bottom:12px;">';
   html += '<div style="font-size:20px;font-weight:700;color:'+hCol+';margin-bottom:8px;">【'+data.hensei+'】</div>';
   html += '<div style="font-size:13px;color:var(--sk-gold-light);font-weight:700;margin-bottom:8px;">✦ '+hd.trend+'</div>';
-  html += '<p style="font-size:12px;color:var(--muted);line-height:1.8;margin:0;">'+hd.detail+'</p>';
+  html += '<p style="font-size:12px;color:var(--text);line-height:1.8;margin:0;">'+hd.detail+'</p>';
+  if(hd.chara) html += '<div style="margin-top:8px;padding:6px 10px;border-radius:8px;background:rgba(255,255,255,0.04);font-size:11px;color:'+hCol+';border-left:2px solid '+hCol+';">👥 '+hd.chara+'</div>';
   html += '</div>';
 
   // 流月（月運）を計算して表示
@@ -14383,11 +14384,15 @@ function buildShichuuCompatHTML(bdA, bdB) {
   html += '<div style="font-size:11px;color:var(--muted);margin-bottom:2px;">あなた（' + nikA + '）→ 相手（' + nikB + '）</div>';
   html += '<div style="font-size:14px;font-weight:700;color:var(--text);">' + hdA.label + '</div>';
   if(hdA.love) html += '<div style="font-size:11px;color:var(--muted);margin-top:3px;">' + hdA.love + '</div>';
+  var charaA = (typeof YEAR_HENSEI_DESC !== 'undefined' && YEAR_HENSEI_DESC[hNameAB]) ? YEAR_HENSEI_DESC[hNameAB].chara : null;
+  if(charaA) html += '<div style="margin-top:4px;font-size:11px;color:#b8a8ff;border-left:2px solid #b8a8ff;padding-left:6px;">👥 '+charaA+'</div>';
   html += '</div>';
   html += '<div style="border-top:1px solid rgba(255,255,255,0.06);padding-top:8px;">';
   html += '<div style="font-size:11px;color:var(--muted);margin-bottom:2px;">相手（' + nikB + '）→ あなた（' + nikA + '）</div>';
   html += '<div style="font-size:14px;font-weight:700;color:var(--text);">' + hdB.label + '</div>';
   if(hdB.love) html += '<div style="font-size:11px;color:var(--muted);margin-top:3px;">' + hdB.love + '</div>';
+  var charaB = (typeof YEAR_HENSEI_DESC !== 'undefined' && YEAR_HENSEI_DESC[hNameBA]) ? YEAR_HENSEI_DESC[hNameBA].chara : null;
+  if(charaB) html += '<div style="margin-top:4px;font-size:11px;color:#b8a8ff;border-left:2px solid #b8a8ff;padding-left:6px;">👥 '+charaB+'</div>';
   html += '</div></div>';
 
   // 日支セクション
@@ -17252,6 +17257,11 @@ function openHenseiPanel(name, context){
   }
   // 詳細内容（折りたたみ）
   var html = '<p style="font-size:12px;line-height:1.8;color:var(--text);">'+d.desc+'</p>';
+  // 関係性キャラ
+  var charaText = (typeof YEAR_HENSEI_DESC !== 'undefined' && YEAR_HENSEI_DESC[name]) ? YEAR_HENSEI_DESC[name].chara : null;
+  if(charaText) {
+    html += '<div style="margin-top:8px;padding:6px 10px;border-radius:8px;background:rgba(168,154,255,0.08);font-size:11px;color:#b8a8ff;border-left:2px solid #b8a8ff;">👥 '+charaText+'</div>';
+  }
   if(d.tenkan){
     html += '<div style="margin-top:10px;padding:8px 10px;background:rgba(184,150,46,0.08);border-radius:8px;border-left:2px solid var(--sk-gold);">'
       +'<div style="font-size:10px;color:var(--sk-gold-light);margin-bottom:4px;">💬 お客様への伝え方</div>'
@@ -17280,9 +17290,18 @@ function openHenseiPanel(name, context){
     var isDayHensei = (colIdxH === 2 || colIdxH === 3);
     var hFriends = getFriendsWithHensei(name, colIdxH);
     if(hFriends.length > 0){
-      hFriendHTML = '<div style="margin-bottom:10px;padding:6px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);">' +
-        '<div style="font-size:10px;color:#b8a8ff;margin-bottom:4px;">👥 この通変星を持つ友達</div>' +
-        '<div>' + buildFriendBadgeHTML(hFriends, isDayHensei) + '</div></div>';
+      var hFriendNames = hFriends.filter(function(n){ var fd=FRIEND_DATA.find(function(d){return d.name===n;}); return fd&&fd.category!=='有名人'; });
+      var hCelebNames  = hFriends.filter(function(n){ var fd=FRIEND_DATA.find(function(d){return d.name===n;}); return fd&&fd.category==='有名人'; });
+      var hTabUid = 'hftab_' + name + '_' + colIdxH;
+      hFriendHTML =
+        '<div style="margin-bottom:10px;padding:8px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);">'
+        + '<div style="display:flex;gap:4px;flex-wrap:wrap;">'
+        + (hFriendNames.length ? '<span data-fuid="'+hTabUid+'" data-ftype="f" onclick="toggleFriendBox(this)" style="font-size:10px;color:#b8a8ff;padding:2px 8px;border-radius:10px;background:transparent;border:1px solid rgba(168,154,255,0.3);cursor:pointer;display:inline-block;margin:2px;">👥 友達 '+hFriendNames.length+'</span>' : '')
+        + (hCelebNames.length  ? '<span data-fuid="'+hTabUid+'" data-ftype="c" onclick="toggleFriendBox(this)" style="font-size:10px;color:#ffd700;padding:2px 8px;border-radius:10px;background:transparent;border:1px solid rgba(255,215,0,0.3);cursor:pointer;display:inline-block;margin:2px;">⭐ 有名人 '+hCelebNames.length+'</span>' : '')
+        + '</div>'
+        + (hFriendNames.length ? '<div id="'+hTabUid+'_f" style="display:none;margin-top:6px;">'+buildFriendBadgeHTML(hFriendNames, isDayHensei)+'</div>' : '')
+        + (hCelebNames.length  ? '<div id="'+hTabUid+'_c" style="display:none;margin-top:6px;">'+buildFriendBadgeHTML(hCelebNames,  isDayHensei)+'</div>' : '')
+        + '</div>';
     }
   }
   document.getElementById('hjDesc').innerHTML = hFriendHTML + labelHTML + '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">詳細</summary>' + html + '</details>';
