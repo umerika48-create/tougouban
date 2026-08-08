@@ -9687,7 +9687,7 @@ function switchCompatTab(tab, source) {
   if (window._compatTabOpenState === stateKey) {
     /* 閉じる */
     var wrapClose = document.getElementById(useTop ? 'tab-personal-wrap-top' : 'tab-personal-wrap');
-    if (wrapClose) wrapClose.innerHTML = '';
+    if (wrapClose) { wrapClose.innerHTML = ''; wrapClose.style.display = 'none'; }
     /* ボタンを非アクティブ表示に戻す */
     btnM.style.background = 'transparent';
     btnM.style.color      = 'var(--accent)';
@@ -9753,6 +9753,7 @@ function switchCompatTab(tab, source) {
   window._nykMonth  = kMonth;
 
   wrap.innerHTML = buildPersonalHTML(bd, kYear, kMonth, isPartner);
+  wrap.style.display = 'block'; // 非表示になっている場合は表示に戻す
 
   // 四柱推命カードのビューも同期
   window._currentShichuuView = isPartner ? 'partner' : 'me';
