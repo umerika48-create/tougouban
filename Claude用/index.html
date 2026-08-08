@@ -5224,6 +5224,53 @@ function selectFriendForInput(target, date, time, place) {
 }
 
 
+
+function checkShichuuShi(shiA, shiB) {
+  if(!shiA || !shiB || typeof SHI_RELATIONS === 'undefined') return [];
+  var results = [];
+  // 三合
+  for(var i=0;i<SHI_RELATIONS.sango.length;i++){
+    var sg = SHI_RELATIONS.sango[i];
+    if(sg.group.indexOf(shiA)>=0 && sg.group.indexOf(shiB)>=0 && shiA!==shiB)
+      results.push({type:'三合', color:'#ff6b9d', score:sg.score});
+  }
+  // 六合
+  for(var i=0;i<SHI_RELATIONS.rikugo.length;i++){
+    var rl = SHI_RELATIONS.rikugo[i];
+    if((rl.pair[0]===shiA&&rl.pair[1]===shiB)||(rl.pair[0]===shiB&&rl.pair[1]===shiA))
+      results.push({type:'六合', color:'#66bb6a', score:rl.score});
+  }
+  // 冲
+  for(var i=0;i<SHI_RELATIONS.chu.length;i++){
+    var ch = SHI_RELATIONS.chu[i];
+    if((ch.pair[0]===shiA&&ch.pair[1]===shiB)||(ch.pair[0]===shiB&&ch.pair[1]===shiA))
+      results.push({type:'冲', color:'#e53935', score:ch.score});
+  }
+  // 刑
+  for(var i=0;i<SHI_RELATIONS.kei.length;i++){
+    var ke = SHI_RELATIONS.kei[i];
+    if(ke.pair){
+      if((ke.pair[0]===shiA&&ke.pair[1]===shiB)||(ke.pair[0]===shiB&&ke.pair[1]===shiA))
+        results.push({type:'刑', color:'#ff7043', score:ke.score});
+    } else if(ke.group&&ke.group.indexOf(shiA)>=0&&ke.group.indexOf(shiB)>=0&&shiA!==shiB){
+      results.push({type:'刑', color:'#ff7043', score:ke.score});
+    }
+  }
+  // 害
+  for(var i=0;i<SHI_RELATIONS.gai.length;i++){
+    var ga = SHI_RELATIONS.gai[i];
+    if((ga.pair[0]===shiA&&ga.pair[1]===shiB)||(ga.pair[0]===shiB&&ga.pair[1]===shiA))
+      results.push({type:'害', color:'#a1887f', score:ga.score});
+  }
+  // 破
+  for(var i=0;i<SHI_RELATIONS.ha.length;i++){
+    var ha = SHI_RELATIONS.ha[i];
+    if((ha.pair[0]===shiA&&ha.pair[1]===shiB)||(ha.pair[0]===shiB&&ha.pair[1]===shiA))
+      results.push({type:'破', color:'#7986cb', score:ha.score});
+  }
+  return results;
+}
+
 function showYearHenseiDetail(key) {
   var data = window._yearHenseiData && window._yearHenseiData[key];
   if(!data) return;
@@ -6258,6 +6305,11 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
             window._yearHenseiData=window._yearHenseiData||{};
             window._yearHenseiData[popKey]={hensei:hns,kan:ryuKs,shi:ryuSs,yr:c.yr};
             ryunenHTML='<span onclick="event.stopPropagation();showYearHenseiDetail(\''+popKey+'\');" style="display:inline-block;margin-left:4px;padding:2px 8px;background:rgba(180,140,220,.12);border:1px solid rgba(180,140,220,.35);border-radius:14px;font-size:10px;color:'+hCol+';cursor:pointer;">'+ryuKs+ryuSs+' 【'+hns+'】</span>';
+            // 流年支×日支の関係
+            var ryuShiRels = (typeof checkShichuuShi === 'function') ? checkShichuuShi(ryuSs, SHI12ry[dayP.shi]) : [];
+            ryuShiRels.forEach(function(r){
+              ryunenHTML += '<span style="display:inline-block;margin-left:3px;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;background:rgba(255,255,255,0.06);color:'+r.color+';border:1px solid '+r.color+'40;cursor:default;">'+r.type+'</span>';
+            });
           }
         }
       } catch(e){}
@@ -6867,7 +6919,15 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
           var rgKan = KAN10rg[rgMon.kan];
           var rgShi = SHI12rg[rgMon.shi];
           var hns = calcHensei(dayP.kan, rgMon.kan);
-          if(hns) { ryugetsuHensei = hns; ryugetsuKanStr = rgKan + rgShi; }
+          if(hns) {
+            ryugetsuHensei = hns;
+            ryugetsuKanStr = rgKan + rgShi;
+          }
+          // 流月支×日支の関係
+          var mgShiRels = (typeof checkShichuuShi === 'function') ? checkShichuuShi(SHI12rg[rgMon.shi], SHI12rg[dayP.shi]) : [];
+          if(mgShiRels.length > 0 && ryugetsuKanStr) {
+            ryugetsuKanStr += mgShiRels.map(function(r){ return '(' + r.type + ')'; }).join('');
+          }
         }
       } catch(e){}
     }
