@@ -4492,6 +4492,38 @@ var YANG_CHOSEI = {'甲':'亥','丙':'寅','戊':'寅','庚':'巳','壬':'申'};
 var YIN_CHOSEI = {'乙':'午','丁':'酉','己':'酉','辛':'子','癸':'卯'};
 var STEM_YY_SANMEI = {'甲':1,'乙':0,'丙':1,'丁':0,'戊':1,'己':0,'庚':1,'辛':0,'壬':1,'癸':0};
 
+
+var JUNIUN_DESC = {
+  '長生': {yomi:'ちょうせい', life:'誕生した直後', energy:'伸びていく、可能性を秘めた元気さ'},
+  '沐浴': {yomi:'もくよく',   life:'産湯を使う赤ちゃん', energy:'不安定、揺らぎやすい'},
+  '冠帯': {yomi:'かんたい',   life:'成人式・青年期', energy:'勢いがついてくる'},
+  '建禄': {yomi:'けんろく',   life:'社会人として自立', energy:'実力がしっかりしてきた状態'},
+  '帝旺': {yomi:'ていおう',   life:'人生の最盛期', energy:'一番エネルギーが強い、ピーク'},
+  '衰':   {yomi:'すい',       life:'中年〜引退準備', energy:'ピークを過ぎて落ち着き始める'},
+  '病':   {yomi:'びょう',     life:'病気がち', energy:'弱っている状態'},
+  '死':   {yomi:'し',         life:'死を迎える', energy:'エネルギーが尽きた状態'},
+  '墓':   {yomi:'ぼ',         life:'お墓に入る', energy:'静かに閉じこもった状態'},
+  '絶':   {yomi:'ぜつ',       life:'完全に途絶える', energy:'エネルギーが一番弱い状態'},
+  '胎':   {yomi:'たい',       life:'お腹の中に宿る', energy:'これから生まれる準備段階'},
+  '養':   {yomi:'よう',       life:'お腹の中で育つ', energy:'ゆっくり育っている段階'},
+};
+
+// 十二運の名前を返す関数
+function getJuniunName(stem, branch) {
+  var yy = STEM_YY_SANMEI[stem];
+  var bi = JUNISHI.indexOf(branch);
+  if(bi === -1) return '';
+  var idx;
+  if(yy === 1) {
+    var si = JUNISHI.indexOf(YANG_CHOSEI[stem]);
+    idx = ((bi - si) % 12 + 12) % 12;
+  } else {
+    var si2 = JUNISHI.indexOf(YIN_CHOSEI[stem]);
+    idx = ((si2 - bi) % 12 + 12) % 12;
+  }
+  return JUNIUN_STAGE_ORDER[idx] || '';
+}
+
 function getJuniunPoint(stem, branch) {
   var yy = STEM_YY_SANMEI[stem];
   var bi = JUNISHI.indexOf(branch);
@@ -6356,6 +6388,12 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
             window._yearHenseiData=window._yearHenseiData||{};
             window._yearHenseiData[popKey]={hensei:hns,kan:ryuKs,shi:ryuSs,yr:c.yr};
             ryunenHTML='<span onclick="event.stopPropagation();showYearHenseiDetail(\''+popKey+'\');" style="display:inline-block;margin-left:4px;padding:2px 8px;background:rgba(180,140,220,.12);border:1px solid rgba(180,140,220,.35);border-radius:14px;font-size:10px;color:'+hCol+';cursor:pointer;">'+ryuKs+ryuSs+' 【'+hns+'】</span>';
+            // 十二運（日干×流年支）
+            if(typeof getJuniunName==='function' && typeof JUNIUN_DESC!=='undefined'){
+              var junNm=getJuniunName(KAN10ry[dayP.kan],ryuSs);
+              var jCol={'長生':'#80ff80','沐浴':'#a8c8ff','冠帯':'#b8a8ff','建禄':'#ffd700','帝旺':'#ffd700','衰':'#ffb347','病':'#ff9999','死':'#ff6b6b','墓':'#ff9999','絶':'#ff6b6b','胎':'#98e698','養':'#98e698'}[junNm]||'#b8a8ff';
+              if(junNm) ryunenHTML+='<span style="display:inline-block;margin-left:3px;padding:1px 6px;border-radius:8px;font-size:8px;font-weight:700;background:rgba(255,255,255,0.06);color:'+jCol+';border:1px solid '+jCol+'40;">'+junNm+'</span>';
+            }
             // 流年支×日支の関係
             var ryuShiRels = (typeof checkShichuuShi === 'function') ? checkShichuuShi(ryuSs, SHI12ry[dayP.shi]) : [];
             ryuShiRels.forEach(function(r){
@@ -6974,6 +7012,11 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
           if(hns) {
             ryugetsuHensei = hns;
             ryugetsuKanStr = rgKan + rgShi;
+            // 十二運（日干×流月支）
+            if(typeof getJuniunName==='function'){
+              var mgJunNm=getJuniunName(KAN10rg[dayP.kan],rgShi);
+              if(mgJunNm) ryugetsuKanStr+=' '+mgJunNm;
+            }
           }
           // 流月支×日支の関係
           var mgShiA = SHI12rg[rgMon.shi], mgShiB = SHI12rg[dayP.shi];
@@ -16444,7 +16487,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
       const shiName = SHI12[p.shi];
       const sc = shiClass(shiName);
       return `<td class="${cols[i]} shi">
-        <span class="shi-pill ${sc}" onclick="openShiPanel('${shiName}',${i})">${shiName}</span>
+        <span class="shi-pill ${sc}" onclick="openShiPanel('${shiName}',${i},'${day_p ? KAN10[day_p.kan] : ""}')">${shiName}</span>
       </td>`;
     }).join('')}
   </tr>`;
@@ -17637,7 +17680,7 @@ function openRowLabelPanel(name){
 }
 
 // 地支タップ → 中央ポップアップ
-function openShiPanel(shiName, colIdx){
+function openShiPanel(shiName, colIdx, dayKan){
   const d = SHI12_DETAIL[shiName];
   if(!d) return;
   const pd = (typeof PILLAR_SHI_DESC !== 'undefined') ? PILLAR_SHI_DESC[shiName] : null;
@@ -17764,8 +17807,27 @@ function openShiPanel(shiName, colIdx){
       '<div style="font-size:12px;font-weight:700;color:' + stColor2 + ';">【' + st2.theme + '】</div>' +
       '</div>';
   }
+  // 十二運（日干×地支）
+  var juniunHTML = '';
+  if(dayKan && typeof getJuniunName === 'function' && typeof JUNIUN_DESC !== 'undefined') {
+    var KAN10j = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+    if(KAN10j.indexOf(dayKan) !== -1) {
+      var juniunName = getJuniunName(dayKan, shiName);
+      var jd = juniunName ? JUNIUN_DESC[juniunName] : null;
+      if(jd) {
+        var juniunColor = {'長生':'#80ff80','沐浴':'#a8c8ff','冠帯':'#b8a8ff','建禄':'#ffd700','帝旺':'#ffd700',
+          '衰':'#ffb347','病':'#ff9999','死':'#ff6b6b','墓':'#ff9999','絶':'#ff6b6b','胎':'#98e698','養':'#98e698'}[juniunName]||'#b8a8ff';
+        juniunHTML = '<div style="margin-bottom:10px;padding:8px 12px;background:rgba(255,255,255,0.04);border-radius:8px;border-left:2px solid '+juniunColor+';">'
+          + '<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">十二運（'+dayKan+'の日干から見た'+shiName+'）</div>'
+          + '<div style="font-size:16px;font-weight:700;color:'+juniunColor+';">'+juniunName+'<span style="font-size:11px;font-weight:400;margin-left:4px;color:var(--muted);">（'+jd.yomi+'）</span></div>'
+          + '<div style="font-size:11px;color:var(--muted);margin-top:2px;">🌱 '+jd.life+'</div>'
+          + '<div style="font-size:11px;color:var(--text);margin-top:2px;">'+jd.energy+'</div>'
+          + '</div>';
+      }
+    }
+  }
   var shiDetailHTML = mainDesc ? '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">詳細</summary>' + shiThemeHTML + '<p style="font-size:12px;line-height:1.8;color:var(--text);margin-top:6px;">' + mainDesc + '</p>' + chokoShiHTML + '</details>' : shiThemeHTML + chokoShiHTML;
-  document.getElementById('hjDesc').innerHTML = shiFriendHTML + shiLabelHTML + shiDetailHTML;
+  document.getElementById('hjDesc').innerHTML = juniunHTML + shiFriendHTML + shiLabelHTML + shiDetailHTML;
   document.getElementById('hjContext').innerHTML = '';
   document.getElementById('hjTitle').dataset.memoKey = 'memo_shi_' + shiName + '_' + colIdx2;
   document.getElementById('hjPanel').classList.add('open');
