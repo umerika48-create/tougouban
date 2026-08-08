@@ -7995,7 +7995,9 @@ function calculateCompat() {
 
   /* カード枠外・上部にパープルタブを複製（本命星カード表示エリアはbottom版のみ持つ） */
   var _purpleTopTab = _purpleHTML.replace('id="tab-btn-me-purple"','id="tab-btn-me-purple-top"').replace('id="tab-btn-partner-purple"','id="tab-btn-partner-purple-top"').replace('id="tab-personal-wrap"','id="tab-personal-wrap-top"').replace('onclick="switchCompatTab(&quot;me&quot;)"','onclick="switchCompatTab(&quot;me&quot;,&quot;top&quot;)"').replace('onclick="switchCompatTab(&quot;partner&quot;)"','onclick="switchCompatTab(&quot;partner&quot;,&quot;top&quot;)"');
-  html = '<div style="display:none;">' + _purpleTopTab + '</div>' + html;
+  html = _purpleTopTab + html;
+  // tab-personal-wrap-topは非表示（相性鑑定では個人カード不要）
+  html = html.replace('id="tab-personal-wrap-top"', 'id="tab-personal-wrap-top" style="display:none;"');
 
   html += makeAccordion('kyusei-compat', '✦ 九星気学 相性', '<div style="display:flex;gap:6px;margin-bottom:10px;">' +
     '<button id="cr-btn-me" onclick="switchCompatResult(\'me\')" style="padding:2px 10px;border-radius:20px;border:1px solid #f472b6;background:#f472b6;color:#fff;font-size:10px;font-weight:700;cursor:pointer;">あなた視点</button>' +
