@@ -15243,7 +15243,14 @@ function buildFriendDataListHTML(list, filterCat){
   });
   var html = '';
   order.forEach(function(cat){
-    html += '<div style="font-size:10px;letter-spacing:.06em;color:var(--gold,#c9a84c);margin:10px 0 4px;text-transform:uppercase;">' + cat + '（' + groups[cat].length + '）</div>';
+    var catAllHidden = groups[cat].every(function(f){ return f.hidden === true; });
+    var catSomeHidden = groups[cat].some(function(f){ return f.hidden === true; });
+    var jsCat = cat.replace(/'/g, "\\'");
+    html += '<div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0 4px;">'
+      + '<span style="font-size:10px;letter-spacing:.06em;color:var(--gold,#c9a84c);text-transform:uppercase;">' + cat + '（' + groups[cat].length + '）</span>'
+      + '<button onclick="toggleGroupHidden(\'' + jsCat + '\')" style="font-size:9px;padding:1px 8px;border-radius:6px;border:1px solid rgba(255,255,255,.2);background:' + (catAllHidden ? 'rgba(255,80,80,.15)' : 'rgba(80,255,80,.1)') + ';color:' + (catAllHidden ? '#ff8080' : '#80ff80') + ';cursor:pointer;">'
+      + (catAllHidden ? 'グループ非表示中' : (catSomeHidden ? 'グループ一部非表示' : 'グループ表示中')) + '</button>'
+      + '</div>';
     groups[cat].forEach(function(f){
       var isHidden = f.hidden === true;
       var dateLabel = f.date ? f.date.replace(/^(\d{4})-(\d{2})-(\d{2})$/, function(_,y,m,d){ return y+'年'+parseInt(m)+'月'+parseInt(d)+'日'; }) : '未設定';
@@ -15589,6 +15596,14 @@ function saveEditFriend() {
     var friendBadgeEls = document.querySelectorAll('.friend-badge-area');
     friendBadgeEls.forEach(function(el){ el.innerHTML = ''; });
   }
+}
+
+function toggleGroupHidden(category) {
+  var group = FRIEND_DATA.filter(function(f){ return (f.category || '未分類') === category; });
+  var allHidden = group.every(function(f){ return f.hidden === true; });
+  group.forEach(function(f){ f.hidden = !allHidden; });
+  var listEl = document.getElementById('friend-data-list');
+  if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA);
 }
 
 function toggleFriendHidden(name) {
