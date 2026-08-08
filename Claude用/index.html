@@ -14338,7 +14338,7 @@ function buildShichuuCompatHTML(bdA, bdB) {
 
   // 五行相性チェック
   function checkGogyo(shiA, shiB) {
-    var goA = SHI_GOGYO[shiA], goB = SHI_GOGYO[shiB];
+    var goA = SHI_GOGYO[SHI12.indexOf(shiA)], goB = SHI_GOGYO[SHI12.indexOf(shiB)];
     if(!goA || !goB) return null;
     for(var sg of SHI_RELATIONS.sogo) {
       if((sg.pair[0]===goA&&sg.pair[1]===goB)||(sg.pair[0]===goB&&sg.pair[1]===goA)) {
@@ -14422,7 +14422,7 @@ function buildShichuuCompatHTML(bdA, bdB) {
   // 月支セクション
   html += '<div style="margin-bottom:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.08);">';
   html += '<div style="font-size:11px;color:var(--sk-gold-light);font-weight:700;margin-bottom:8px;padding-left:6px;border-left:2px solid var(--sk-gold-light);">月支の関係（価値観・仕事の相性）</div>';
-  html += '<div style="font-size:13px;margin-bottom:6px;color:var(--text);">' + getsshiA + '（' + (SHI_GOGYO[getsshiA]||'') + '） × ' + getsshiB + '（' + (SHI_GOGYO[getsshiB]||'') + '）</div>';
+  html += '<div style="font-size:13px;margin-bottom:6px;color:var(--text);">' + getsshiA + '（' + (SHI_GOGYO[SHI12.indexOf(getsshiA)]||'') + '） × ' + getsshiB + '（' + (SHI_GOGYO[SHI12.indexOf(getsshiB)]||'') + '）</div>';
   if(getsshiRel) {
     html += '<div style="display:inline-block;margin-bottom:6px;padding:3px 10px;border-radius:12px;font-size:12px;font-weight:700;background:rgba(255,255,255,0.06);color:' + getsshiRel.color + ';border:1px solid ' + getsshiRel.color + '40;">' + getsshiRel.name + '</div>';
     html += '<div style="font-size:11px;color:var(--muted);margin-top:4px;">' + getsshiRel.desc + '</div>';
