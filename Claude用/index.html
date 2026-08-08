@@ -6509,6 +6509,30 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
           'color:var(--muted);font-size:11px;cursor:pointer;font-family:\'Shippori Mincho\',serif;">'+
           '▲ 閉じる'+
         '</button>'+
+        /* 十二運の詳細 */
+        (ryunenHTML && typeof getJuniunName === 'function' && birthdate ? (function(){
+          var bpts2 = birthdate.split('-');
+          var bdt2 = new Date(parseInt(bpts2[0]),parseInt(bpts2[1])-1,parseInt(bpts2[2]),12,0);
+          var dayP2 = (typeof calcNicchu === 'function') ? calcNicchu(bdt2) : null;
+          var KAN10n = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+          var SHI12n = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+          if(!dayP2) return '';
+          var ryuDT2 = new Date(c.yr,4,1,12,0);
+          var ryuNen2 = (typeof calcNenchu === 'function') ? calcNenchu(ryuDT2) : null;
+          if(!ryuNen2) return '';
+          var dayKanN = KAN10n[dayP2.kan];
+          var ryuShiN = SHI12n[ryuNen2.shi];
+          var junNm2 = getJuniunName(dayKanN, ryuShiN);
+          var jd2 = (junNm2 && typeof JUNIUN_DESC !== 'undefined') ? JUNIUN_DESC[junNm2] : null;
+          if(!jd2) return '';
+          var jCol2 = {'長生':'#80ff80','沐浴':'#a8c8ff','冠帯':'#b8a8ff','建禄':'#ffd700','帝旺':'#ffd700','衰':'#ffb347','病':'#ff9999','死':'#ff6b6b','墓':'#ff9999','絶':'#ff6b6b','胎':'#98e698','養':'#98e698'}[junNm2]||'#b8a8ff';
+          return '<div style="margin-top:12px;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,0.04);border-left:2px solid '+jCol2+';">'
+            + '<div style="font-size:9px;color:var(--muted);margin-bottom:4px;">十二運（'+dayKanN+'の日干から見たこの年）</div>'
+            + '<div style="font-size:15px;font-weight:700;color:'+jCol2+';margin-bottom:6px;">'+junNm2+'<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:4px;">（'+jd2.yomi+'）</span></div>'
+            + '<div style="font-size:11px;color:var(--muted);margin-bottom:3px;">🌱 '+jd2.life+'</div>'
+            + '<div style="font-size:12px;color:var(--text);">'+jd2.energy+'</div>'
+            + '</div>';
+        })() : '')+
       '</div>';
   });
 
@@ -7206,6 +7230,30 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
           'color:var(--muted);font-size:11px;cursor:pointer;font-family:\'Shippori Mincho\',serif;">'+
           '▲ 閉じる'+
         '</button>'+
+        /* 十二運の詳細 */
+        (ryunenHTML && typeof getJuniunName === 'function' && birthdate ? (function(){
+          var bpts2 = birthdate.split('-');
+          var bdt2 = new Date(parseInt(bpts2[0]),parseInt(bpts2[1])-1,parseInt(bpts2[2]),12,0);
+          var dayP2 = (typeof calcNicchu === 'function') ? calcNicchu(bdt2) : null;
+          var KAN10n = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+          var SHI12n = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+          if(!dayP2) return '';
+          var ryuDT2 = new Date(c.yr,4,1,12,0);
+          var ryuNen2 = (typeof calcNenchu === 'function') ? calcNenchu(ryuDT2) : null;
+          if(!ryuNen2) return '';
+          var dayKanN = KAN10n[dayP2.kan];
+          var ryuShiN = SHI12n[ryuNen2.shi];
+          var junNm2 = getJuniunName(dayKanN, ryuShiN);
+          var jd2 = (junNm2 && typeof JUNIUN_DESC !== 'undefined') ? JUNIUN_DESC[junNm2] : null;
+          if(!jd2) return '';
+          var jCol2 = {'長生':'#80ff80','沐浴':'#a8c8ff','冠帯':'#b8a8ff','建禄':'#ffd700','帝旺':'#ffd700','衰':'#ffb347','病':'#ff9999','死':'#ff6b6b','墓':'#ff9999','絶':'#ff6b6b','胎':'#98e698','養':'#98e698'}[junNm2]||'#b8a8ff';
+          return '<div style="margin-top:12px;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,0.04);border-left:2px solid '+jCol2+';">'
+            + '<div style="font-size:9px;color:var(--muted);margin-bottom:4px;">十二運（'+dayKanN+'の日干から見たこの年）</div>'
+            + '<div style="font-size:15px;font-weight:700;color:'+jCol2+';margin-bottom:6px;">'+junNm2+'<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:4px;">（'+jd2.yomi+'）</span></div>'
+            + '<div style="font-size:11px;color:var(--muted);margin-bottom:3px;">🌱 '+jd2.life+'</div>'
+            + '<div style="font-size:12px;color:var(--text);">'+jd2.energy+'</div>'
+            + '</div>';
+        })() : '')+
       '</div>';
   });
   gridHTML += '</div>';
