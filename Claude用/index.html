@@ -17392,11 +17392,29 @@ function openKanPanel(kanName, colIdx, monthShi, ownShi){
   var isDayKan = (colIdx === 2);
   var autoHTML = buildFriendBadgeHTML(autoFriends, isDayKan, colIdx);
 
-  // 友達名を一番上に表示
-  var friendTopHTML = autoFriends.length ? 
-    '<div style="margin-bottom:10px;padding:6px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);">' +
-    '<div style="font-size:10px;color:#b8a8ff;margin-bottom:4px;">👥 同じ' + colLabels[colIdx] + 'の友達</div>' +
-    '<div>' + autoHTML + '</div></div>' : '';
+  // 友達・有名人タブ分け表示
+  var friendNames = autoFriends.filter(function(n){
+    var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
+    return fd && fd.category !== '有名人';
+  });
+  var celebNames = autoFriends.filter(function(n){
+    var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
+    return fd && fd.category === '有名人';
+  });
+
+  var friendHTML = buildFriendBadgeHTML(friendNames, isDayKan, colIdx);
+  var celebHTML  = buildFriendBadgeHTML(celebNames,  isDayKan, colIdx);
+
+  var tabUid = 'frtab_' + kanName + '_' + colIdx;
+  var friendTopHTML = autoFriends.length ?
+    '<div style="margin-bottom:10px;padding:8px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);">' +
+      '<div style="display:flex;gap:6px;margin-bottom:6px;">' +
+        (friendNames.length ? '<span onclick="(function(){document.getElementById(\''+tabUid+'_f\').style.display=\'\';document.getElementById(\''+tabUid+'_c\').style.display=\'none\';this.style.background=\'rgba(168,154,255,0.3)\';this.style.fontWeight=\'700\';document.getElementById(\''+tabUid+'_ct\').style.background=\'transparent\';document.getElementById(\''+tabUid+'_ct\').style.fontWeight=\'400\';}).call(this)" id="'+tabUid+'_ft" style="font-size:10px;color:#b8a8ff;padding:2px 8px;border-radius:10px;background:rgba(168,154,255,0.3);border:1px solid rgba(168,154,255,0.3);cursor:pointer;font-weight:700;">👥 友達 '+friendNames.length+'</span>' : '') +
+        (celebNames.length  ? '<span onclick="(function(){document.getElementById(\''+tabUid+'_c\').style.display=\'\';document.getElementById(\''+tabUid+'_f\').style.display=\'none\';this.style.background=\'rgba(255,215,0,0.25)\';this.style.fontWeight=\'700\';document.getElementById(\''+tabUid+'_ft\').style.background=\'transparent\';document.getElementById(\''+tabUid+'_ft\').style.fontWeight=\'400\';}).call(this)" id="'+tabUid+'_ct" style="font-size:10px;color:#ffd700;padding:2px 8px;border-radius:10px;background:transparent;border:1px solid rgba(255,215,0,0.3);cursor:pointer;">⭐ 有名人 '+celebNames.length+'</span>' : '') +
+      '</div>' +
+      (friendNames.length ? '<div id="'+tabUid+'_f">' + friendHTML + '</div>' : '') +
+      (celebNames.length  ? '<div id="'+tabUid+'_c" style="display:' + (friendNames.length ? 'none' : '') + '">' + celebHTML + '</div>' : '') +
+    '</div>' : '';
 
   // ラベル表示（KAN_LABELS）
   var kanLabelHTML = '';
