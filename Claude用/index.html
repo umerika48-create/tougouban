@@ -17647,7 +17647,26 @@ function openShiPanel(shiName, colIdx){
     var shiFriends = getFriendsWithShi(shiIdx, colIdx);
     if(shiFriends.length > 0){
       var isDayShi = (colIdx === 2);
-      shiFriendHTML = '<div style="margin-bottom:10px;padding:6px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);"><div style="font-size:10px;color:#b8a8ff;margin-bottom:4px;">👥 同じ地支の友達</div><div>' + buildFriendBadgeHTML(shiFriends, isDayShi, colIdx) + '</div></div>';
+      var shiFriendNames = shiFriends.filter(function(n){
+        var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
+        return fd && fd.category !== '有名人';
+      });
+      var shiCelebNames = shiFriends.filter(function(n){
+        var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
+        return fd && fd.category === '有名人';
+      });
+      var sTabUid = 'sftab_' + shiName + '_' + colIdx;
+      var sfBadgesF = shiFriendNames.length ? buildFriendBadgeHTML(shiFriendNames, isDayShi, colIdx) : '';
+      var sfBadgesC = shiCelebNames.length  ? buildFriendBadgeHTML(shiCelebNames,  isDayShi, colIdx) : '';
+      shiFriendHTML =
+        '<div style="margin-bottom:10px;padding:8px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border:1px solid rgba(168,154,255,0.2);">'
+        + '<div style="display:flex;gap:4px;flex-wrap:wrap;">'
+        + (shiFriendNames.length ? '<span data-fuid="' + sTabUid + '" data-ftype="f" onclick="toggleFriendBox(this)" style="font-size:10px;color:#b8a8ff;padding:2px 8px;border-radius:10px;background:transparent;border:1px solid rgba(168,154,255,0.3);cursor:pointer;display:inline-block;margin:2px;">👥 友達 ' + shiFriendNames.length + '</span>' : '')
+        + (shiCelebNames.length  ? '<span data-fuid="' + sTabUid + '" data-ftype="c" onclick="toggleFriendBox(this)" style="font-size:10px;color:#ffd700;padding:2px 8px;border-radius:10px;background:transparent;border:1px solid rgba(255,215,0,0.3);cursor:pointer;display:inline-block;margin:2px;">⭐ 有名人 ' + shiCelebNames.length + '</span>' : '')
+        + '</div>'
+        + (shiFriendNames.length ? '<div id="' + sTabUid + '_f" style="display:none;margin-top:6px;">' + sfBadgesF + '</div>' : '')
+        + (shiCelebNames.length  ? '<div id="' + sTabUid + '_c" style="display:none;margin-top:6px;">' + sfBadgesC + '</div>' : '')
+        + '</div>';
     }
   }
   // ラベル表示（SHI_LABELS）
