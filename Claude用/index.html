@@ -5271,6 +5271,42 @@ function checkShichuuShi(shiA, shiB) {
   return results;
 }
 
+
+function showShiRelDetail(shiA, shiB, relType) {
+  var titleEl = document.getElementById('hjTitle');
+  var descEl = document.getElementById('hjDesc');
+  if(!titleEl || !descEl) return;
+
+  var relLabels = {
+    '三合': {icon:'🌟', desc:'三合：3つの地支が集まると強いエネルギーを生む関係。チームになると力を発揮しやすい。この月は仲間・チームワークで動くと吉。'},
+    '六合': {icon:'🤝', desc:'六合：自然に引き合う関係。流れに乗りやすく、人との縁が活発になりやすい月。'},
+    '冲': {icon:'⚡', desc:'冲：正反対のエネルギーがぶつかる関係。変化・動き・刺激が起きやすい。良くも悪くも転機になりやすい月。'},
+    '刑': {icon:'⚖️', desc:'刑：価値観のズレや摩擦が生じやすい関係。人間関係に注意が必要な月。ただし自己鍛錬・成長のきっかけにもなる。'},
+    '害': {icon:'🌿', desc:'害：じわじわ消耗しやすい関係。無理をしすぎると体や心が疲れやすい月。ペースを落として丁寧に動くのが吉。'},
+    '破': {icon:'💥', desc:'破：信頼・ペース・計画が崩れやすい関係。想定外のことが起きやすい月。柔軟に対応することが大切。'},
+  };
+
+  var rel = relLabels[relType] || {icon:'', desc:'特別な関係なし（中立）。普通の月として過ごしやすい。'};
+
+  titleEl.textContent = shiA + ' × ' + shiB + '　' + rel.icon + ' ' + relType;
+  document.getElementById('hjYomi').textContent = '';
+  document.getElementById('hjBadge').textContent = '';
+  document.getElementById('hjContext').innerHTML = '';
+
+  var relColors = {'三合':'#ff6b9d','六合':'#66bb6a','冲':'#e53935','刑':'#ff7043','害':'#a1887f','破':'#7986cb'};
+  var relColor = relColors[relType] || '#b8a8ff';
+
+  descEl.innerHTML =
+    '<div style="padding:12px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid ' + relColor + '40;">' +
+    '<div style="font-size:24px;text-align:center;margin-bottom:10px;">' + rel.icon + '</div>' +
+    '<div style="display:inline-block;margin-bottom:10px;padding:3px 12px;border-radius:12px;font-size:13px;font-weight:700;background:rgba(255,255,255,0.06);color:' + relColor + ';border:1px solid ' + relColor + '40;">' + relType + '</div>' +
+    '<p style="font-size:13px;color:var(--text);line-height:1.8;margin:0;">' + rel.desc + '</p>' +
+    '</div>';
+
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
+
 function showYearHenseiDetail(key) {
   var data = window._yearHenseiData && window._yearHenseiData[key];
   if(!data) return;
@@ -6308,7 +6344,8 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
             // 流年支×日支の関係
             var ryuShiRels = (typeof checkShichuuShi === 'function') ? checkShichuuShi(ryuSs, SHI12ry[dayP.shi]) : [];
             ryuShiRels.forEach(function(r){
-              ryunenHTML += '<span style="display:inline-block;margin-left:3px;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;background:rgba(255,255,255,0.06);color:'+r.color+';border:1px solid '+r.color+'40;cursor:default;">'+r.type+'</span>';
+              var ryuArgA = ryuSs, ryuArgB = SHI12ry[dayP.shi], ryuArgT = r.type;
+              ryunenHTML += '<span onclick="event.stopPropagation();showShiRelDetail(\''+ryuArgA+'\',\''+ryuArgB+'\',\''+ryuArgT+'\')" style="display:inline-block;margin-left:3px;padding:1px 6px;border-radius:10px;font-size:9px;font-weight:700;background:rgba(255,255,255,0.06);color:'+r.color+';border:1px solid '+r.color+'40;cursor:pointer;">'+r.type+'</span>';
             });
           }
         }
@@ -6924,14 +6961,12 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
             ryugetsuKanStr = rgKan + rgShi;
           }
           // 流月支×日支の関係
-          var mgShiRels = (typeof checkShichuuShi === 'function') ? checkShichuuShi(SHI12rg[rgMon.shi], SHI12rg[dayP.shi]) : [];
-          if(mgShiRels.length > 0 && ryugetsuKanStr) {
-            ryugetsuKanStr += mgShiRels.map(function(r){ return '(' + r.type + ')'; }).join('');
-          }
+          var mgShiA = SHI12rg[rgMon.shi], mgShiB = SHI12rg[dayP.shi];
+          var mgShiRels = (typeof checkShichuuShi === 'function') ? checkShichuuShi(mgShiA, mgShiB) : [];
         }
       } catch(e){}
     }
-    months.push({ mo:mo, palace:palace, d:d, judgment:judgment, rokkuNm:rokkuNm, pmNum:pmNum, ryugetsuHensei:ryugetsuHensei, ryugetsuKanStr:ryugetsuKanStr, isCurrent:(mo===kMonth) });
+    months.push({ mo:mo, palace:palace, d:d, judgment:judgment, rokkuNm:rokkuNm, pmNum:pmNum, ryugetsuHensei:ryugetsuHensei, ryugetsuKanStr:ryugetsuKanStr, ryugetsuShiRels:mgShiRels||[], ryugetsuShiA:mgShiA||'', ryugetsuShiB:mgShiB||'', isCurrent:(mo===kMonth) });
   });
 
   /* 波グラフ（月版） */
@@ -7005,6 +7040,9 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
         (m.isCurrent?'<div class="cycle-now-badge">今月</div>':'')+
         '<div class="cycle-year" style="color:'+(m.isCurrent?'var(--gold-light)':isJan?'var(--gold)':'var(--muted)')+'">'+janLabel+'</div>'+
         '<div class="cycle-rank '+m.d.level+'" style="display:flex;align-items:baseline;gap:4px;justify-content:center;">'+m.d.rank+'<span style="font-size:10px;font-weight:400;opacity:.7;">'+m.d.score+'</span></div>'+
+        '<div style="font-size:9px;text-align:center;letter-spacing:1px;margin-bottom:2px;color:'+(m.d.score>=60?'#ffd700':m.d.score>=42?'#b8a8ff':m.d.score>=28?'#80b8ff':'#ff9999')+';">'+
+        (m.d.score>=60?'★★★★★':m.d.score>=42?'★★★★☆':m.d.score>=28?'★★★☆☆':m.d.score>=14?'★★☆☆☆':'★☆☆☆☆')+
+        '</div>'+
         '<div class="cycle-label" onclick="toggleCycleLabel(\'mlabel-'+m.mo+'\',event)">'+m.d.label+
           (m.d.labelSub ? '<span style="font-size:8px;color:var(--muted);display:block;">'+m.d.labelSub+'</span>' : '')+
           (m.palace===honmei ? '<span style="font-size:9px;color:#e8c97a;display:block;margin-top:2px;">※本命月</span>' : '')+
@@ -7019,7 +7057,10 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
             var popKey = 'ryM_'+m.mo+'_'+kYear;
             window._yearHenseiData = window._yearHenseiData||{};
             window._yearHenseiData[popKey] = {hensei:m.ryugetsuHensei, kan:m.ryugetsuKanStr.slice(0,1), shi:m.ryugetsuKanStr.slice(1), yr:kYear+'年'+m.mo+'月'};
-            return '<span onclick="event.stopPropagation();showYearHenseiDetail(\''+popKey+'\')" style="display:inline-block;margin-left:4px;padding:1px 6px;border-radius:10px;font-size:8px;font-weight:700;background:rgba(180,140,220,.15);border:1px solid rgba(180,140,220,.3);color:'+hCol+';cursor:pointer;">'+m.ryugetsuKanStr+'【'+m.ryugetsuHensei+'】</span>';
+            return '<span onclick="event.stopPropagation();showYearHenseiDetail(\''+popKey+'\')" style="display:inline-block;margin-left:4px;padding:1px 6px;border-radius:10px;font-size:8px;font-weight:700;background:rgba(180,140,220,.15);border:1px solid rgba(180,140,220,.3);color:'+hCol+';cursor:pointer;">'+m.ryugetsuKanStr+'【'+m.ryugetsuHensei+'】</span>'+
+              (m.ryugetsuShiRels && m.ryugetsuShiRels.length > 0 ? m.ryugetsuShiRels.map(function(r){
+                return '<span onclick="event.stopPropagation();showShiRelDetail(\''+m.ryugetsuShiA+'\',\''+m.ryugetsuShiB+'\',\''+r.type+'\')" style="display:inline-block;margin-left:3px;padding:1px 5px;border-radius:8px;font-size:8px;font-weight:700;background:rgba(255,255,255,0.06);color:'+r.color+';border:1px solid '+r.color+'40;cursor:pointer;">'+r.type+'</span>';
+              }).join('') : '');
           })() : '')+
         '</div>'+
       '</div>';
