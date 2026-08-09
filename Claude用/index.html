@@ -3,6 +3,9 @@
 <head>
 <script>
 // ES6 polyfills for older iOS Safari
+if(!String.prototype.padStart){String.prototype.padStart=function(n,p){var s=String(this);p=p===undefined?' ':String(p);while(s.length<n)s=p+s;return s.slice(-n);};}
+if(!String.prototype.padEnd){String.prototype.padEnd=function(n,p){var s=String(this);p=p===undefined?' ':String(p);while(s.length<n)s+=p;return s.slice(0,n);};}
+function _objValues(obj){var r=[];for(var k in obj){if(Object.prototype.hasOwnProperty.call(obj,k))r.push(obj[k]);}return r;}
 if(!Array.prototype.includes){Array.prototype.includes=function(v){return this.indexOf(v)!==-1;};}
 if(!String.prototype.includes){String.prototype.includes=function(v){return this.indexOf(v)!==-1;};}
 if(!Object.values){Object.values=function(o){return Object.keys(o).map(function(k){return o[k];});};}
@@ -15822,7 +15825,8 @@ function getSeasonBadge(friendName, colIdx) {
   if(colIdx !== 1 && colIdx !== 2) return null;
   var shi = getFriendMoonShi(friendName);
   if(!shi || !SHI_SEASON_COLORS[shi]) return null;
-  return {shi: shi, ...SHI_SEASON_COLORS[shi]};
+  var _sc = SHI_SEASON_COLORS[shi];
+  return {shi: shi, color: _sc.color, bg: _sc.bg, border: _sc.border, label: _sc.label};
 }
 
 function buildFriendBadgeHTML(names, showUnknown, colIdx) {
@@ -16525,7 +16529,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
 
   // 五行バランス
   var balance = calcBalance(unknownTime ? [year_p, month_p, day_p] : pillars);
-  var balTotal = Object.values(balance).reduce(function (a, b) {
+  var balTotal = _objValues(balance).reduce(function (a, b) {
     return a + b;
   }, 0);
 
@@ -16642,7 +16646,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   // 五行バランスHTML（アコーディオン付き）
   var gogyoNames = ['木', '火', '土', '金', '水'];
   var gogyoColors = ['#5db856', '#e05c40', '#c8a840', '#b0c4de', '#4aa8d8'];
-  var maxVal = Math.max.apply(Math, _toConsumableArray(Object.values(balance)).concat([1]));
+  var maxVal = Math.max.apply(Math, _toConsumableArray(_objValues(balance)).concat([1]));
   var gogyoDetail = {
     '木': {
       image: '樹木・成長・上昇',
