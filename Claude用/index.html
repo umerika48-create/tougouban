@@ -14411,41 +14411,41 @@ function buildShichuuCompatHTML(bdA, bdB) {
   function checkShi(shiA, shiB) {
     var results = [];
     // 三合
-    for(var sg of SHI_RELATIONS.sango) {
-      if(sg.group.includes(shiA) && sg.group.includes(shiB)) {
+    for(var _i0=0;_i0<SHI_RELATIONS.sango.length;_i0++){var sg=SHI_RELATIONS.sango[_i0];
+      if(sg.group.indexOf(shiA)!==-1 && sg.group.indexOf(shiB)!==-1) {
         results.push({type:'三合', name:sg.name, desc:sg.desc, score:sg.score, color:'#ff6b9d'});
       }
     }
     // 六合
-    for(var rl of SHI_RELATIONS.rikugo) {
+    for(var _i1=0;_i1<SHI_RELATIONS.rikugo.length;_i1++){var rl=SHI_RELATIONS.rikugo[_i1];
       if((rl.pair[0]===shiA&&rl.pair[1]===shiB)||(rl.pair[0]===shiB&&rl.pair[1]===shiA)) {
         results.push({type:'六合', name:rl.name, desc:rl.desc, score:rl.score, color:'#66bb6a'});
       }
     }
     // 冲
-    for(var ch of SHI_RELATIONS.chu) {
+    for(var _i2=0;_i2<SHI_RELATIONS.chu.length;_i2++){var ch=SHI_RELATIONS.chu[_i2];
       if((ch.pair[0]===shiA&&ch.pair[1]===shiB)||(ch.pair[0]===shiB&&ch.pair[1]===shiA)) {
         results.push({type:'冲', name:ch.name, desc:ch.desc, score:ch.score, color:'#e53935'});
       }
     }
     // 刑
-    for(var ke of SHI_RELATIONS.kei) {
+    for(var _i3=0;_i3<SHI_RELATIONS.kei.length;_i3++){var ke=SHI_RELATIONS.kei[_i3];
       if(ke.pair) {
         if((ke.pair[0]===shiA&&ke.pair[1]===shiB)||(ke.pair[0]===shiB&&ke.pair[1]===shiA)) {
           results.push({type:'刑', name:ke.name, desc:ke.desc, score:ke.score, color:'#ff7043'});
         }
-      } else if(ke.group && ke.group.includes(shiA) && ke.group.includes(shiB) && shiA!==shiB) {
+      } else if(ke.group && ke.group.indexOf(shiA)!==-1 && ke.group.indexOf(shiB)!==-1 && shiA!==shiB) {
         results.push({type:'刑', name:ke.name, desc:ke.desc, score:ke.score, color:'#ff7043'});
       }
     }
     // 害
-    for(var ga of SHI_RELATIONS.gai) {
+    for(var _i4=0;_i4<SHI_RELATIONS.gai.length;_i4++){var ga=SHI_RELATIONS.gai[_i4];
       if((ga.pair[0]===shiA&&ga.pair[1]===shiB)||(ga.pair[0]===shiB&&ga.pair[1]===shiA)) {
         results.push({type:'害', name:ga.name, desc:ga.desc, score:ga.score, color:'#a1887f'});
       }
     }
     // 破
-    for(var ha of SHI_RELATIONS.ha) {
+    for(var _i5=0;_i5<SHI_RELATIONS.ha.length;_i5++){var ha=SHI_RELATIONS.ha[_i5];
       if((ha.pair[0]===shiA&&ha.pair[1]===shiB)||(ha.pair[0]===shiB&&ha.pair[1]===shiA)) {
         results.push({type:'破', name:ha.name, desc:ha.desc, score:ha.score, color:'#7986cb'});
       }
@@ -14461,12 +14461,12 @@ function buildShichuuCompatHTML(bdA, bdB) {
   function checkGogyo(shiA, shiB) {
     var goA = SHI_GOGYO[SHI12.indexOf(shiA)], goB = SHI_GOGYO[SHI12.indexOf(shiB)];
     if(!goA || !goB) return null;
-    for(var sg of SHI_RELATIONS.sogo) {
-      if((sg.pair[0]===goA&&sg.pair[1]===goB)||(sg.pair[0]===goB&&sg.pair[1]===goA)) {
-        return {name:sg.name, desc:sg.desc, score:sg.score, color:'#66bb6a', goA, goB};
+    for(var _i6=0;_i6<SHI_RELATIONS.sogo.length;_i6++){var sg2=SHI_RELATIONS.sogo[_i6];
+      if((sg2.pair[0]===goA&&sg2.pair[1]===goB)||(sg2.pair[0]===goB&&sg2.pair[1]===goA)) {
+        return {name:sg2.name, desc:sg2.desc, score:sg2.score, color:'#66bb6a', goA:goA, goB:goB};
       }
     }
-    for(var sk of SHI_RELATIONS.sokoku) {
+    for(var _i7=0;_i7<SHI_RELATIONS.sokoku.length;_i7++){var sk=SHI_RELATIONS.sokoku[_i7];
       if((sk.pair[0]===goA&&sk.pair[1]===goB)||(sk.pair[0]===goB&&sk.pair[1]===goA)) {
         return {name:sk.name, desc:sk.desc, score:sk.score, color:'#ff7043', goA, goB};
       }
