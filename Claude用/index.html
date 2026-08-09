@@ -8155,6 +8155,8 @@ function calculateCompat() {
   html = _purpleTopTab + html;
   // tab-personal-wrap-topは非表示（相性鑑定では個人カード不要）
   html = html.replace('id="tab-personal-wrap-top"', 'id="tab-personal-wrap-top" style="display:none;"');
+  // _compatTabOpenStateもリセット（再鑑定時に前の状態を引き継がない）
+  window._compatTabOpenState = null;
 
   html += makeAccordion('kyusei-compat', '✦ 九星気学 相性', '<div style="display:flex;gap:6px;margin-bottom:10px;">' +
     '<button id="cr-btn-me" onclick="switchCompatResult(\'me\')" style="padding:2px 10px;border-radius:20px;border:1px solid #f472b6;background:#f472b6;color:#fff;font-size:10px;font-weight:700;cursor:pointer;">あなた視点</button>' +
@@ -9885,7 +9887,7 @@ function switchCompatTab(tab, source) {
   /* 押されたタブの場所(上/下)に応じて表示先を切り替え、もう一方は空にする */
   var wrap     = document.getElementById(useTop ? 'tab-personal-wrap-top' : 'tab-personal-wrap');
   var wrapOther= document.getElementById(useTop ? 'tab-personal-wrap'     : 'tab-personal-wrap-top');
-  if (wrapOther) wrapOther.innerHTML = '';
+  if (wrapOther) { wrapOther.innerHTML = ''; wrapOther.style.display = 'none'; }
   if (!wrap) return;
 
   var honmei = getHonmeiStar(bd);
