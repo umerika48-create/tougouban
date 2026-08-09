@@ -5,6 +5,10 @@
 // ES6 polyfills for older iOS Safari
 if(!String.prototype.padStart){String.prototype.padStart=function(n,p){var s=String(this);p=p===undefined?' ':String(p);while(s.length<n)s=p+s;return s.slice(-n);};}
 if(!String.prototype.padEnd){String.prototype.padEnd=function(n,p){var s=String(this);p=p===undefined?' ':String(p);while(s.length<n)s+=p;return s.slice(0,n);};}
+if(!Array.prototype.find){Array.prototype.find=function(fn){for(var i=0;i<this.length;i++){if(fn(this[i],i,this))return this[i];}return undefined;};}
+if(!Array.prototype.findIndex){Array.prototype.findIndex=function(fn){for(var i=0;i<this.length;i++){if(fn(this[i],i,this))return i;}return -1;};}
+if(!String.prototype.repeat){String.prototype.repeat=function(n){var s='';for(var i=0;i<n;i++)s+=this;return s;};}
+if(!Object.assign){Object.assign=function(t){for(var i=1;i<arguments.length;i++){var s=arguments[i];if(s){for(var k in s){if(Object.prototype.hasOwnProperty.call(s,k))t[k]=s[k];}}}return t;};}
 function _objValues(obj){var r=[];for(var k in obj){if(Object.prototype.hasOwnProperty.call(obj,k))r.push(obj[k]);}return r;}
 if(!Array.prototype.includes){Array.prototype.includes=function(v){return this.indexOf(v)!==-1;};}
 if(!String.prototype.includes){String.prototype.includes=function(v){return this.indexOf(v)!==-1;};}
@@ -17460,24 +17464,17 @@ function openJyu12Panel(name, context){
 /* openHjMemo and saveHjMemo are defined above */
 
 /* ======= メモ保存・読み込み（Artifact/Cloudflare両対応） ======= */
-async function saveMemoStorage(key, value) {
+function saveMemoStorage(key, value) {
   // Artifact環境（window.storage）
   if(typeof window.storage !== 'undefined') {
-    try { await window.storage.set('memo_' + key, value); } catch(e) {}
+    try { window.storage.set('memo_' + key, value); } catch(e) {}
   }
   // Cloudflare環境（localStorage）
   try { localStorage.setItem('sakurako_memo_' + key, value); } catch(e) {}
 }
 
-async function loadMemoStorage(key) {
-  // Artifact環境（window.storage）
-  if(typeof window.storage !== 'undefined') {
-    try {
-      var r = await window.storage.get('memo_' + key);
-      if(r && r.value) return r.value;
-    } catch(e) {}
-  }
-  // Cloudflare環境（localStorage）
+function loadMemoStorage(key) {
+  // Cloudflare環境（localStorage）のみ同期で対応
   try {
     var v = localStorage.getItem('sakurako_memo_' + key);
     if(v) return v;
@@ -18043,7 +18040,7 @@ function updateYakodokiDefault(timeStr4, unknownTime) {
 /* ======= 夜子時設定 END ======= */
 
 /* ======= 命の主星AI鑑定文・理由表示 ======= */
-async function generateNikkanAI(nichi, moonShi, dayShi, moonKan) {
+function generateNikkanAI(nichi, moonShi, dayShi, moonKan) {
   var el = document.getElementById('nikkan-ai-result');
   if(!el) return;
   el.innerHTML = '<div style="color:var(--sk-gold-light);font-size:12px;padding:8px;">✨ 生成中...</div>';
@@ -18053,8 +18050,7 @@ async function generateNikkanAI(nichi, moonShi, dayShi, moonKan) {
 
   var prompt = 'あなたは四柱推命の占い師です。以下の命式情報をもとに、お客様への鑑定文を日本語で書いてください。\n\n命式情報：\n- 日干（本質）：' + nichi + '\n- 月支（季節）：' + moonShi + '（' + season + '）\n- 月干（才能・社会での出し方）：' + moonKan + '\n- 日支（内面・パートナーに見せる素顔）：' + dayShi + '\n\n【鑑定文の書き方ルール】\n・「頑張り屋さん」「負けず嫌い」「人に合わせるのが得意」「面倒見がいい」「芯が強い」「感受性が豊か」など、誰でもわかる日常的な言葉で性格を表現する\n・疑問文は使わない。断定系で書く\n・「あなたはとても〇〇な方ですよ」「一見〇〇に見られるかもしれませんが、実は〇〇です」のようなギャップ表現を使う\n・お客様が「そうそう、これ私のことだ！」と感じる言い当てられた感を出す\n・占い用語・専門用語は一切使わない（甲・日干・月支・五行・通変星などの言葉は絶対に出さない）\n・性格・恋愛・仕事それぞれで、具体的な場面や行動が浮かぶような表現にする\n・3セクションで書く：\n  【あなたはこういう人】（性格・本質・2〜3文）\n  【恋愛では】（恋愛傾向・2文）\n  【仕事・将来では】（向いている方向性・2文）\n・各セクションはセクション名から始めずに本文のみ書く\n・全体で250〜300文字程度\n\n【例文イメージ】\nあなたはこういう人：「とても粘り強い方ですよ。一見さらっとしているように見られるかもしれませんが、実は誰よりも最後まで残るタイプです。」\n恋愛では：「一度好きになったら一途で、相手のことをとことん大切にするタイプですよ。」\n仕事では：「コツコツ積み上げることが得意で、続けるほど評価される方ですよ。」';
 
-  try {
-    var res = await fetch('https://api.anthropic.com/v1/messages', {
+  fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true'},
       body: JSON.stringify({
@@ -18062,8 +18058,7 @@ async function generateNikkanAI(nichi, moonShi, dayShi, moonKan) {
         max_tokens: 1000,
         messages: [{role: 'user', content: prompt}]
       })
-    });
-    var data = await res.json();
+    }).then(function(res){ return res.json(); }).then(function(data) {
     var text = data.content && data.content[0] ? data.content[0].text : '';
 
     if(text) {
@@ -18104,9 +18099,9 @@ async function generateNikkanAI(nichi, moonShi, dayShi, moonKan) {
     } else {
       el.innerHTML = '<p style="font-size:12px;color:var(--muted);">生成できませんでした。</p>';
     }
-  } catch(e) {
+  }).catch(function(e) {
     el.innerHTML = '<p style="font-size:12px;color:var(--muted);">エラーが発生しました。</p>';
-  }
+  });
 }
 
 function getSeasonEffect(nichiGo, moonShi) {
