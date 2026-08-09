@@ -4995,7 +4995,7 @@ function runShichuu() {
   var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
   var ew = document.getElementById('enhanced-wrap');
   if(ew) ew.innerHTML = '';
-  FRIEND_MEISHIKI_CACHE = null; // 正午計算でキャッシュクリア
+  FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {}; // 正午計算でキャッシュクリア
 
   // 友達データをグローバルに保存
   window._shichuuTagData = {};
@@ -5045,7 +5045,7 @@ function runShichuu() {
 
   var html = '<div style="padding:16px;">'
     + '<div style="font-size:11px;color:var(--muted);margin-bottom:16px;">タップすると友達名が表示されます</div>'
-    + (function(){ FRIEND_MEISHIKI_CACHE = null; return ''; })()  // ここでキャッシュクリア
+    + (function(){ FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {}; return ''; })()  // ここでキャッシュクリア
     + makeTagSection('月干', KAN10, 1, true)
     + makeTagSection('日干', KAN10, 2, true)
     + makeTagSection('月支', SHI12, 1, false)
@@ -15469,7 +15469,7 @@ function saveFriendDataFromPaste(){
     return;
   }
   FRIEND_DATA = merged;
-  FRIEND_MEISHIKI_CACHE = null;
+  FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {};
   if(statusEl){ statusEl.style.color='#7ee787'; statusEl.textContent = '新規' + addedCount + '人・更新' + updatedCount + '人。合計' + merged.length + '人になりました。次回このアプリを開いた時も反映されます。'; }
   var listEl = document.getElementById('friend-data-list');
   if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA);
@@ -15479,11 +15479,16 @@ function saveFriendDataFromPaste(){
 }
 
 /* 友達の命式を計算してキャッシュ */
-var FRIEND_MEISHIKI_CACHE = null;
+var FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {};
 
-function getFriendMeishiki() {
-  if(FRIEND_MEISHIKI_CACHE) return FRIEND_MEISHIKI_CACHE;
-  FRIEND_MEISHIKI_CACHE = [];
+function getFriendMeishiki(forceYakodoki) {
+  var isYak = (forceYakodoki !== undefined) ? forceYakodoki : (typeof window._yakodoki !== 'undefined' ? window._yakodoki : false);
+  // 0時用・23時用の2種キャッシュ
+  var cacheKey = isYak ? '_yak' : '_nor';
+  if(!window._friendMeishikiCache) window._friendMeishikiCache = {};
+  if(window._friendMeishikiCache[cacheKey]) return window._friendMeishikiCache[cacheKey];
+  // 後方互換：既存のFRIEND_MEISHIKI_CACHEも更新
+  var result = [];
   for(var i=0; i<FRIEND_DATA.length; i++) {
     var f = FRIEND_DATA[i];
     try {
@@ -15496,9 +15501,11 @@ function getFriendMeishiki() {
         hourVal=parseInt(timeStr4.slice(0,2));
         minVal=parseInt(timeStr4.slice(2,4));
       }
-      // 時刻不明のとき → 常に正午（当日扱い）で計算
+      // 時刻不明のとき → 0時モード=正午、23時モード=23:30で計算
       if(unknownTime){
-        hourVal=12; minVal=0; unknownTime=false;
+        hourVal = isYak ? 23 : 12;
+        minVal  = isYak ? 30 : 0;
+        unknownTime = false;
       }
       var placeOffset=0;
       if(f.place && typeof lookupCity === 'function'){
@@ -15506,41 +15513,41 @@ function getFriendMeishiki() {
         if(cd && cd.lon) placeOffset = Math.round((cd.lon-135)*4);
       }
       var adjMin = minVal - placeOffset;
-      var birthDT;      // 地方時補正あり（日支・時支用）
-      var birthDTraw;   // 補正なし（月支・年支用）
+      var birthDT;
+      var birthDTraw;
       if(unknownTime){
         birthDT    = new Date(yr,mo-1,da,12,0,0,0);
         birthDTraw = new Date(yr,mo-1,da,12,0,0,0);
       } else {
         birthDT    = new Date(yr,mo-1,da,hourVal,adjMin,0,0);
-        birthDTraw = new Date(yr,mo-1,da,hourVal,minVal,0,0); // 補正なし
+        birthDTraw = new Date(yr,mo-1,da,hourVal,minVal,0,0);
       }
-      var _yakodoki2 = (typeof window._yakodoki !== 'undefined') ? window._yakodoki : true;
-      // 夜子時判定：元の時刻が23時以降かつbirthDTが既に翌日になっていない場合のみ+1日
+      // 夜子時判定
       var nicchiDate = birthDT;
-      if(!unknownTime && _yakodoki2 && hourVal >= 23){
-        // birthDTが既に翌日になっている（adjMin>=60で自動繰越）場合は+1日しない
+      if(isYak && hourVal >= 23){
         if(birthDT.getDate() === da){
           nicchiDate = new Date(birthDT.getTime()+86400000);
         }
       }
-      var year_p  = calcNenchu(birthDT);
-      var month_p = calcGetschu(birthDT, year_p.kan);
+      var year_p  = calcNenchu(birthDTraw);
+      var month_p = calcGetschu(birthDTraw, year_p.kan);
       var day_p   = calcNicchu(nicchiDate);
       var hour_p  = null;
-      if(!unknownTime){
+      if(!unknownTime && timeStr4){
         var adjDate=new Date(yr,mo-1,da,hourVal,adjMin);
         hour_p=calcJicchu(adjDate.getHours(),adjDate.getMinutes(),day_p.kan);
       }
-      FRIEND_MEISHIKI_CACHE.push({
+      result.push({
         name: f.name,
         year_p: year_p, month_p: month_p, day_p: day_p, hour_p: hour_p
       });
     } catch(e) {
-      FRIEND_MEISHIKI_CACHE.push({name:f.name, year_p:null, month_p:null, day_p:null, hour_p:null});
+      result.push({name:f.name, year_p:null, month_p:null, day_p:null, hour_p:null});
     }
   }
-  return FRIEND_MEISHIKI_CACHE;
+  window._friendMeishikiCache[cacheKey] = result;
+  FRIEND_MEISHIKI_CACHE = result; // 後方互換
+  return result;
 }
 
 /* 特定の柱×干に一致する友達を返す */
@@ -15643,7 +15650,7 @@ function resetAllFriendData() {
 
 function confirmResetAllFriendData() {
   FRIEND_DATA.splice(0, FRIEND_DATA.length);
-  FRIEND_MEISHIKI_CACHE = null;
+  FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {};
   try { /* localStorage削除無効化 */ } catch(e) {}
   var modal = document.getElementById('friend-reset-modal');
   if(modal) modal.style.display = 'none';
@@ -15664,7 +15671,7 @@ function deleteFriend(name) {
   var idx = FRIEND_DATA.findIndex(function(d){ return d.name === name; });
   if(idx === -1) return;
   FRIEND_DATA.splice(idx, 1);
-  FRIEND_MEISHIKI_CACHE = null;
+  FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {};
   try { /* localStorage保存無効化 */ } catch(e) {}
   var listEl = document.getElementById('friend-data-list');
   if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA, window._friendCategoryFilter && window._friendCategoryFilter !== '全員' ? window._friendCategoryFilter : null);
@@ -15707,11 +15714,11 @@ function saveEditFriend() {
   f.place = newPlace;
   f.memo = newMemo;
   f.category = newCategory;
-  FRIEND_MEISHIKI_CACHE = null;
+  FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {};
   try { /* localStorage保存無効化 */ } catch(e) {}
   closeEditFriendModal();
   // キャッシュをクリアして再描画
-  FRIEND_MEISHIKI_CACHE = null;
+  FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {};
   var listEl = document.getElementById('friend-data-list');
   if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA);
   // 命式カードが表示中なら再計算
