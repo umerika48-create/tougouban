@@ -16519,12 +16519,7 @@ function buildPillarCell(pillar, colClass, nichikan_idx, label){
 }
 
 
-function _toConsumableArray(r) { return _arrayWithoutHoles(r) || _iterableToArray(r) || _unsupportedIterableToArray(r) || _nonIterableSpread(); }
-function _nonIterableSpread() { throw new TypeError("Invalid attempt to spread non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _iterableToArray(r) { if ("undefined" != typeof Symbol && null != r[Symbol.iterator] || null != r["@@iterator"]) return Array.from(r); }
-function _arrayWithoutHoles(r) { if (Array.isArray(r)) return _arrayLikeToArray(r); }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
+function _toConsumableArray(r) { return Array.isArray(r) ? r.slice() : []; }
 function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hideTabs) {
   var nik = day_p.kan; // 日干インデックス
   var pillars = [year_p, month_p, day_p, hour_p];
@@ -16871,9 +16866,9 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   };
 
   // 天干一覧（タップで展開）
-  var usedKan = [Array.from(new Set(pillars.filter(Boolean).map(function (p) {
-    return KAN10[p.kan];
-  })))];
+  var _kkTmp = pillars.filter(Boolean).map(function (p) { return KAN10[p.kan]; });
+  var _kkSeen = {}; var usedKan = [];
+  for(var _kki=0;_kki<_kkTmp.length;_kki++){if(!_kkSeen[_kkTmp[_kki]]){_kkSeen[_kkTmp[_kki]]=1;usedKan.push(_kkTmp[_kki]);}}
   var tenkanList = usedKan.map(function (k) {
     var d = TENKAN_DETAIL[k];
     var gc = kanClass(KAN10.indexOf(k));
@@ -18240,7 +18235,7 @@ function toggleSakurakoText(btn) {
   btn.textContent = isOpen ? 'さくらこ文章' : '閉じる';
 }
 
-/* ======= 命の主星AI鑑定文・理由表示 END ======= v3 */
+/* ======= 命の主星AI鑑定文・理由表示 END ======= v1786258859 */
 // ROKKU_UNMEISU汚染チェック（起動時）
 (function() {
   if(typeof ROKKU_UNMEISU === 'undefined') return;
