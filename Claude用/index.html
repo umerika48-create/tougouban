@@ -15584,7 +15584,8 @@ function showFriendMeishiki(name, isYakodoki) {
   var unknown = !f.time || f.timeUnknown;
   var timeStr = f.time || '';
   if(unknown) {
-    timeStr = isYakodoki ? '23:30' : '12:00';
+    // 時刻不明の場合：0時モード=正午計算、23時モード=FORCE_UNKNOWNで夜子の刻判定
+    timeStr = isYakodoki ? 'FORCE_UNKNOWN' : '12:00';
   }
 
   // 専用モーダルに表示
