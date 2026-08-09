@@ -3,6 +3,13 @@
 <head>
 <script>
 // ES6 polyfills for older iOS Safari
+window.onerror = function(msg, src, line, col, err) {
+  var d = document.createElement('div');
+  d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:red;color:white;font-size:11px;padding:8px;z-index:99999;word-break:break-all;';
+  d.textContent = 'ERROR: ' + msg + ' | src:' + src + ' | line:' + line + ' | col:' + col + (err ? ' | '+err.stack : '');
+  document.body ? document.body.appendChild(d) : document.addEventListener('DOMContentLoaded', function(){ document.body.appendChild(d); });
+  return false;
+};
 if(!String.prototype.padStart){String.prototype.padStart=function(n,p){var s=String(this);p=p===undefined?' ':String(p);while(s.length<n)s=p+s;return s.slice(-n);};}
 if(!String.prototype.padEnd){String.prototype.padEnd=function(n,p){var s=String(this);p=p===undefined?' ':String(p);while(s.length<n)s+=p;return s.slice(0,n);};}
 if(!Array.prototype.find){Array.prototype.find=function(fn){for(var i=0;i<this.length;i++){if(fn(this[i],i,this))return this[i];}return undefined;};}
