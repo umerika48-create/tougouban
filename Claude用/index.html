@@ -10299,542 +10299,549 @@ function autoCalculate() {
 }
 
 function calculate() {
-  /* 新規鑑定実行時は年運サイクルの表示年状態をリセット（前回の年が残らないように） */
-  window._nyCurrentYear = null;
-  window._nyCurrentCycleYear = null;
-  window._nyCurrentCycleMonth = null;
-  syncBirthdate();
-  var birthdate   = document.getElementById('birthdate').value;
-  var targetYear  = parseInt(document.getElementById('targetYear').value);
-  var targetMonth = parseInt(document.getElementById('targetMonth').value);
-  var situation   = document.getElementById('loveSituation').value;
-  if(situation==='horoscope'){ runHoroscope(); return; }
-  if(situation==='lovetype'){
-    var bd=document.getElementById('birthdate').value;
-    if(!bd){document.getElementById('bd-error').textContent='生年月日を入力してください';return;}
-    var rd=document.getElementById('result');
-    rd.innerHTML='<div class="card fade-up" style="margin-top:24px;"><div style="display:flex;align-items:center;justify-content:space-between;"><div class="card-title" style="color:#a89aff;margin-bottom:0;">✨ 恋愛タイプ診断</div><button onclick="copyLoveDiag(this)" style="padding:5px 12px;border-radius:14px;border:1px solid #a89aff;background:rgba(168,154,255,.1);color:#a89aff;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">📋 コピー</button></div>'+buildLoveDiag(bd)+'</div>';
-    rd.style.display='block';rd.scrollIntoView({behavior:'smooth',block:'start'});return;
-  }
-  var err = document.getElementById('bd-error');
+  try {
+    /* 新規鑑定実行時は年運サイクルの表示年状態をリセット（前回の年が残らないように） */
+    window._nyCurrentYear = null;
+    window._nyCurrentCycleYear = null;
+    window._nyCurrentCycleMonth = null;
+    syncBirthdate();
+    var birthdate   = document.getElementById('birthdate').value;
+    var targetYear  = parseInt(document.getElementById('targetYear').value);
+    var targetMonth = parseInt(document.getElementById('targetMonth').value);
+    var situation   = document.getElementById('loveSituation').value;
+    if(situation==='horoscope'){ runHoroscope(); return; }
+    if(situation==='lovetype'){
+      var bd=document.getElementById('birthdate').value;
+      if(!bd){document.getElementById('bd-error').textContent='生年月日を入力してください';return;}
+      var rd=document.getElementById('result');
+      rd.innerHTML='<div class="card fade-up" style="margin-top:24px;"><div style="display:flex;align-items:center;justify-content:space-between;"><div class="card-title" style="color:#a89aff;margin-bottom:0;">✨ 恋愛タイプ診断</div><button onclick="copyLoveDiag(this)" style="padding:5px 12px;border-radius:14px;border:1px solid #a89aff;background:rgba(168,154,255,.1);color:#a89aff;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;">📋 コピー</button></div>'+buildLoveDiag(bd)+'</div>';
+      rd.style.display='block';rd.scrollIntoView({behavior:'smooth',block:'start'});return;
+    }
+    var err = document.getElementById('bd-error');
 
-  if(!document.getElementById('bd-text').value.trim()){
-    err.textContent='生年月日を入力してください（例：1990/1/1）'; return;
-  }
-  if(!birthdate) return;
-  if(isNaN(targetYear)||targetYear<1900||targetYear>2050){
-    err.textContent='年を正しく入力してください（1900〜2050）'; return;
-  }
-  if(isNaN(targetMonth)||targetMonth<1||targetMonth>12){
-    err.textContent='月は1〜12で入力してください'; return;
-  }
+    if(!document.getElementById('bd-text').value.trim()){
+      err.textContent='生年月日を入力してください（例：1990/1/1）'; return;
+    }
+    if(!birthdate) return;
+    if(isNaN(targetYear)||targetYear<1900||targetYear>2050){
+      err.textContent='年を正しく入力してください（1900〜2050）'; return;
+    }
+    if(isNaN(targetMonth)||targetMonth<1||targetMonth>12){
+      err.textContent='月は1〜12で入力してください'; return;
+    }
 
-  /* ── 気学年月補正（立春・節入りベース） ──
-     targetYear/targetMonthはユーザー入力値（カレンダー年月）
-     kYearは年盤計算用の気学年（立春基準）
-     centerYearは月盤の月中宮計算専用の年               */
-  var _kgToday = new Date();
-  var _kgY = _kgToday.getFullYear(), _kgM = _kgToday.getMonth()+1, _kgD = _kgToday.getDate();
-  /* ユーザーが入力した targetYear/targetMonth を気学年月として解釈する。
-     入力値はすでに初期値セット時に getKigakuMonth() で補正されているが、
-     ユーザーが手動で変更した場合は補正なし入力が来る可能性がある。
-     ここでは「入力値をそのまま気学年月として信頼する」設計にする。
-     ただし月中宮計算に必要な centerYear だけは内部で正しく導出する。 */
-  var kYear      = targetYear;   /* 気学年（立春補正済み前提） */
-  var kMonth     = targetMonth;  /* 気学月（節入り補正済み前提） */
-  /* centerYear: 月中宮計算用の年 = kYear（全月統一）
-     1月（小寒）も含めて全てkYearを使う。
-     例: 2026年1月7日 → kYear=2025, centerYear=2025
-     getMonthCenter(2025,1)=六白 ← 八雲院照合済み */
-  var centerYear = kYear; /* 全月kYearを使用 */
+    /* ── 気学年月補正（立春・節入りベース） ──
+       targetYear/targetMonthはユーザー入力値（カレンダー年月）
+       kYearは年盤計算用の気学年（立春基準）
+       centerYearは月盤の月中宮計算専用の年               */
+    var _kgToday = new Date();
+    var _kgY = _kgToday.getFullYear(), _kgM = _kgToday.getMonth()+1, _kgD = _kgToday.getDate();
+    /* ユーザーが入力した targetYear/targetMonth を気学年月として解釈する。
+       入力値はすでに初期値セット時に getKigakuMonth() で補正されているが、
+       ユーザーが手動で変更した場合は補正なし入力が来る可能性がある。
+       ここでは「入力値をそのまま気学年月として信頼する」設計にする。
+       ただし月中宮計算に必要な centerYear だけは内部で正しく導出する。 */
+    var kYear      = targetYear;   /* 気学年（立春補正済み前提） */
+    var kMonth     = targetMonth;  /* 気学月（節入り補正済み前提） */
+    /* centerYear: 月中宮計算用の年 = kYear（全月統一）
+       1月（小寒）も含めて全てkYearを使う。
+       例: 2026年1月7日 → kYear=2025, centerYear=2025
+       getMonthCenter(2025,1)=六白 ← 八雲院照合済み */
+    var centerYear = kYear; /* 全月kYearを使用 */
 
-  /* ── データ算出 ── */
-  var honmei   = getHonmeiStar(birthdate);
-  /* 年運/月運サイクルの「前後」切替ボタン（shiftNineYear/shiftMonth）が参照する変数をセット
-     ※これが無いとソロ鑑定時にボタンを押しても何も起きない不具合になる */
-  window._nyHonmeiMe      = honmei;
-  window._nyBirthdateMe   = birthdate;
-  window._nyHonmeiPartner = null;
-  window._nyKYear         = kYear;
-  window._nykMonth        = kMonth;
-  var sd       = STARS[honmei];
-  var yearBoard= getYearBoard(kYear);
-  var monthBoard= getMonthBoard(centerYear, kMonth);
-  var judgment = judgeDirections(honmei, yearBoard);
-  var yearPal  = getYearPalace(honmei, kYear);
-  var monthPal = getMonthPalace(honmei, centerYear, kMonth);
-  var yd       = getPalaceData(honmei, yearPal, kYear);    /* 五行補正済み */
-  var md       = getPalaceData(honmei, monthPal, kYear);   /* 五行補正済み */
-  var yColor   = getLuckColor(yd.level);
-  var mColor   = getLuckColor(md.level);
+    /* ── データ算出 ── */
+    var honmei   = getHonmeiStar(birthdate);
+    /* 年運/月運サイクルの「前後」切替ボタン（shiftNineYear/shiftMonth）が参照する変数をセット
+       ※これが無いとソロ鑑定時にボタンを押しても何も起きない不具合になる */
+    window._nyHonmeiMe      = honmei;
+    window._nyBirthdateMe   = birthdate;
+    window._nyHonmeiPartner = null;
+    window._nyKYear         = kYear;
+    window._nykMonth        = kMonth;
+    var sd       = STARS[honmei];
+    var yearBoard= getYearBoard(kYear);
+    var monthBoard= getMonthBoard(centerYear, kMonth);
+    var judgment = judgeDirections(honmei, yearBoard);
+    var yearPal  = getYearPalace(honmei, kYear);
+    var monthPal = getMonthPalace(honmei, centerYear, kMonth);
+    var yd       = getPalaceData(honmei, yearPal, kYear);    /* 五行補正済み */
+    var md       = getPalaceData(honmei, monthPal, kYear);   /* 五行補正済み */
+    var yColor   = getLuckColor(yd.level);
+    var mColor   = getLuckColor(md.level);
 
-  /* 統合コメント：運気レベル × 吉方位の有無 */
-  var hasGood  = judgment.auspicious.length > 0;
-  var combo    = COMBO_MSG[yd.level][hasGood ? 'has_good' : 'no_good'];
+    /* 統合コメント：運気レベル × 吉方位の有無 */
+    var hasGood  = judgment.auspicious.length > 0;
+    var combo    = COMBO_MSG[yd.level][hasGood ? 'has_good' : 'no_good'];
 
-  /* 恋愛メッセージ */
-  var loveMsg  = LOVE_MSG[situation][yd.level];
+    /* 恋愛メッセージ */
+    var loveMsg  = LOVE_MSG[situation][yd.level];
 
-  /* 最良吉方位（恋愛） */
-  var bestLoveDir = null;
-  if(judgment.auspicious.length > 0){
-    bestLoveDir = judgment.auspicious[0].dir;
-  }
+    /* 最良吉方位（恋愛） */
+    var bestLoveDir = null;
+    if(judgment.auspicious.length > 0){
+      bestLoveDir = judgment.auspicious[0].dir;
+    }
 
-  var html = '<div style="text-align:right;margin-bottom:8px;">'+
-    '<span style="font-size:9px;color:var(--muted);margin-right:6px;">運気ラベルスタイル</span>'+
-    '<button onclick="document.body.classList.remove(\'label-style-d\');this.style.opacity=1;this.nextSibling.style.opacity=.4;" '+
-      'style="font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#c8c0d8;cursor:pointer;margin-right:4px;">B</button>'+
-    '<button onclick="document.body.classList.add(\'label-style-d\');this.style.opacity=1;this.previousSibling.style.opacity=.4;" '+
-      'style="font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid rgba(201,168,76,.35);background:transparent;color:#c9a84c;cursor:pointer;">D</button>'+
-  '</div>';
-  window._currentHonmei = honmei; // 月盤切り替えで参照
-
-  /* ① 本命星バナー */
-  var lifeNum   = getLifePathNumber(birthdate);
-  var futureNum = getFutureNumber(birthdate);
-  var pastNum   = getPastNumber(birthdate);
-  var lifeDisp   = formatCoreNum(lifeNum);
-  var futureDisp = formatCoreNum(futureNum);
-  var pastDisp   = formatCoreNum(pastNum);
-  var lifeBase   = (lifeNum === 11 || lifeNum === 22 || lifeNum === 33) ? lifeNum : lifeNum;
-  var futureBase = (futureNum === 11 || futureNum === 22 || futureNum === 33) ? futureNum : futureNum;
-  var pastBase   = (pastNum === 11 || pastNum === 22 || pastNum === 33) ? pastNum : pastNum;
-
-  /* 年齢計算（本命星バナー用） */
-  var _bdParts = birthdate.split('-');
-  var _by = +_bdParts[0], _bm = +_bdParts[1], _bd = +_bdParts[2];
-  var _now = new Date();
-  var _age = _now.getFullYear() - _by;
-  if (_now.getMonth()+1 < _bm || (_now.getMonth()+1 === _bm && _now.getDate() < _bd)) _age--;
-
-  /* 本命星カード切替ボタン（相性鑑定中のみ表示） */
-  var _honmeiBtnHTML = '';
-  if (window._compatBdB) {
-    _honmeiBtnHTML =
-      '<div style="display:flex;gap:4px;">' +
-        '<button id="hm-btn-me" onclick="switchHonmeiCard(&quot;me&quot;)" style="padding:2px 8px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:10px;font-weight:600;cursor:pointer;">あなた</button>' +
-        '<button id="hm-btn-partner" onclick="switchHonmeiCard(&quot;partner&quot;)" style="padding:2px 8px;border-radius:20px;border:1px solid rgba(168,154,255,.3);background:transparent;color:rgba(168,154,255,.4);font-size:10px;font-weight:600;cursor:pointer;">相手</button>' +
-      '</div>';
-  }
-  html +=
-    '<div class="honmei-banner fade-up" style="border-color:'+sd.color+'50">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'+
-        '<div class="honmei-label" style="margin-bottom:0;">'+_age+'歳</div>'+
-        '<div style="display:flex;align-items:center;gap:6px;">'+_honmeiBtnHTML+'<button onclick="event.stopPropagation();resetCoreNumPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button></div>'+
-      '</div>'+
-      '<div class="honmei-star" style="color:'+sd.color+';text-shadow:0 0 40px '+sd.color+'60;cursor:pointer;-webkit-tap-highlight-color:transparent;" onclick="toggleCoreNum(\'honmei-detail\')">'+sd.name+'<span style="font-size:13px;font-weight:400;opacity:.75;">（'+getRokkuShortLabel(birthdate)+'）</span></div>'+(situation==="meeting"?lt_buildBadges(birthdate):"")+
-      '<div class="core-num-detail" id="honmei-detail" style="margin-top:10px;">'+
-        buildPanelTitleWithMemo('honmei-detail', sd.name, birthdate)+
-        sd.desc+
-        '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);">'+
-          '<div class="core-num-detail-title" style="font-size:12px;">五行：'+sd.element+'</div>'+
-          (ELEMENT_DESC[sd.element] || '')+
-        '</div>'+
-      '</div>'+
-      /* 数秘コアナンバー */
-      '<div class="core-nums-row">'+
-        '<div class="core-num-cell" onclick="toggleCoreNum(\'corenum-life\')">'+
-          '<div class="core-num-label"><b>本命数</b><br><span style="font-size:9px;color:var(--muted);font-weight:normal;">（育てていく本質）</span></div>'+
-          '<div class="core-num-value">'+lifeDisp+'</div>'+
-          '<div style="text-align:center;padding-bottom:4px;">'+
-          '<span onclick="event.stopPropagation();toggleCoreNum(\'corenum-life-work\')" style="display:inline-block;margin:3px 2px 0;padding:2px 10px;border-radius:14px;font-size:10px;cursor:pointer;background:rgba(100,180,255,.12);border:1px solid rgba(100,180,255,.4);color:#80c8f0;">仕事</span>'+
-          '<span onclick="event.stopPropagation();toggleCoreNum(\'corenum-life-love\')" style="display:inline-block;margin:3px 2px 0;padding:2px 10px;border-radius:14px;font-size:10px;cursor:pointer;background:rgba(255,150,180,.12);border:1px solid rgba(255,150,180,.4);color:#ffb0c8;">恋愛</span>'+
-          '</div>'+
-        '</div>'+
-        '<div class="core-num-cell" onclick="toggleCoreNum(\'corenum-future\')">'+
-          '<div class="core-num-label"><b>未来数</b><br><span style="font-size:9px;color:var(--muted);font-weight:normal;">（習得するスキル）</span></div>'+
-          '<div class="core-num-value">'+futureDisp+'</div>'+
-          '<div style="text-align:center;padding-bottom:4px;">'+
-          '<span onclick="event.stopPropagation();toggleCoreNum(\'corenum-future-work\')" style="display:inline-block;margin:3px 2px 0;padding:2px 10px;border-radius:14px;font-size:10px;cursor:pointer;background:rgba(100,180,255,.12);border:1px solid rgba(100,180,255,.4);color:#80c8f0;">仕事</span>'+
-          '<span onclick="event.stopPropagation();toggleCoreNum(\'corenum-future-love\')" style="display:inline-block;margin:3px 2px 0;padding:2px 10px;border-radius:14px;font-size:10px;cursor:pointer;background:rgba(255,150,180,.12);border:1px solid rgba(255,150,180,.4);color:#ffb0c8;">恋愛</span>'+
-          '</div>'+
-        '</div>'+
-        '<div class="core-num-cell" onclick="toggleCoreNum(\'corenum-past\')">'+
-          '<div class="core-num-label"><b>過去数</b><br><span style="font-size:9px;color:var(--muted);font-weight:normal;">（初期装備スキル）</span></div>'+
-          '<div class="core-num-value">'+pastDisp+'</div>'+
-          '<div style="text-align:center;padding-bottom:4px;">'+
-          '<span onclick="event.stopPropagation();toggleCoreNum(\'corenum-past-work\')" style="display:inline-block;margin:3px 2px 0;padding:2px 10px;border-radius:14px;font-size:10px;cursor:pointer;background:rgba(100,180,255,.12);border:1px solid rgba(100,180,255,.4);color:#80c8f0;">仕事</span>'+
-          '<span onclick="event.stopPropagation();toggleCoreNum(\'corenum-past-love\')" style="display:inline-block;margin:3px 2px 0;padding:2px 10px;border-radius:14px;font-size:10px;cursor:pointer;background:rgba(255,150,180,.12);border:1px solid rgba(255,150,180,.4);color:#ffb0c8;">恋愛</span>'+
-          '</div>'+
-        '</div>'+
-      '</div>'+
-      '<div class="core-num-detail" id="corenum-life-work">'+buildPanelTitleWithMemo('corenum-life-work', '本命数 '+lifeDisp+'　仕事・適職', birthdate)+makeWorkHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life-love">'+buildPanelTitleWithMemo('corenum-life-love', '本命数 '+lifeDisp+'　恋愛パターン', birthdate)+makeLoveHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life">'+
-        buildPanelTitleWithMemo('corenum-life', '本命数 '+lifeDisp+'　'+(CORE_NUM_DESC[lifeBase]?CORE_NUM_DESC[lifeBase].name:''), birthdate)+
-        (CORE_NUM_DESC[lifeBase]&&CORE_NUM_DESC[lifeBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[lifeBase].keyword+'</div>':'')+
-        (CORE_NUM_DESC[lifeBase]?CORE_NUM_DESC[lifeBase].desc:'')+
-      '</div>'+
-      '<div class="core-num-detail" id="corenum-future-work">'+buildPanelTitleWithMemo('corenum-future-work', '未来数 '+futureDisp+'　仕事・適職', birthdate)+makeWorkHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future-love">'+buildPanelTitleWithMemo('corenum-future-love', '未来数 '+futureDisp+'　恋愛パターン', birthdate)+makeLoveHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future">'+
-        buildPanelTitleWithMemo('corenum-future', '未来数 '+futureDisp+'　'+(CORE_NUM_DESC[futureBase]?CORE_NUM_DESC[futureBase].name:''), birthdate)+
-        (CORE_NUM_DESC[futureBase]&&CORE_NUM_DESC[futureBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[futureBase].keyword+'</div>':'')+
-        (CORE_NUM_DESC[futureBase]?CORE_NUM_DESC[futureBase].desc:'')+
-      '</div>'+
-      '<div class="core-num-detail" id="corenum-past-work">'+buildPanelTitleWithMemo('corenum-past-work', '過去数 '+pastDisp+'　仕事・適職', birthdate)+makeWorkHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past-love">'+buildPanelTitleWithMemo('corenum-past-love', '過去数 '+pastDisp+'　恋愛パターン', birthdate)+makeLoveHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past">'+
-        buildPanelTitleWithMemo('corenum-past', '過去数 '+pastDisp+'　'+(CORE_NUM_DESC[pastBase]?CORE_NUM_DESC[pastBase].name:''), birthdate)+
-        (CORE_NUM_DESC[pastBase]&&CORE_NUM_DESC[pastBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[pastBase].keyword+'</div>':'')+
-        (CORE_NUM_DESC[pastBase]?CORE_NUM_DESC[pastBase].desc:'')+
-      '</div>'+
+    var html = '<div style="text-align:right;margin-bottom:8px;">'+
+      '<span style="font-size:9px;color:var(--muted);margin-right:6px;">運気ラベルスタイル</span>'+
+      '<button onclick="document.body.classList.remove(\'label-style-d\');this.style.opacity=1;this.nextSibling.style.opacity=.4;" '+
+        'style="font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.08);color:#c8c0d8;cursor:pointer;margin-right:4px;">B</button>'+
+      '<button onclick="document.body.classList.add(\'label-style-d\');this.style.opacity=1;this.previousSibling.style.opacity=.4;" '+
+        'style="font-size:10px;padding:3px 10px;border-radius:20px;border:1px solid rgba(201,168,76,.35);background:transparent;color:#c9a84c;cursor:pointer;">D</button>'+
     '</div>';
+    window._currentHonmei = honmei; // 月盤切り替えで参照
 
-  /* ── 六星・数秘データ算出（表示より先に計算） ── */
-  var rokkuFull  = getRokkuFull(birthdate);
-  window._rokkuFull = rokkuFull; /* 各描画関数から参照できるよう保存 */
-  var rokkuStar  = rokkuFull.starId;
-  var rokkuRs    = ROKKU_STARS[rokkuStar];
-  var rokkuYPos  = getRokkuYearPos(birthdate, kYear);
-  var rokkuMPos  = getRokkuMonthPos(birthdate, kYear, kMonth);
-  var rokkuSubMPos = rokkuFull.reigo ? getRokkuSubMonthPos(birthdate, kMonth) : 0;
-  var rokkuYd    = ROKKU_CYCLE[rokkuYPos];
-  var rokkuMd    = ROKKU_CYCLE[rokkuMPos];
-  var rokkuSubMd = rokkuFull.reigo ? ROKKU_CYCLE[rokkuSubMPos] : null;
-  var pyNum      = getPersonalYear(birthdate, kYear);
-  /* マスターナンバーは SUUHI_YEAR のキー（1〜9）に還元して参照する
-     表示は pyNum のまま（formatCoreNum で "2(11)" 形式）         */
-  var pyBase     = (pyNum === 11) ? 2 : (pyNum === 22) ? 4 : (pyNum === 33) ? 6 : pyNum;
-  var pyData     = SUUHI_YEAR[pyBase] || SUUHI_YEAR[1];
+    /* ① 本命星バナー */
+    var lifeNum   = getLifePathNumber(birthdate);
+    var futureNum = getFutureNumber(birthdate);
+    var pastNum   = getPastNumber(birthdate);
+    var lifeDisp   = formatCoreNum(lifeNum);
+    var futureDisp = formatCoreNum(futureNum);
+    var pastDisp   = formatCoreNum(pastNum);
+    var lifeBase   = (lifeNum === 11 || lifeNum === 22 || lifeNum === 33) ? lifeNum : lifeNum;
+    var futureBase = (futureNum === 11 || futureNum === 22 || futureNum === 33) ? futureNum : futureNum;
+    var pastBase   = (pastNum === 11 || pastNum === 22 || pastNum === 33) ? pastNum : pastNum;
 
-  /* 統合メッセージ計算（先に済ませる） */
-  var unifiedYear  = buildUnifiedMessageYear(yd.level, rokkuYd.level, pyData.level, rokkuYd.name, pyData.name, yd.label);
-  var unifiedMonth = buildUnifiedMessage(md.level, rokkuMd.level, pyData.level, rokkuMd.name, pyData.name, md.label);
+    /* 年齢計算（本命星バナー用） */
+    var _bdParts = birthdate.split('-');
+    var _by = +_bdParts[0], _bm = +_bdParts[1], _bd = +_bdParts[2];
+    var _now = new Date();
+    var _age = _now.getFullYear() - _by;
+    if (_now.getMonth()+1 < _bm || (_now.getMonth()+1 === _bm && _now.getDate() < _bd)) _age--;
 
-  /* ② 9年運気サイクル */
-  /* 相性鑑定中の場合は相手切替ボタンを表示 */
-  var _nineYearBtnHTML = '';
-  if (window._compatBdB) {
-    _nineYearBtnHTML =
-      '<div style="display:flex;gap:4px;margin-left:auto;">' +
-        '<button id="ny-btn-me" onclick="switchNineYear(&quot;me&quot;)" style="padding:2px 8px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:10px;font-weight:600;cursor:pointer;">あなた</button>' +
-        '<button id="ny-btn-partner" onclick="switchNineYear(&quot;partner&quot;)" style="padding:2px 8px;border-radius:20px;border:1px solid rgba(168,154,255,.3);background:transparent;color:rgba(168,154,255,.4);font-size:10px;font-weight:600;cursor:pointer;">相手</button>' +
-      '</div>';
-  }
-  html += (function(){
-    var _scBtnHTML = '';
-    var bdB = window._compatBdB;
-    if(bdB){
-      var _act='padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;';
-      var _smAct=_act+'background:var(--accent);color:#fff;border-color:var(--accent);';
-      var _smInact=_act+'background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);font-weight:600;';
-      var _initPartner = false; // calculate()はあなた側のみ
-      _scBtnHTML='<div style="display:flex;gap:4px;">'+
-        '<button id="sc-btn-me" onclick="switchShichuuCard(\'me\')" style="'+(_initPartner?_smInact:_smAct)+'">あなた</button>'+
-        '<button id="sc-btn-partner" onclick="switchShichuuCard(\'partner\')" style="'+(_initPartner?_smAct:_smInact)+'">相手</button>'+
+    /* 本命星カード切替ボタン（相性鑑定中のみ表示） */
+    var _honmeiBtnHTML = '';
+    if (window._compatBdB) {
+      _honmeiBtnHTML =
+        '<div style="display:flex;gap:4px;">' +
+          '<button id="hm-btn-me" onclick="switchHonmeiCard(&quot;me&quot;)" style="padding:2px 8px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:10px;font-weight:600;cursor:pointer;">あなた</button>' +
+          '<button id="hm-btn-partner" onclick="switchHonmeiCard(&quot;partner&quot;)" style="padding:2px 8px;border-radius:20px;border:1px solid rgba(168,154,255,.3);background:transparent;color:rgba(168,154,255,.4);font-size:10px;font-weight:600;cursor:pointer;">相手</button>' +
         '</div>';
     }
-    return  '<div class="accordion-wrap">'+
-      '<button class="accordion-btn" id="abtn-shichuu-card" onclick="toggleAccordion(\'shichuu-card\')">'+
-        '<span style="display:flex;align-items:center;justify-content:space-between;width:100%;">'+
-          '<span>☯ 四柱推命</span>'+_scBtnHTML+
-        '</span>'+
-        '<span class="accordion-arrow">▼</span>'+
-      '</button>'+
-      '<div class="accordion-body" id="abody-shichuu-card">'+
-        '<div id="shichuu-card-body"></div>'+
-      '</div>'+
-    '</div>';
-  })();
-  html +=
-    '<div class="card fade-up">'+
-      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span></div></div>'+
-      '<div id="sanmei-body">' + buildSanmeiEnergyHTML(birthdate) + '</div>'+
-    '</div>';
-  html += buildAspectCardHTML(birthdate, false);
-
-  html +=
-    '<div class="card fade-up">'+
-      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>年運サイクル</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' + _nineYearBtnHTML + '<button onclick="resetNineYearToDefault()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">RESET</button></div></div></div>'+
-      '<div id="nine-year-container">' + buildNineYearHTML(honmei, kYear, birthdate) + '</div>'+
-    '</div>';
-  /* 年運サイクル切替用データはswitchCompatTabで管理 */
-
-  /* 年間統合リーディング（9年サイクルの直下） */
-  html += makeAccordion('unified-year', '✦ '+kYear+'年 年間 統合リーディング',
-    '<div class="unified-banner '+unifiedYear.level+'">'+
-      '<div class="unified-label">九星気学 × 六星占術 × 数秘術</div>'+
-      '<div class="unified-three-row">'+
-        '<div class="unified-three-cell"><div class="unified-three-label">九星気学</div><div class="unified-three-val">'+yd.label+'</div></div>'+
-        '<div class="unified-three-cell"><div class="unified-three-label">六星占術</div><div class="unified-three-val">'+rokkuYd.name+(rokkuFull.reigo?'/'+ROKKU_CYCLE[getRokkuSubPos(birthdate,kYear)].name:'')+'</div></div>'+
-        '<div class="unified-three-cell"><div class="unified-three-label">数秘術</div><div class="unified-three-val">PY'+pyNum+'</div></div>'+
-      '</div>'+
-      '<div class="unified-main">'+unifiedYear.main+'</div>'+
-      '<div class="unified-action"><div class="unified-action-label">✦ 行動アドバイス</div><div class="unified-action-text">'+unifiedYear.action+'</div></div>'+
-    '</div>', true);
-
-  /* ⑦ 月運サイクル（12ヶ月グリッド） */
-  var _cycleBtnHTML = '';
-  if (window._compatBdB) {
-    _cycleBtnHTML =
-      '<div style="display:flex;gap:4px;margin-left:auto;">' +
-        '<button id="cy-btn-me" onclick="switchCycleCard(&quot;me&quot;)" style="padding:2px 8px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:10px;font-weight:600;cursor:pointer;">あなた</button>' +
-        '<button id="cy-btn-partner" onclick="switchCycleCard(&quot;partner&quot;)" style="padding:2px 8px;border-radius:20px;border:1px solid rgba(168,154,255,.3);background:transparent;color:rgba(168,154,255,.4);font-size:10px;font-weight:600;cursor:pointer;">相手</button>' +
-      '</div>';
-  }
-  html +=
-    '<div class="card fade-up">'+
-      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>月運サイクル</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' + _cycleBtnHTML + '<button onclick="resetMonthCycleToDefault()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">RESET</button></div></div></div>'+
-      '<div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin:-4px 0 10px;line-height:1.6;">'+
-        '※九星気学の1年は立春（2月頃）から翌年1月末までです。'+
-        '1月のみ翌年カレンダーですが気学上は'+kYear+'年のサイクルに属します。'+
-      '</div>'+
-      '<div id="cycle-container">' + buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) + '</div>'+
-    '</div>';
-
-  /* ⑦-C 年月日 重ね読み（日運の直下） */
-  html += makeAccordion('daily-overlap', '✦ '+kYear+'年'+kMonth+'月 年運×月運×日運 重ね読み',
-    buildDailyOverlapHTML(honmei, kYear, kMonth, birthdate), true);
-
-  /* 月間統合リーディング（月運サイクルの直下） */
-  html += makeAccordion('unified-month', '✦ '+kYear+'年 '+kMonth+'月 月間 統合リーディング',
-    '<div class="unified-banner '+unifiedMonth.level+'">'+
-      '<div class="unified-label">九星気学 × 六星占術 × 数秘術</div>'+
-      '<div class="unified-three-row">'+
-        '<div class="unified-three-cell"><div class="unified-three-label">九星気学</div><div class="unified-three-val">'+md.label+'</div></div>'+
-        '<div class="unified-three-cell"><div class="unified-three-label">六星占術</div><div class="unified-three-val">'+rokkuMd.name+(rokkuFull.reigo&&rokkuSubMd?'/'+rokkuSubMd.name:'')+'</div></div>'+
-        '<div class="unified-three-cell"><div class="unified-three-label">数秘術</div><div class="unified-three-val">PY'+pyNum+'</div></div>'+
-      '</div>'+
-      '<div class="unified-main">'+unifiedMonth.main+'</div>'+
-      '<div class="unified-action"><div class="unified-action-label">✦ 行動アドバイス</div><div class="unified-action-text">'+unifiedMonth.action+'</div></div>'+
-    '</div>', true);
-
-  /* 区切り：九星気学・方位 */
-  html += '<div class="section-divider"><span class="section-divider-label">九星気学 · 方位</span></div>';
-
-  /* ⑤ 年盤 方位 */
-  html +=
-    '<div class="card fade-up">'+
-      '<div class="card-title">'+kYear+'年 年盤 方位</div>'+
-      '<div class="tap-hint">✦ 各マスをタップすると詳細が見られます</div>'+
-      '<div id="compassWrap"></div>'+
-      '<div style="margin-top:12px;font-size:10px;color:var(--muted);text-align:center;letter-spacing:.1em">✦ 緑：吉方位　▲ 赤：凶方位　グレー：普通</div>'+
-    '</div>';
-
-  /* ⑥ 月盤（月ごとの詳細） */
-  html += '<div class="card fade-up"><div class="card-title">月盤（月ごとの詳細）</div><div class="month-tabs">';
-  for(var i=1;i<=12;i++){
-    html+='<button class="month-tab'+(i===1?' active':'')+'" onclick="showMonthBoard('+i+','+kYear+',this)">'+i+'月</button>';
-  }
-  html+='</div><div id="monthBoardWrap"></div></div>';
-
-  /* ⑧ テーマ別アドバイス */
-  html += makeAccordion('theme', 'テーマ別アドバイス（'+kYear+'年）',
-    '<div class="card">'+buildThemeSectionHTML(judgment)+'</div>');
-
-  /* ⑨ 吉方位・凶方位まとめ */
-  var dirHtml = '<div class="card">';
-  if(judgment.auspicious.length > 0){
-    dirHtml += '<div style="font-size:12px;letter-spacing:.15em;color:#6fcfb8;margin-bottom:10px">✦ 吉方位</div>';
-    judgment.auspicious.forEach(function(d) {
-      var dd = DIR_DATA[d.dir];
-      dirHtml +=
-        '<div class="dir-summary-row">'+
-          '<div class="dir-summary-name" style="color:#7de0c8">'+d.dir+'</div>'+
-          '<div class="dir-summary-sub">'+(dd?dd.overview:d.starName+'　'+d.reason)+'</div>'+
-          '<span class="dir-badge good">吉 ✦</span>'+
-        '</div>';
-    });
-  }
-  if(judgment.inauspicious.length > 0){
-    dirHtml += '<div style="font-size:12px;letter-spacing:.15em;color:#e07060;margin:14px 0 10px">▲ 注意方位</div>';
-    judgment.inauspicious.forEach(function(d) {
-      var bi = BAD_REASONS[d.reason];
-      dirHtml +=
-        '<div class="dir-summary-row">'+
-          '<div class="dir-summary-name" style="color:#e08070">'+d.dir+'</div>'+
-          '<div class="dir-summary-sub">'+(bi?bi.overview:d.starName+'　'+d.reason)+'</div>'+
-          '<span class="dir-badge caution">注意 ▲</span>'+
-        '</div>';
-    });
-  }
-  dirHtml += '</div>';
-  html += makeAccordion('dirs', '吉方位・凶方位まとめ', dirHtml);
-
-  /* ⑩ 恋愛メッセージ */
-  var situationLabel = {meeting:'出会いを探している',crush:'片思い中',reunion:'復縁を考えている',confused:'恋愛に迷っている'};
-  html += makeAccordion('love', '恋愛メッセージ',
-    '<div class="card">'+
-      '<div class="love-card '+yd.level+'">'+
-        '<div class="love-situation">'+situationLabel[situation]+'のあなたへ</div>'+
-        '<div class="love-main">'+loveMsg.main+'</div>'+
-        '<div class="love-dir-tip">'+
-          (bestLoveDir ? '今年の吉方位は「'+bestLoveDir+'」。'+loveMsg.dirHint : loveMsg.dirHint)+
+    html +=
+      '<div class="honmei-banner fade-up" style="border-color:'+sd.color+'50">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">'+
+          '<div class="honmei-label" style="margin-bottom:0;">'+_age+'歳</div>'+
+          '<div style="display:flex;align-items:center;gap:6px;">'+_honmeiBtnHTML+'<button onclick="event.stopPropagation();resetCoreNumPanels()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">展：RE</button></div>'+
         '</div>'+
-      '</div>'+
-    '</div>');
-
-  /* ⑪ 総合リーディング（九星気学） */
-  html += makeAccordion('sougo', '総合リーディング（九星気学）',
-    '<div class="total-banner '+yd.level+'">'+
-      '<div class="total-banner-label">✦ 総合リーディング（九星気学） — '+kYear+'年 '+kMonth+'月</div>'+
-      '<div class="total-banner-main">'+combo+'</div>'+
-      '<div class="total-banner-sub">'+yd.yearAdvice+'</div>'+
-    '</div>');
-
-  /* ⑫ 年運 × 月運 */
-  html += makeAccordion('nengetsu', '年運 × 月運',
-    '<div class="card">'+
-      '<div class="luck-duo">'+
-        '<div class="luck-mini '+yd.level+'">'+
-          '<div class="luck-mini-label">'+kYear+'年 年運</div>'+
-          '<div class="luck-mini-sym '+yd.level+'">'+yd.rank+'</div>'+
-          '<div class="luck-mini-name">'+yd.label+'</div>'+
-          '<div class="luck-bar-bg" style="margin-top:8px">'+
-            '<div class="luck-bar-fill" id="yearBar" style="width:0%;background:'+yColor+'"></div>'+
+        '<div class="honmei-star" style="color:'+sd.color+';text-shadow:0 0 40px '+sd.color+'60;cursor:pointer;-webkit-tap-highlight-color:transparent;" onclick="toggleCoreNum(\'honmei-detail\')">'+sd.name+'<span style="font-size:13px;font-weight:400;opacity:.75;">（'+getRokkuShortLabel(birthdate)+'）</span></div>'+(situation==="meeting"?lt_buildBadges(birthdate):"")+
+        '<div class="core-num-detail" id="honmei-detail" style="margin-top:10px;">'+
+          buildPanelTitleWithMemo('honmei-detail', sd.name, birthdate)+
+          sd.desc+
+          '<div style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);">'+
+            '<div class="core-num-detail-title" style="font-size:12px;">五行：'+sd.element+'</div>'+
+            (ELEMENT_DESC[sd.element] || '')+
           '</div>'+
         '</div>'+
-        '<div class="luck-mini '+md.level+'">'+
-          '<div class="luck-mini-label">'+kMonth+'月 月運</div>'+
-          '<div class="luck-mini-sym '+md.level+'">'+md.rank+'</div>'+
-          '<div class="luck-mini-name">'+md.label+'</div>'+
-          '<div class="luck-bar-bg" style="margin-top:8px">'+
-            '<div class="luck-bar-fill" id="monthBar" style="width:0%;background:'+mColor+'"></div>'+
-          '</div>'+
-        '</div>'+
-      '</div>'+
-      '<div style="margin-top:14px">'+
-        '<div class="luck-desc">'+yd.yearDesc+'</div>'+
-        '<div class="luck-advice">'+
-          '<div class="luck-advice-label">今年のアドバイス</div>'+
-          yd.yearAdvice+
-        '</div>'+
-      '</div>'+
-      '<div style="margin-top:12px">'+
-        '<div class="luck-desc">'+md.monthDesc+'</div>'+
-        '<div class="luck-advice">'+
-          '<div class="luck-advice-label">今月のアドバイス</div>'+
-          md.monthAdvice+
-        '</div>'+
-      '</div>'+
-    '</div>');
-
-  /* 区切り：六星占術 */
-  /* 9年サイクル帯（六星） */
-  var rokku9html = '<div class="rokku-12cycle">';
-  for(var ri9=0;ri9<9;ri9++){
-    var ryr = kYear - rokkuYPos + ri9;
-    var rcd9 = ROKKU_CYCLE[(rokkuYPos+ri9)%12];
-    var isActY = (ri9 === 0);
-    rokku9html +=
-      '<div class="rokku-12cell '+rcd9.level+(isActY?' is-active':'')+'">'+
-        '<div class="rokku-12mo">'+ryr+'年</div>'+
-        '<div class="rokku-12name '+rcd9.level+'">'+rcd9.name+'</div>'+
-      '</div>';
-  }
-  rokku9html += '</div>';
-
-  /* 12ヶ月サイクル帯（六星） */
-  var rokku12html = '<div class="rokku-12cycle">';
-  for(var ri=0;ri<12;ri++){
-    var rcd = ROKKU_CYCLE[(rokkuYPos+ri)%12];
-    var isAct = (ri === (kMonth-1));
-    rokku12html +=
-      '<div class="rokku-12cell '+rcd.level+(isAct?' is-active':'')+'">'+
-        '<div class="rokku-12mo">'+(ri+1)+'月</div>'+
-        '<div class="rokku-12name '+rcd.level+'">'+rcd.name+'</div>'+
-      '</div>';
-  }
-  rokku12html += '</div>';
-
-  html +=
-    '<div class="section-divider"><span class="section-divider-label">六星占術</span></div>'+
-    makeAccordion('rokku', '六星占術 · 運気リーディング',
-      '<div class="rokku-banner">'+
-        '<div style="font-size:10px;letter-spacing:.25em;color:var(--muted);margin-bottom:8px">あなたの星</div>'+
-        '<div class="rokku-star-name" style="color:'+rokkuRs.color+'">'+rokkuRs.symbol+' '+rokkuFull.label+'</div>'+
-        '<div class="rokku-element">'+
-          (rokkuFull.reigo
-            ? 'メインの〈'+rokkuYd.name+'〉× サブの〈'+ROKKU_CYCLE[getRokkuSubPos(birthdate,kYear)].name+'〉— 2つの運気が交わる霊合の流れ'
-            : '六星占術の基本星')+
-        '</div>'+
-        '<div class="rokku-cycle-row">'+
-          '<div class="rokku-cycle-card '+rokkuYd.level+'">'+
-            '<div class="rokku-cycle-label">'+targetYear+'年 年運</div>'+
-            '<div class="rokku-cycle-name '+rokkuYd.level+'">'+
-              rokkuYd.name+
-              (rokkuFull.reigo
-                ? '<span style="color:var(--muted);font-size:12px;font-weight:400;"> / '+ROKKU_CYCLE[getRokkuSubPos(birthdate, targetYear)].name+'</span>'
-                : '')+
+        /* 数秘コアナンバー */
+        '<div class="core-nums-row">'+
+          '<div class="core-num-cell" onclick="toggleCoreNum(\'corenum-life\')">'+
+            '<div class="core-num-label"><b>本命数</b><br><span style="font-size:9px;color:var(--muted);font-weight:normal;">（育てていく本質）</span></div>'+
+            '<div class="core-num-value">'+lifeDisp+'</div>'+
+            '<div style="text-align:center;padding-bottom:4px;">'+
+            '<span onclick="event.stopPropagation();toggleCoreNum(\'corenum-life-work\')" style="display:inline-block;margin:3px 2px 0;padding:2px 10px;border-radius:14px;font-size:10px;cursor:pointer;background:rgba(100,180,255,.12);border:1px solid rgba(100,180,255,.4);color:#80c8f0;">仕事</span>'+
+            '<span onclick="event.stopPropagation();toggleCoreNum(\'corenum-life-love\')" style="display:inline-block;margin:3px 2px 0;padding:2px 10px;border-radius:14px;font-size:10px;cursor:pointer;background:rgba(255,150,180,.12);border:1px solid rgba(255,150,180,.4);color:#ffb0c8;">恋愛</span>'+
             '</div>'+
-            '<div class="rokku-cycle-sub">'+rokkuYd.desc+'</div>'+
+          '</div>'+
+          '<div class="core-num-cell" onclick="toggleCoreNum(\'corenum-future\')">'+
+            '<div class="core-num-label"><b>未来数</b><br><span style="font-size:9px;color:var(--muted);font-weight:normal;">（習得するスキル）</span></div>'+
+            '<div class="core-num-value">'+futureDisp+'</div>'+
+            '<div style="text-align:center;padding-bottom:4px;">'+
+            '<span onclick="event.stopPropagation();toggleCoreNum(\'corenum-future-work\')" style="display:inline-block;margin:3px 2px 0;padding:2px 10px;border-radius:14px;font-size:10px;cursor:pointer;background:rgba(100,180,255,.12);border:1px solid rgba(100,180,255,.4);color:#80c8f0;">仕事</span>'+
+            '<span onclick="event.stopPropagation();toggleCoreNum(\'corenum-future-love\')" style="display:inline-block;margin:3px 2px 0;padding:2px 10px;border-radius:14px;font-size:10px;cursor:pointer;background:rgba(255,150,180,.12);border:1px solid rgba(255,150,180,.4);color:#ffb0c8;">恋愛</span>'+
+            '</div>'+
+          '</div>'+
+          '<div class="core-num-cell" onclick="toggleCoreNum(\'corenum-past\')">'+
+            '<div class="core-num-label"><b>過去数</b><br><span style="font-size:9px;color:var(--muted);font-weight:normal;">（初期装備スキル）</span></div>'+
+            '<div class="core-num-value">'+pastDisp+'</div>'+
+            '<div style="text-align:center;padding-bottom:4px;">'+
+            '<span onclick="event.stopPropagation();toggleCoreNum(\'corenum-past-work\')" style="display:inline-block;margin:3px 2px 0;padding:2px 10px;border-radius:14px;font-size:10px;cursor:pointer;background:rgba(100,180,255,.12);border:1px solid rgba(100,180,255,.4);color:#80c8f0;">仕事</span>'+
+            '<span onclick="event.stopPropagation();toggleCoreNum(\'corenum-past-love\')" style="display:inline-block;margin:3px 2px 0;padding:2px 10px;border-radius:14px;font-size:10px;cursor:pointer;background:rgba(255,150,180,.12);border:1px solid rgba(255,150,180,.4);color:#ffb0c8;">恋愛</span>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        '<div class="core-num-detail" id="corenum-life-work">'+buildPanelTitleWithMemo('corenum-life-work', '本命数 '+lifeDisp+'　仕事・適職', birthdate)+makeWorkHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life-love">'+buildPanelTitleWithMemo('corenum-life-love', '本命数 '+lifeDisp+'　恋愛パターン', birthdate)+makeLoveHTML(lifeBase)+'</div>'+'<div class="core-num-detail" id="corenum-life">'+
+          buildPanelTitleWithMemo('corenum-life', '本命数 '+lifeDisp+'　'+(CORE_NUM_DESC[lifeBase]?CORE_NUM_DESC[lifeBase].name:''), birthdate)+
+          (CORE_NUM_DESC[lifeBase]&&CORE_NUM_DESC[lifeBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[lifeBase].keyword+'</div>':'')+
+          (CORE_NUM_DESC[lifeBase]?CORE_NUM_DESC[lifeBase].desc:'')+
+        '</div>'+
+        '<div class="core-num-detail" id="corenum-future-work">'+buildPanelTitleWithMemo('corenum-future-work', '未来数 '+futureDisp+'　仕事・適職', birthdate)+makeWorkHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future-love">'+buildPanelTitleWithMemo('corenum-future-love', '未来数 '+futureDisp+'　恋愛パターン', birthdate)+makeLoveHTML(futureBase)+'</div>'+'<div class="core-num-detail" id="corenum-future">'+
+          buildPanelTitleWithMemo('corenum-future', '未来数 '+futureDisp+'　'+(CORE_NUM_DESC[futureBase]?CORE_NUM_DESC[futureBase].name:''), birthdate)+
+          (CORE_NUM_DESC[futureBase]&&CORE_NUM_DESC[futureBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[futureBase].keyword+'</div>':'')+
+          (CORE_NUM_DESC[futureBase]?CORE_NUM_DESC[futureBase].desc:'')+
+        '</div>'+
+        '<div class="core-num-detail" id="corenum-past-work">'+buildPanelTitleWithMemo('corenum-past-work', '過去数 '+pastDisp+'　仕事・適職', birthdate)+makeWorkHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past-love">'+buildPanelTitleWithMemo('corenum-past-love', '過去数 '+pastDisp+'　恋愛パターン', birthdate)+makeLoveHTML(pastBase)+'</div>'+'<div class="core-num-detail" id="corenum-past">'+
+          buildPanelTitleWithMemo('corenum-past', '過去数 '+pastDisp+'　'+(CORE_NUM_DESC[pastBase]?CORE_NUM_DESC[pastBase].name:''), birthdate)+
+          (CORE_NUM_DESC[pastBase]&&CORE_NUM_DESC[pastBase].keyword?'<div style="margin:6px 0;">'+CORE_NUM_DESC[pastBase].keyword+'</div>':'')+
+          (CORE_NUM_DESC[pastBase]?CORE_NUM_DESC[pastBase].desc:'')+
+        '</div>'+
+      '</div>';
+
+    /* ── 六星・数秘データ算出（表示より先に計算） ── */
+    var rokkuFull  = getRokkuFull(birthdate);
+    window._rokkuFull = rokkuFull; /* 各描画関数から参照できるよう保存 */
+    var rokkuStar  = rokkuFull.starId;
+    var rokkuRs    = ROKKU_STARS[rokkuStar];
+    var rokkuYPos  = getRokkuYearPos(birthdate, kYear);
+    var rokkuMPos  = getRokkuMonthPos(birthdate, kYear, kMonth);
+    var rokkuSubMPos = rokkuFull.reigo ? getRokkuSubMonthPos(birthdate, kMonth) : 0;
+    var rokkuYd    = ROKKU_CYCLE[rokkuYPos];
+    var rokkuMd    = ROKKU_CYCLE[rokkuMPos];
+    var rokkuSubMd = rokkuFull.reigo ? ROKKU_CYCLE[rokkuSubMPos] : null;
+    var pyNum      = getPersonalYear(birthdate, kYear);
+    /* マスターナンバーは SUUHI_YEAR のキー（1〜9）に還元して参照する
+       表示は pyNum のまま（formatCoreNum で "2(11)" 形式）         */
+    var pyBase     = (pyNum === 11) ? 2 : (pyNum === 22) ? 4 : (pyNum === 33) ? 6 : pyNum;
+    var pyData     = SUUHI_YEAR[pyBase] || SUUHI_YEAR[1];
+
+    /* 統合メッセージ計算（先に済ませる） */
+    var unifiedYear  = buildUnifiedMessageYear(yd.level, rokkuYd.level, pyData.level, rokkuYd.name, pyData.name, yd.label);
+    var unifiedMonth = buildUnifiedMessage(md.level, rokkuMd.level, pyData.level, rokkuMd.name, pyData.name, md.label);
+
+    /* ② 9年運気サイクル */
+    /* 相性鑑定中の場合は相手切替ボタンを表示 */
+    var _nineYearBtnHTML = '';
+    if (window._compatBdB) {
+      _nineYearBtnHTML =
+        '<div style="display:flex;gap:4px;margin-left:auto;">' +
+          '<button id="ny-btn-me" onclick="switchNineYear(&quot;me&quot;)" style="padding:2px 8px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:10px;font-weight:600;cursor:pointer;">あなた</button>' +
+          '<button id="ny-btn-partner" onclick="switchNineYear(&quot;partner&quot;)" style="padding:2px 8px;border-radius:20px;border:1px solid rgba(168,154,255,.3);background:transparent;color:rgba(168,154,255,.4);font-size:10px;font-weight:600;cursor:pointer;">相手</button>' +
+        '</div>';
+    }
+    html += (function(){
+      var _scBtnHTML = '';
+      var bdB = window._compatBdB;
+      if(bdB){
+        var _act='padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;';
+        var _smAct=_act+'background:var(--accent);color:#fff;border-color:var(--accent);';
+        var _smInact=_act+'background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);font-weight:600;';
+        var _initPartner = false; // calculate()はあなた側のみ
+        _scBtnHTML='<div style="display:flex;gap:4px;">'+
+          '<button id="sc-btn-me" onclick="switchShichuuCard(\'me\')" style="'+(_initPartner?_smInact:_smAct)+'">あなた</button>'+
+          '<button id="sc-btn-partner" onclick="switchShichuuCard(\'partner\')" style="'+(_initPartner?_smAct:_smInact)+'">相手</button>'+
+          '</div>';
+      }
+      return  '<div class="accordion-wrap">'+
+        '<button class="accordion-btn" id="abtn-shichuu-card" onclick="toggleAccordion(\'shichuu-card\')">'+
+          '<span style="display:flex;align-items:center;justify-content:space-between;width:100%;">'+
+            '<span>☯ 四柱推命</span>'+_scBtnHTML+
+          '</span>'+
+          '<span class="accordion-arrow">▼</span>'+
+        '</button>'+
+        '<div class="accordion-body" id="abody-shichuu-card">'+
+          '<div id="shichuu-card-body"></div>'+
+        '</div>'+
+      '</div>';
+    })();
+    html +=
+      '<div class="card fade-up">'+
+        '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span></div></div>'+
+        '<div id="sanmei-body">' + buildSanmeiEnergyHTML(birthdate) + '</div>'+
+      '</div>';
+    html += buildAspectCardHTML(birthdate, false);
+
+    html +=
+      '<div class="card fade-up">'+
+        '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>年運サイクル</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' + _nineYearBtnHTML + '<button onclick="resetNineYearToDefault()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">RESET</button></div></div></div>'+
+        '<div id="nine-year-container">' + buildNineYearHTML(honmei, kYear, birthdate) + '</div>'+
+      '</div>';
+    /* 年運サイクル切替用データはswitchCompatTabで管理 */
+
+    /* 年間統合リーディング（9年サイクルの直下） */
+    html += makeAccordion('unified-year', '✦ '+kYear+'年 年間 統合リーディング',
+      '<div class="unified-banner '+unifiedYear.level+'">'+
+        '<div class="unified-label">九星気学 × 六星占術 × 数秘術</div>'+
+        '<div class="unified-three-row">'+
+          '<div class="unified-three-cell"><div class="unified-three-label">九星気学</div><div class="unified-three-val">'+yd.label+'</div></div>'+
+          '<div class="unified-three-cell"><div class="unified-three-label">六星占術</div><div class="unified-three-val">'+rokkuYd.name+(rokkuFull.reigo?'/'+ROKKU_CYCLE[getRokkuSubPos(birthdate,kYear)].name:'')+'</div></div>'+
+          '<div class="unified-three-cell"><div class="unified-three-label">数秘術</div><div class="unified-three-val">PY'+pyNum+'</div></div>'+
+        '</div>'+
+        '<div class="unified-main">'+unifiedYear.main+'</div>'+
+        '<div class="unified-action"><div class="unified-action-label">✦ 行動アドバイス</div><div class="unified-action-text">'+unifiedYear.action+'</div></div>'+
+      '</div>', true);
+
+    /* ⑦ 月運サイクル（12ヶ月グリッド） */
+    var _cycleBtnHTML = '';
+    if (window._compatBdB) {
+      _cycleBtnHTML =
+        '<div style="display:flex;gap:4px;margin-left:auto;">' +
+          '<button id="cy-btn-me" onclick="switchCycleCard(&quot;me&quot;)" style="padding:2px 8px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:10px;font-weight:600;cursor:pointer;">あなた</button>' +
+          '<button id="cy-btn-partner" onclick="switchCycleCard(&quot;partner&quot;)" style="padding:2px 8px;border-radius:20px;border:1px solid rgba(168,154,255,.3);background:transparent;color:rgba(168,154,255,.4);font-size:10px;font-weight:600;cursor:pointer;">相手</button>' +
+        '</div>';
+    }
+    html +=
+      '<div class="card fade-up">'+
+        '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>月運サイクル</span><div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">' + _cycleBtnHTML + '<button onclick="resetMonthCycleToDefault()" style="padding:3px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:transparent;color:var(--muted);font-size:9px;letter-spacing:.05em;cursor:pointer;">RESET</button></div></div></div>'+
+        '<div style="font-size:9px;color:var(--muted);letter-spacing:.06em;margin:-4px 0 10px;line-height:1.6;">'+
+          '※九星気学の1年は立春（2月頃）から翌年1月末までです。'+
+          '1月のみ翌年カレンダーですが気学上は'+kYear+'年のサイクルに属します。'+
+        '</div>'+
+        '<div id="cycle-container">' + buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) + '</div>'+
+      '</div>';
+
+    /* ⑦-C 年月日 重ね読み（日運の直下） */
+    html += makeAccordion('daily-overlap', '✦ '+kYear+'年'+kMonth+'月 年運×月運×日運 重ね読み',
+      buildDailyOverlapHTML(honmei, kYear, kMonth, birthdate), true);
+
+    /* 月間統合リーディング（月運サイクルの直下） */
+    html += makeAccordion('unified-month', '✦ '+kYear+'年 '+kMonth+'月 月間 統合リーディング',
+      '<div class="unified-banner '+unifiedMonth.level+'">'+
+        '<div class="unified-label">九星気学 × 六星占術 × 数秘術</div>'+
+        '<div class="unified-three-row">'+
+          '<div class="unified-three-cell"><div class="unified-three-label">九星気学</div><div class="unified-three-val">'+md.label+'</div></div>'+
+          '<div class="unified-three-cell"><div class="unified-three-label">六星占術</div><div class="unified-three-val">'+rokkuMd.name+(rokkuFull.reigo&&rokkuSubMd?'/'+rokkuSubMd.name:'')+'</div></div>'+
+          '<div class="unified-three-cell"><div class="unified-three-label">数秘術</div><div class="unified-three-val">PY'+pyNum+'</div></div>'+
+        '</div>'+
+        '<div class="unified-main">'+unifiedMonth.main+'</div>'+
+        '<div class="unified-action"><div class="unified-action-label">✦ 行動アドバイス</div><div class="unified-action-text">'+unifiedMonth.action+'</div></div>'+
+      '</div>', true);
+
+    /* 区切り：九星気学・方位 */
+    html += '<div class="section-divider"><span class="section-divider-label">九星気学 · 方位</span></div>';
+
+    /* ⑤ 年盤 方位 */
+    html +=
+      '<div class="card fade-up">'+
+        '<div class="card-title">'+kYear+'年 年盤 方位</div>'+
+        '<div class="tap-hint">✦ 各マスをタップすると詳細が見られます</div>'+
+        '<div id="compassWrap"></div>'+
+        '<div style="margin-top:12px;font-size:10px;color:var(--muted);text-align:center;letter-spacing:.1em">✦ 緑：吉方位　▲ 赤：凶方位　グレー：普通</div>'+
+      '</div>';
+
+    /* ⑥ 月盤（月ごとの詳細） */
+    html += '<div class="card fade-up"><div class="card-title">月盤（月ごとの詳細）</div><div class="month-tabs">';
+    for(var i=1;i<=12;i++){
+      html+='<button class="month-tab'+(i===1?' active':'')+'" onclick="showMonthBoard('+i+','+kYear+',this)">'+i+'月</button>';
+    }
+    html+='</div><div id="monthBoardWrap"></div></div>';
+
+    /* ⑧ テーマ別アドバイス */
+    html += makeAccordion('theme', 'テーマ別アドバイス（'+kYear+'年）',
+      '<div class="card">'+buildThemeSectionHTML(judgment)+'</div>');
+
+    /* ⑨ 吉方位・凶方位まとめ */
+    var dirHtml = '<div class="card">';
+    if(judgment.auspicious.length > 0){
+      dirHtml += '<div style="font-size:12px;letter-spacing:.15em;color:#6fcfb8;margin-bottom:10px">✦ 吉方位</div>';
+      judgment.auspicious.forEach(function(d) {
+        var dd = DIR_DATA[d.dir];
+        dirHtml +=
+          '<div class="dir-summary-row">'+
+            '<div class="dir-summary-name" style="color:#7de0c8">'+d.dir+'</div>'+
+            '<div class="dir-summary-sub">'+(dd?dd.overview:d.starName+'　'+d.reason)+'</div>'+
+            '<span class="dir-badge good">吉 ✦</span>'+
+          '</div>';
+      });
+    }
+    if(judgment.inauspicious.length > 0){
+      dirHtml += '<div style="font-size:12px;letter-spacing:.15em;color:#e07060;margin:14px 0 10px">▲ 注意方位</div>';
+      judgment.inauspicious.forEach(function(d) {
+        var bi = BAD_REASONS[d.reason];
+        dirHtml +=
+          '<div class="dir-summary-row">'+
+            '<div class="dir-summary-name" style="color:#e08070">'+d.dir+'</div>'+
+            '<div class="dir-summary-sub">'+(bi?bi.overview:d.starName+'　'+d.reason)+'</div>'+
+            '<span class="dir-badge caution">注意 ▲</span>'+
+          '</div>';
+      });
+    }
+    dirHtml += '</div>';
+    html += makeAccordion('dirs', '吉方位・凶方位まとめ', dirHtml);
+
+    /* ⑩ 恋愛メッセージ */
+    var situationLabel = {meeting:'出会いを探している',crush:'片思い中',reunion:'復縁を考えている',confused:'恋愛に迷っている'};
+    html += makeAccordion('love', '恋愛メッセージ',
+      '<div class="card">'+
+        '<div class="love-card '+yd.level+'">'+
+          '<div class="love-situation">'+situationLabel[situation]+'のあなたへ</div>'+
+          '<div class="love-main">'+loveMsg.main+'</div>'+
+          '<div class="love-dir-tip">'+
+            (bestLoveDir ? '今年の吉方位は「'+bestLoveDir+'」。'+loveMsg.dirHint : loveMsg.dirHint)+
+          '</div>'+
+        '</div>'+
+      '</div>');
+
+    /* ⑪ 総合リーディング（九星気学） */
+    html += makeAccordion('sougo', '総合リーディング（九星気学）',
+      '<div class="total-banner '+yd.level+'">'+
+        '<div class="total-banner-label">✦ 総合リーディング（九星気学） — '+kYear+'年 '+kMonth+'月</div>'+
+        '<div class="total-banner-main">'+combo+'</div>'+
+        '<div class="total-banner-sub">'+yd.yearAdvice+'</div>'+
+      '</div>');
+
+    /* ⑫ 年運 × 月運 */
+    html += makeAccordion('nengetsu', '年運 × 月運',
+      '<div class="card">'+
+        '<div class="luck-duo">'+
+          '<div class="luck-mini '+yd.level+'">'+
+            '<div class="luck-mini-label">'+kYear+'年 年運</div>'+
+            '<div class="luck-mini-sym '+yd.level+'">'+yd.rank+'</div>'+
+            '<div class="luck-mini-name">'+yd.label+'</div>'+
+            '<div class="luck-bar-bg" style="margin-top:8px">'+
+              '<div class="luck-bar-fill" id="yearBar" style="width:0%;background:'+yColor+'"></div>'+
+            '</div>'+
+          '</div>'+
+          '<div class="luck-mini '+md.level+'">'+
+            '<div class="luck-mini-label">'+kMonth+'月 月運</div>'+
+            '<div class="luck-mini-sym '+md.level+'">'+md.rank+'</div>'+
+            '<div class="luck-mini-name">'+md.label+'</div>'+
+            '<div class="luck-bar-bg" style="margin-top:8px">'+
+              '<div class="luck-bar-fill" id="monthBar" style="width:0%;background:'+mColor+'"></div>'+
+            '</div>'+
+          '</div>'+
+        '</div>'+
+        '<div style="margin-top:14px">'+
+          '<div class="luck-desc">'+yd.yearDesc+'</div>'+
+          '<div class="luck-advice">'+
+            '<div class="luck-advice-label">今年のアドバイス</div>'+
+            yd.yearAdvice+
+          '</div>'+
+        '</div>'+
+        '<div style="margin-top:12px">'+
+          '<div class="luck-desc">'+md.monthDesc+'</div>'+
+          '<div class="luck-advice">'+
+            '<div class="luck-advice-label">今月のアドバイス</div>'+
+            md.monthAdvice+
+          '</div>'+
+        '</div>'+
+      '</div>');
+
+    /* 区切り：六星占術 */
+    /* 9年サイクル帯（六星） */
+    var rokku9html = '<div class="rokku-12cycle">';
+    for(var ri9=0;ri9<9;ri9++){
+      var ryr = kYear - rokkuYPos + ri9;
+      var rcd9 = ROKKU_CYCLE[(rokkuYPos+ri9)%12];
+      var isActY = (ri9 === 0);
+      rokku9html +=
+        '<div class="rokku-12cell '+rcd9.level+(isActY?' is-active':'')+'">'+
+          '<div class="rokku-12mo">'+ryr+'年</div>'+
+          '<div class="rokku-12name '+rcd9.level+'">'+rcd9.name+'</div>'+
+        '</div>';
+    }
+    rokku9html += '</div>';
+
+    /* 12ヶ月サイクル帯（六星） */
+    var rokku12html = '<div class="rokku-12cycle">';
+    for(var ri=0;ri<12;ri++){
+      var rcd = ROKKU_CYCLE[(rokkuYPos+ri)%12];
+      var isAct = (ri === (kMonth-1));
+      rokku12html +=
+        '<div class="rokku-12cell '+rcd.level+(isAct?' is-active':'')+'">'+
+          '<div class="rokku-12mo">'+(ri+1)+'月</div>'+
+          '<div class="rokku-12name '+rcd.level+'">'+rcd.name+'</div>'+
+        '</div>';
+    }
+    rokku12html += '</div>';
+
+    html +=
+      '<div class="section-divider"><span class="section-divider-label">六星占術</span></div>'+
+      makeAccordion('rokku', '六星占術 · 運気リーディング',
+        '<div class="rokku-banner">'+
+          '<div style="font-size:10px;letter-spacing:.25em;color:var(--muted);margin-bottom:8px">あなたの星</div>'+
+          '<div class="rokku-star-name" style="color:'+rokkuRs.color+'">'+rokkuRs.symbol+' '+rokkuFull.label+'</div>'+
+          '<div class="rokku-element">'+
             (rokkuFull.reigo
-              ? '<div class="rokku-cycle-sub" style="margin-top:6px;color:var(--muted);">サブ：'+ROKKU_CYCLE[getRokkuSubPos(birthdate, targetYear)].desc+'</div>'
-              : '')+
+              ? 'メインの〈'+rokkuYd.name+'〉× サブの〈'+ROKKU_CYCLE[getRokkuSubPos(birthdate,kYear)].name+'〉— 2つの運気が交わる霊合の流れ'
+              : '六星占術の基本星')+
           '</div>'+
-          '<div class="rokku-cycle-card '+rokkuMd.level+'">'+
-            '<div class="rokku-cycle-label">'+targetMonth+'月 月運</div>'+
-            '<div class="rokku-cycle-name '+rokkuMd.level+'">'+
-              rokkuMd.name+
-              (rokkuFull.reigo && rokkuSubMd
-                ? '<span style="color:var(--muted);font-size:12px;font-weight:400;"> / '+rokkuSubMd.name+'</span>'
+          '<div class="rokku-cycle-row">'+
+            '<div class="rokku-cycle-card '+rokkuYd.level+'">'+
+              '<div class="rokku-cycle-label">'+targetYear+'年 年運</div>'+
+              '<div class="rokku-cycle-name '+rokkuYd.level+'">'+
+                rokkuYd.name+
+                (rokkuFull.reigo
+                  ? '<span style="color:var(--muted);font-size:12px;font-weight:400;"> / '+ROKKU_CYCLE[getRokkuSubPos(birthdate, targetYear)].name+'</span>'
+                  : '')+
+              '</div>'+
+              '<div class="rokku-cycle-sub">'+rokkuYd.desc+'</div>'+
+              (rokkuFull.reigo
+                ? '<div class="rokku-cycle-sub" style="margin-top:6px;color:var(--muted);">サブ：'+ROKKU_CYCLE[getRokkuSubPos(birthdate, targetYear)].desc+'</div>'
                 : '')+
             '</div>'+
-            '<div class="rokku-cycle-sub">'+rokkuMd.desc+'</div>'+
-            (rokkuFull.reigo && rokkuSubMd
-              ? '<div class="rokku-cycle-sub" style="margin-top:6px;color:var(--muted);">サブ：'+rokkuSubMd.desc+'</div>'
-              : '')+
+            '<div class="rokku-cycle-card '+rokkuMd.level+'">'+
+              '<div class="rokku-cycle-label">'+targetMonth+'月 月運</div>'+
+              '<div class="rokku-cycle-name '+rokkuMd.level+'">'+
+                rokkuMd.name+
+                (rokkuFull.reigo && rokkuSubMd
+                  ? '<span style="color:var(--muted);font-size:12px;font-weight:400;"> / '+rokkuSubMd.name+'</span>'
+                  : '')+
+              '</div>'+
+              '<div class="rokku-cycle-sub">'+rokkuMd.desc+'</div>'+
+              (rokkuFull.reigo && rokkuSubMd
+                ? '<div class="rokku-cycle-sub" style="margin-top:6px;color:var(--muted);">サブ：'+rokkuSubMd.desc+'</div>'
+                : '')+
+            '</div>'+
           '</div>'+
-        '</div>'+
-        '<div class="rokku-advice">'+
-          '<div class="rokku-advice-label">今年のアドバイス</div>'+
-          rokkuYd.advice+
-        '</div>'+
-        '<div style="font-size:10px;letter-spacing:.2em;color:var(--gold);margin:16px 0 6px">9年サイクル（横スクロール）</div>'+
-        rokku9html+
-        '<div style="font-size:10px;letter-spacing:.2em;color:var(--gold);margin:14px 0 6px">12ヶ月サイクル（横スクロール）</div>'+
-        rokku12html+
-      '</div>');
+          '<div class="rokku-advice">'+
+            '<div class="rokku-advice-label">今年のアドバイス</div>'+
+            rokkuYd.advice+
+          '</div>'+
+          '<div style="font-size:10px;letter-spacing:.2em;color:var(--gold);margin:16px 0 6px">9年サイクル（横スクロール）</div>'+
+          rokku9html+
+          '<div style="font-size:10px;letter-spacing:.2em;color:var(--gold);margin:14px 0 6px">12ヶ月サイクル（横スクロール）</div>'+
+          rokku12html+
+        '</div>');
 
-  /* 区切り：数秘術 */
-  var suuhiStrip = '<div class="suuhi-cycle-strip">';
-  for(var si=1;si<=9;si++){
-    var isActS = (si === pyBase); /* pyBaseを使う（マスター11→2, 22→4, 33→6） */
-    suuhiStrip +=
-      '<div class="suuhi-strip-cell'+(isActS?' is-active':'')+'">'+
-        '<div class="suuhi-strip-num">'+si+'</div>'+
-        '<div class="suuhi-strip-name">'+SUUHI_YEAR[si].name.replace('の年','')+'</div>'+
-      '</div>';
+    /* 区切り：数秘術 */
+    var suuhiStrip = '<div class="suuhi-cycle-strip">';
+    for(var si=1;si<=9;si++){
+      var isActS = (si === pyBase); /* pyBaseを使う（マスター11→2, 22→4, 33→6） */
+      suuhiStrip +=
+        '<div class="suuhi-strip-cell'+(isActS?' is-active':'')+'">'+
+          '<div class="suuhi-strip-num">'+si+'</div>'+
+          '<div class="suuhi-strip-name">'+SUUHI_YEAR[si].name.replace('の年','')+'</div>'+
+        '</div>';
+    }
+    suuhiStrip += '</div>';
+
+    html +=
+      '<div class="section-divider"><span class="section-divider-label">数秘術</span></div>'+
+      makeAccordion('suuhi', '数秘術 · パーソナルイヤー',
+        '<div class="suuhi-banner">'+
+          '<div class="suuhi-number-wrap">'+
+            '<div class="suuhi-number">'+pyNum+'</div>'+
+            '<div class="suuhi-info">'+
+              '<div class="suuhi-year-label">'+kYear+'年のテーマ</div>'+
+              '<div class="suuhi-year-name">'+pyData.name+'</div>'+
+              '<div class="suuhi-year-sub">キーワード：'+pyData.keyword+'</div>'+
+            '</div>'+
+          '</div>'+
+          '<div class="suuhi-desc">'+pyData.desc+'</div>'+
+          '<div class="suuhi-advice">'+
+            '<div class="suuhi-advice-label">数秘からのアドバイス</div>'+
+            pyData.advice+
+          '</div>'+
+          suuhiStrip+
+        '</div>');
+
+    var resultEl = document.getElementById('result');
+    resultEl.innerHTML = html;
+    resultEl.style.display = 'block';
+
+    setTimeout(function() {
+      /* _noScroll=true のとき（switchCompatTab 経由）は副作用を一切起こさない */
+      if (window._noScroll) return;
+      /* 方位盤 */
+      renderCompass(yearBoard, judgment, 'compassWrap', 'yr');
+      /* 月盤初期表示（1月） */
+      showMonthBoard(1, kYear, document.querySelector('.month-tab'));
+      /* バーアニメーション */
+      var yb=document.getElementById('yearBar');
+      var mb=document.getElementById('monthBar');
+      if(yb) yb.style.width=toWidth(yd.score);
+      if(mb) mb.style.width=toWidth(md.score);
+      resultEl.scrollIntoView({behavior:'smooth',block:'start'});
+      KyuseiEnhanced.renderAll('enhanced-wrap', honmei, kYear, kMonth);
+      // 夜子時トグルを表示
+      if(typeof showYakodokiToggle === 'function') showYakodokiToggle();
+    }, 80);
+  } catch(e) {
+    var _ed = document.createElement("div");
+    _ed.style.cssText = "position:fixed;top:40px;left:0;right:0;background:#c00;color:#fff;font-size:10px;padding:8px;z-index:99999;word-break:break-all;";
+    _ed.textContent = "calculate ERROR: " + (e && e.message ? e.message : String(e)) + " | stack: " + (e && e.stack ? e.stack.slice(0,200) : "");
+    document.body.appendChild(_ed);
   }
-  suuhiStrip += '</div>';
-
-  html +=
-    '<div class="section-divider"><span class="section-divider-label">数秘術</span></div>'+
-    makeAccordion('suuhi', '数秘術 · パーソナルイヤー',
-      '<div class="suuhi-banner">'+
-        '<div class="suuhi-number-wrap">'+
-          '<div class="suuhi-number">'+pyNum+'</div>'+
-          '<div class="suuhi-info">'+
-            '<div class="suuhi-year-label">'+kYear+'年のテーマ</div>'+
-            '<div class="suuhi-year-name">'+pyData.name+'</div>'+
-            '<div class="suuhi-year-sub">キーワード：'+pyData.keyword+'</div>'+
-          '</div>'+
-        '</div>'+
-        '<div class="suuhi-desc">'+pyData.desc+'</div>'+
-        '<div class="suuhi-advice">'+
-          '<div class="suuhi-advice-label">数秘からのアドバイス</div>'+
-          pyData.advice+
-        '</div>'+
-        suuhiStrip+
-      '</div>');
-
-  var resultEl = document.getElementById('result');
-  resultEl.innerHTML = html;
-  resultEl.style.display = 'block';
-
-  setTimeout(function() {
-    /* _noScroll=true のとき（switchCompatTab 経由）は副作用を一切起こさない */
-    if (window._noScroll) return;
-    /* 方位盤 */
-    renderCompass(yearBoard, judgment, 'compassWrap', 'yr');
-    /* 月盤初期表示（1月） */
-    showMonthBoard(1, kYear, document.querySelector('.month-tab'));
-    /* バーアニメーション */
-    var yb=document.getElementById('yearBar');
-    var mb=document.getElementById('monthBar');
-    if(yb) yb.style.width=toWidth(yd.score);
-    if(mb) mb.style.width=toWidth(md.score);
-    resultEl.scrollIntoView({behavior:'smooth',block:'start'});
-    KyuseiEnhanced.renderAll('enhanced-wrap', honmei, kYear, kMonth);
-    // 夜子時トグルを表示
-    if(typeof showYakodokiToggle === 'function') showYakodokiToggle();
-  }, 80);
 }
 
 /* =======================================================
