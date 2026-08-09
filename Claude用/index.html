@@ -1834,6 +1834,13 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
 </div>
 
 <script>
+// ES6 polyfills for older iOS Safari
+if(!Array.prototype.includes){Array.prototype.includes=function(v){return this.indexOf(v)!==-1;};}
+if(!String.prototype.includes){String.prototype.includes=function(v){return this.indexOf(v)!==-1;};}
+if(!Object.values){Object.values=function(o){return Object.keys(o).map(function(k){return o[k];});};}
+if(!Object.entries){Object.entries=function(o){return Object.keys(o).map(function(k){return[k,o[k]];});};}
+if(!Array.from){Array.from=function(a){return Array.prototype.slice.call(a);};}
+</script>
 /* ======= MEMO DATA（ここを編集してGitHub更新で全端末反映） ======= */
 var MEMO_DATA = {};
 /* ======= MEMO DATA END ======= */
@@ -16503,47 +16510,47 @@ function buildPillarCell(pillar, colClass, nichikan_idx, label){
 }
 
 function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hideTabs){
-  const nik = day_p.kan; // 日干インデックス
-  const pillars = [year_p, month_p, day_p, hour_p];
-  const labels = ['年柱','月柱','日柱','時柱'];
-  const cols = ['year','month','day-pillar-col','hour'];
+  var nik = day_p.kan; // 日干インデックス
+  var pillars = [year_p, month_p, day_p, hour_p];
+  var labels = ['年柱','月柱','日柱','時柱'];
+  var cols = ['year','month','day-pillar-col','hour'];
 
   // 五行バランス
-  const balance = calcBalance(unknownTime ? [year_p,month_p,day_p] : pillars);
-  const balTotal = Object.values(balance).reduce((a,b)=>a+b,0);
+  var balance = calcBalance(unknownTime ? [year_p,month_p,day_p] : pillars);
+  var balTotal = Object.values(balance).reducefunction((a,b){ return a+b; },0);
 
   // 通変星・十二運（天干）
-  const hensei = pillars.map((p,i)=> p ? calcHensei(nik, p.kan) : '—');
-  const jyu12  = pillars.map((p,i)=> p ? calcJyu12(nik, p.shi) : '—');
+  var hensei = pillars.mapfunction((p,i){ return p ? calcHensei(nik; }, p.kan) : '—');
+  var jyu12  = pillars.mapfunction((p,i){ return p ? calcJyu12(nik; }, p.shi) : '—');
 
   // 蔵干
-  const zg = pillars.map((p,i)=>{
+  var zg = pillars.mapfunction((p,i){
     if(!p) return null;
     return ZOUGAN[p.shi];
   });
 
   // 蔵干通変星
-  const zgHensei = zg.map((z,i)=>{
+  var zgHensei = zg.mapfunction((z,i){
     if(!z) return null;
-    return z.map(k => k!==null ? `${KAN10[k]}(${calcZouganHensei(nik, k)})` : null).filter(Boolean);
+    return z.map(function(k){ return k!==null ? `$; }{KAN10[k]}(${calcZouganHensei(nik, k)})` : null).filter(Boolean);
   });
 
   // 月支・日支名（調候用）
-  const SHI12_NAMES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
-  const month_shi_name = month_p ? SHI12_NAMES[month_p.shi] : '';
-  const day_shi_name = day_p ? SHI12_NAMES[day_p.shi] : '';
-  const noHourClass = unknownTime ? 'no-hour' : '';
+  var SHI12_NAMES = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  var month_shi_name = month_p ? SHI12_NAMES[month_p.shi] : '';
+  var day_shi_name = day_p ? SHI12_NAMES[day_p.shi] : '';
+  var noHourClass = unknownTime ? 'no-hour' : '';
 
-  let tableRows = '';
+  var tableRows = '';
 
   // 1行目: ラベル（タップで解説パネル）
   // PILLAR_INFO はグローバルで定義
 
   tableRows += `<tr>
     <th class="col-label"></th>
-    ${labels.map((l,i)=>{
-      const info = PILLAR_INFO[i];
-      const colCls = cols[i] === 'day-pillar-col' ? 'day-pillar-col' : cols[i];
+    ${labels.mapfunction((l,i){
+      var info = PILLAR_INFO[i];
+      var colCls = cols[i] === 'day-pillar-col' ? 'day-pillar-col' : cols[i];
       return `<th class="${colCls}" style="cursor:pointer;" onclick="openPillarPanel(${i})">
         <span style="display:block;letter-spacing:0.1em;">${info.label}</span>
         <span style="display:block;font-size:0.62rem;color:var(--sk-silver-dim);letter-spacing:0.04em;">（${info.yomi}）</span>
@@ -16554,11 +16561,11 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   // 2行目: 天干（タップで中央ポップアップ）
   tableRows += `<tr>
     <td class="col-label" style="cursor:pointer;" onclick="openRowLabelPanel('天干')">天干<br><span style="font-size:0.65rem;color:var(--sk-silver-dim);">（てんかん）</span></td>
-    ${pillars.map((p,i)=>{
+    ${pillars.mapfunction((p,i){
       if(!p) return `<td class="${cols[i]} hour-col" style="color:var(--sk-silver-dim);font-size:0.8rem;">不明</td>`;
-      const kc = kanClass(p.kan);
-      const dayEx = i===2 ? ' day' : '';
-      const kanName = KAN10[p.kan];
+      var kc = kanClass(p.kan);
+      var dayEx = i===2 ? ' day' : '';
+      var kanName = KAN10[p.kan];
       return `<td class="${cols[i]} kan${dayEx} ${kc}">
         <span class="kan-pill" onclick="openKanPanel('${kanName}',${i},'${month_p ? SHI12[month_p.shi] : ""}','${[year_p,month_p,day_p,hour_p][i] ? SHI12[[year_p,month_p,day_p,hour_p][i].shi] : ""}')">${kanName}</span>
       </td>`;
@@ -16568,10 +16575,10 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   // 3行目: 地支（タップで中央ポップアップ）
   tableRows += `<tr>
     <td class="col-label" style="cursor:pointer;" onclick="openRowLabelPanel('地支')">地支<br><span style="font-size:0.65rem;color:var(--sk-silver-dim);">（ちし）</span></td>
-    ${pillars.map((p,i)=>{
+    ${pillars.mapfunction((p,i){
       if(!p) return `<td class="${cols[i]} hour-col shi" style="color:var(--sk-silver-dim);">—</td>`;
-      const shiName = SHI12[p.shi];
-      const sc = shiClass(shiName);
+      var shiName = SHI12[p.shi];
+      var sc = shiClass(shiName);
       return `<td class="${cols[i]} shi">
         <span class="shi-pill ${sc}" onclick="openShiPanel('${shiName}',${i},'${day_p ? KAN10[day_p.kan] : ""}')">${shiName}</span>
       </td>`;
@@ -16581,11 +16588,11 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   // 4行目: 蔵干
   tableRows += `<tr>
     <td class="col-label" style="cursor:pointer;" onclick="openRowLabelPanel('蔵干')">蔵干<br><span style="font-size:0.65rem;color:var(--sk-silver-dim);">（ぞうかん）</span></td>
-    ${zg.map((z,i)=>{
+    ${zg.mapfunction((z,i){
       if(!z) return `<td class="${cols[i]} zougan-cell hour-col">—</td>`;
-      const items = [z[2],z[1],z[0]].filter(k=>k!==null)
-        .map((k,j)=>{
-          const role = j===0?'正気':j===1?'中気':'余気';
+      var items = [z[2],z[1],z[0]].filter(function(k){ return k!==null; })
+        .mapfunction((k,j){
+          var role = j===0?'正気':j===1?'中気':'余気';
           return `<span class="zougan-item">${KAN10[k]}<span>（${role}）</span></span>`;
         }).join('');
       return `<td class="${cols[i]} zougan-cell">${items}</td>`;
@@ -16593,13 +16600,13 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   </tr>`;
 
   // 5行目: 通変星（天干）
-  const pillarLabels = ['年柱','月柱','日柱','時柱'];
+  var pillarLabels = ['年柱','月柱','日柱','時柱'];
   tableRows += `<tr>
     <td class="col-label" style="cursor:pointer;" onclick="openRowLabelPanel('通変星')">通変星<br><span style="font-size:0.65rem;color:var(--sk-silver-dim);">（つうへんせい）</span></td>
-    ${hensei.map((h,i)=>{
+    ${hensei.mapfunction((h,i){
       if(!pillars[i]) return `<td class="${cols[i]} hensei-cell hour-col">—</td>`;
-      const dayStyle = i===2 ? 'color:var(--sk-gold-light);font-weight:500;' : '';
-      const ctx = pillarLabels[i] + 'の通変星';
+      var dayStyle = i===2 ? 'color:var(--sk-gold-light);font-weight:500;' : '';
+      var ctx = pillarLabels[i] + 'の通変星';
       if(i===2) return `<td class="${cols[i]} hensei-cell" style="${dayStyle}"><span style="font-size:0.65rem;color:var(--sk-gold-dark);display:block;">日 主</span></td>`;
       return `<td class="${cols[i]} hensei-cell">
         <span class="hj-pill" onclick="openHenseiPanel('${h}','${ctx}')" style="${(function(){
@@ -16614,19 +16621,19 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   // 6行目: 蔵干通変星
   tableRows += `<tr>
     <td class="col-label" style="cursor:pointer;" onclick="openRowLabelPanel('蔵干星')">蔵干星<br><span style="font-size:0.65rem;color:var(--sk-silver-dim);">（ぞうかんせい）</span></td>
-    ${zgHensei.map((z,i)=>{
+    ${zgHensei.mapfunction((z,i){
       if(!z) return `<td class="${cols[i]} zougan-cell hour-col">—</td>`;
-      return `<td class="${cols[i]} zougan-cell">${z.map(s=>`<span class="zougan-item">${s}</span>`).join('')}</td>`;
+      return `<td class="${cols[i]} zougan-cell">${z.map(function(s){ return `<span class="zougan-item">$; }{s}</span>`).join('')}</td>`;
     }).join('')}
   </tr>`;
 
   // 7行目: 十二運
   tableRows += `<tr>
     <td class="col-label" style="cursor:pointer;" onclick="openRowLabelPanel('十二運')">十二運<br><span style="font-size:0.65rem;color:var(--sk-silver-dim);">（じゅうにうん）</span></td>
-    ${jyu12.map((j,i)=>{
+    ${jyu12.mapfunction((j,i){
       if(!pillars[i]) return `<td class="${cols[i]} jyunsei-cell hour-col">—</td>`;
-      const jc = jyu12Class(j);
-      const ctx = pillarLabels[i] + 'の十二運';
+      var jc = jyu12Class(j);
+      var ctx = pillarLabels[i] + 'の十二運';
       return `<td class="${cols[i]} jyunsei-cell ${jc}">
         <span class="hj-pill" onclick="openJyu12Panel('${j}','${ctx}')">${j}</span>
       </td>`;
@@ -16635,19 +16642,19 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
 
   // 蔵干通変星詳細（天干のみではなく地支蔵干全体も）
   // 空亡（天中殺）
-  const kuuboShis = calcKuubo(day_p.offset);
-  const kuuboNames = kuuboShis.map(s => SHI12[s]);
+  var kuuboShis = calcKuubo(day_p.offset);
+  var kuuboNames = kuuboShis.map(function(s){ return SHI12[s]; });
   // 命式の各柱に空亡地支が含まれるか判定
-  const kuuboInPillars = pillars.filter(Boolean).filter(p => kuuboShis.includes(p.shi));
+  var kuuboInPillars = pillars.filter(Boolean).filter(function(p){ return kuuboShis.includes(p.shi; }));
 
-  const nichikan = KAN10[nik];
-  const ndesc = NICHIKAN_DESC[nichikan];
+  var nichikan = KAN10[nik];
+  var ndesc = NICHIKAN_DESC[nichikan];
 
   // 五行バランスHTML（アコーディオン付き）
-  const gogyoNames = ['木','火','土','金','水'];
-  const gogyoColors = ['#5db856','#e05c40','#c8a840','#b0c4de','#4aa8d8'];
-  const maxVal = Math.max(...Object.values(balance), 1);
-  const gogyoDetail = {
+  var gogyoNames = ['木','火','土','金','水'];
+  var gogyoColors = ['#5db856','#e05c40','#c8a840','#b0c4de','#4aa8d8'];
+  var maxVal = Math.max(...Object.values(balance), 1);
+  var gogyoDetail = {
     '木': { image:'樹木・成長・上昇', season:'春', direction:'東', organ:'肝・胆', emotion:'怒り・慈悲', trait:'柔軟・向上心・創造性',
             uму:'水', umu_reason:'水が木を育てる', umu_verb:'育てられる',
             uмu2:'火', umu2_reason:'木が燃えて火を生む', umu2_verb:'生む',
@@ -16674,10 +16681,10 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
             koku:'土', koku_reason:'土が水をせき止める', koku_verb:'剋される',
             koku2:'火', koku2_reason:'水が火を消す', koku2_verb:'剋す' },
   };
-  const gogyoColorMap = {'木':'#5db856','火':'#e05c40','土':'#c8a840','金':'#b0c4de','水':'#4aa8d8'};
-  const balHtml = gogyoNames.map((g,i)=>{
-    const d = gogyoDetail[g];
-    const pct = Math.round(balance[g]/maxVal*100);
+  var gogyoColorMap = {'木':'#5db856','火':'#e05c40','土':'#c8a840','金':'#b0c4de','水':'#4aa8d8'};
+  var balHtml = gogyoNames.mapfunction((g,i){
+    var d = gogyoDetail[g];
+    var pct = Math.round(balance[g]/maxVal*100);
     return `
     <div class="gogyo-bar" onclick="this.classList.toggle('open')">
       <div class="gogyo-bar-main">
@@ -16744,7 +16751,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   }).join('');
 
   // 十干詳細データ
-  const TENKAN_DETAIL = {
+  var TENKAN_DETAIL = {
     '甲':{ yomi:'きのえ', image:'大樹', gogyo:'木', inyo:'陽', rank:'十干の1番目・リーダーの星',
       strengths:['天に向かってまっすぐ伸びる大木のように、目標に向かってブレない','正義感が強く、人の上に立つことへの適性がある','開拓者精神、新しいものを切り拓く力がある'],
       weaknesses:['大木は風に揺れない分、強い風には折れやすい → 頑固・融通が利かない面も','曲がることが苦手なので、プライドが高く見られることがある'],
@@ -16788,47 +16795,47 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   };
 
   // 天干一覧（タップで展開）
-  const usedKan = [...new Set(pillars.filter(Boolean).map(p=>KAN10[p.kan]))];
-  const tenkanList = usedKan.map(k=>{
-    const d = TENKAN_DETAIL[k];
-    const gc = kanClass(KAN10.indexOf(k));
+  var usedKan = [...new Set(pillars.filter(Boolean).map(function(p){ return KAN10[p.kan]; }))];
+  var tenkanList = usedKan.map(function(k){
+    var d = TENKAN_DETAIL[k];
+    var gc = kanClass(KAN10.indexOf(k));
     return `<span class="tenkan-pill ${gc}" onclick="toggleTenkan('td_${k}', this)">${k} ${d.gogyo}${d.inyo}</span>`;
   });
 
-  const _toggleHTML = '<div style="margin-bottom:8px;padding:6px 10px;background:rgba(184,150,46,0.08);border-radius:8px;display:flex;align-items:center;justify-content:space-between;">' +
+  var _toggleHTML = '<div style="margin-bottom:8px;padding:6px 10px;background:rgba(184,150,46,0.08);border-radius:8px;display:flex;align-items:center;justify-content:space-between;">' +
     '<div style="display:flex;align-items:center;gap:6px;">' +
       '<button onclick="setYakodoki(true)" id="yak-btn-23" style="padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (window._yakodoki === true ? 'var(--sk-gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (window._yakodoki === true ? 'var(--sk-gold)' : 'transparent') + ';color:' + (window._yakodoki === true ? '#000' : 'var(--sk-silver-dim)') + ';font-weight:' + (window._yakodoki === true ? '700' : '400') + ';">23時</button>' +
       '<button onclick="setYakodoki(false)" id="yak-btn-0" style="padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (window._yakodoki === false ? 'var(--sk-gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (window._yakodoki === false ? 'var(--sk-gold)' : 'transparent') + ';color:' + (window._yakodoki === false ? '#000' : 'var(--sk-silver-dim)') + ';font-weight:' + (window._yakodoki === false ? '700' : '400') + ';">0時</button>' +
     '</div>' +
   '</div>';
   // 生年月日表示文字列を生成（birthStrは既に「1986年4月30日 13:17 福岡」形式）
-  const _bsParts = birthStr.trim().split(/\s+/);
-  let _bsPlace = '';
-  let _bsTime = '';
+  var _bsParts = birthStr.trim().split(/\s+/);
+  var _bsPlace = '';
+  var _bsTime = '';
   // 時刻（HH:MM形式）と出生地を抽出
-  for(let _pi=1; _pi<_bsParts.length; _pi++){
-    const _p = _bsParts[_pi];
+  for(var _pi=1; _pi<_bsParts.length; _pi++){
+    var _p = _bsParts[_pi];
     if(/^\d{1,2}:\d{2}$/.test(_p)) { _bsTime = _p; }
     else if(_p && !/^\d+$/.test(_p)) { _bsPlace = _p; }
   }
   // 年齢計算（birthStrから年月日を抽出）
-  const _bsYrM = birthStr.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
-  let _bsAge = '';
+  var _bsYrM = birthStr.match(/(\d{4})年(\d{1,2})月(\d{1,2})日/);
+  var _bsAge = '';
   if(_bsYrM){
-    const _now = new Date();
-    let _a = _now.getFullYear() - parseInt(_bsYrM[1]);
-    const _bsMo = parseInt(_bsYrM[2]), _bsDa = parseInt(_bsYrM[3]);
+    var _now = new Date();
+    var _a = _now.getFullYear() - parseInt(_bsYrM[1]);
+    var _bsMo = parseInt(_bsYrM[2]), _bsDa = parseInt(_bsYrM[3]);
     if(_now.getMonth()+1 < _bsMo || (_now.getMonth()+1 === _bsMo && _now.getDate() < _bsDa)) _a--;
     _bsAge = _a + '歳';
   }
   // 表示文字列：日付部分 + 時刻 + 出生地 + 年齢
-  const _bsDatePart = _bsYrM ? `${_bsYrM[1]}年${_bsYrM[2]}月${_bsYrM[3]}日` : _bsParts[0];
-  let _birthDisplay = _bsDatePart;
+  var _bsDatePart = _bsYrM ? `${_bsYrM[1]}年${_bsYrM[2]}月${_bsYrM[3]}日` : _bsParts[0];
+  var _birthDisplay = _bsDatePart;
   if(_bsTime) _birthDisplay += ' ' + _bsTime;
   if(_bsPlace) _birthDisplay += '（' + _bsPlace + '）';
   if(_bsAge) _birthDisplay += '（' + _bsAge + '）';
 
-  const html = (hideTabs ? '' : _toggleHTML) + `
+  var html = (hideTabs ? '' : _toggleHTML) + `
   <div class="result-title fade-in">
     <h2>命 式 表</h2>
     <div class="person-name">${_birthDisplay}生</div>
@@ -16844,12 +16851,12 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
     <div class="kuubo-title">空 亡（天 中 殺）</div>
     <div class="kuubo-content">
       <div class="kuubo-shi">
-        ${kuuboNames.map(s=>`<span class="kuubo-badge">${s}</span>`).join('<span class="kuubo-sep">・</span>')}
+        ${kuuboNames.map(function(s){ return `<span class="kuubo-badge">$; }{s}</span>`).join('<span class="kuubo-sep">・</span>')}
       </div>
       <div class="kuubo-note">
         日柱「${KAN10[day_p.kan]}${SHI12[day_p.shi]}」が属する旬の空亡地支です。
         ${kuuboInPillars.length > 0
-          ? `命式中に空亡地支（${kuuboInPillars.map(p=>SHI12[p.shi]).join('・')}）が含まれています。`
+          ? `命式中に空亡地支（${kuuboInPillars.map(function(p){ return SHI12[p.shi]; }).join('・')}）が含まれています。`
           : '命式中に空亡地支は含まれていません。'}
       </div>
     </div>
@@ -16882,11 +16889,11 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
         <div class="interp-card-title" style="margin-bottom:0.5rem;">天 干 一 覧</div>
         <div style="font-size:0.68rem;color:var(--sk-silver-dim);margin-bottom:0.5rem;">タップで詳細を展開</div>
         <div class="tenkan-list">${tenkanList.join('')}</div>
-        ${usedKan.map(k=>{
-          const d = TENKAN_DETAIL[k];
-          const gc = kanClass(KAN10.indexOf(k));
-          const gogyoColorMap2 = {'木':'#5db856','火':'#e05c40','土':'#c8a840','金':'#b0c4de','水':'#4aa8d8'};
-          const col = gogyoColorMap2[d.gogyo];
+        ${usedKan.map(function(k){
+          var d = TENKAN_DETAIL[k];
+          var gc = kanClass(KAN10.indexOf(k));
+          var gogyoColorMap2 = {'木':'#5db856','火':'#e05c40','土':'#c8a840','金':'#b0c4de','水':'#4aa8d8'};
+          var col = gogyoColorMap2[d.gogyo];
           return `<div class="tenkan-detail-panel" id="td_${k}">
             <div class="tenkan-detail-header">
               <span class="tenkan-detail-kanji ${gc}">${k}</span>
@@ -16898,16 +16905,16 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
             <div class="tenkan-kyoaku">
               <div class="tenkan-kyoaku-box" style="border-left:2px solid #5db856;">
                 <div class="tenkan-kyoaku-title" style="color:#5db856;">✦ 強み</div>
-                <div class="tenkan-kyoaku-item">${d.strengths.map(s=>`・${s}`).join('<br>')}</div>
+                <div class="tenkan-kyoaku-item">${d.strengths.map(function(s){ return `・$; }{s}`).join('<br>')}</div>
               </div>
               <div class="tenkan-kyoaku-box" style="border-left:2px solid #e05c40;">
                 <div class="tenkan-kyoaku-title" style="color:#e05c40;">✦ 弱み</div>
-                <div class="tenkan-kyoaku-item">${d.weaknesses.map(s=>`・${s}`).join('<br>')}</div>
+                <div class="tenkan-kyoaku-item">${d.weaknesses.map(function(s){ return `・$; }{s}`).join('<br>')}</div>
               </div>
             </div>
             <div style="font-size:0.65rem;letter-spacing:0.2em;color:var(--sk-silver-dim);margin-bottom:0.4rem;">五行から見た関係性</div>
             <div class="tenkan-gogyo-row">
-              ${d.gogyo_rel.map(r=>`<div class="tenkan-gogyo-item">${r}</div>`).join('')}
+              ${d.gogyo_rel.map(function(r){ return `<div class="tenkan-gogyo-item">$; }{r}</div>`).join('')}
             </div>
           </div>`;
         }).join('')}
@@ -16917,11 +16924,11 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
     <div class="interp-card" style="grid-column: 1 / -1;">
       <div class="interp-card-title">十 二 運 の 解 説</div>
       <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.8rem;margin-top:0.3rem;">
-        ${pillars.map((p,i)=>{
+        ${pillars.mapfunction((p,i){
           if(!p) return '';
-          const j = jyu12[i];
-          const jc = jyu12Class(j);
-          const descs = {
+          var j = jyu12[i];
+          var jc = jyu12Class(j);
+          var descs = {
             '長生':'生まれたばかりの旺盛な生命力。新しいことへの適応力が高い。',
             '沐浴':'入浴のように心身をリセット。変化に富み、行動力があるが移り気な面も。',
             '冠帯':'成長著しい時期を象徴。向上心と野心が強く、積極的に自己を磨く。',
