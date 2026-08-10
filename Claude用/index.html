@@ -14527,7 +14527,7 @@ function buildShichuuCompatHTML(bdA, bdB) {
   // 日支セクション
   html += '<div style="margin-bottom:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.08);">';
   html += '<div style="font-size:11px;color:var(--sk-gold-light);font-weight:700;margin-bottom:8px;padding-left:6px;border-left:2px solid var(--sk-gold-light);">日支の関係（内面・素顔の相性）</div>';
-  html += '<div style="font-size:13px;margin-bottom:6px;color:var(--text);">' + nisshiA + ' × ' + nisshiB + '</div>';
+  html += '<div style="font-size:13px;margin-bottom:6px;color:var(--text);">' + nisshiA + '（' + (SHI_GOGYO[SHI12.indexOf(nisshiA)]||'') + '） × ' + nisshiB + '（' + (SHI_GOGYO[SHI12.indexOf(nisshiB)]||'') + '）</div>';
   if(nisshiRel.length > 0) {
     html += '<div style="margin-bottom:6px;">';
     nisshiRel.forEach(function(r) {
