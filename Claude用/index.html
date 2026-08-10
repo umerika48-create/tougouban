@@ -17848,8 +17848,8 @@ function openKanPanel(kanName, colIdx, monthShi, ownShi){
       + '<span style="display:inline-block;padding:4px 14px;border-radius:20px;font-size:13px;font-weight:600;background:rgba(180,150,46,0.12);color:var(--sk-gold-light);border:1px solid rgba(180,150,46,0.3);">'
       + pd.short[colIdx] + '</span></div>';
   }
-  // 月干（colIdx=1）のとき：月干×月支の組み合わせを表示
-  if(colIdx === 1 && monthShi && typeof MOON_KAN_DESC !== 'undefined') {
+  // 全柱：干×月支の組み合わせを表示（春の終わりの壬、など）
+  if(monthShi && typeof MOON_KAN_DESC !== 'undefined') {
     var mkd = MOON_KAN_DESC[kanName] && MOON_KAN_DESC[kanName][monthShi];
     var msc3 = (typeof SHI_SEASON_COLORS !== 'undefined' && SHI_SEASON_COLORS[monthShi]) ? SHI_SEASON_COLORS[monthShi] : null;
     var mkColor = msc3 ? msc3.color : 'var(--sk-gold-light)';
