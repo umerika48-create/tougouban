@@ -17763,10 +17763,10 @@ function openKanPanel(kanName, colIdx, monthShi, ownShi){
   var colLabels = ['年柱','月柱','日柱','時柱'];
   var gogyoYomi = {木:'もく',火:'か',土:'ど',金:'こん',水:'すい'};
 
-  document.getElementById('hjTitle').textContent = colLabels[colIdx] + 'の' + kanName;
+  document.getElementById('hjTitle').textContent = colLabels[colIdx] + 'の' + kanName + '　' + nd.image + '　' + nd.gogyo + '（' + (gogyoYomi[nd.gogyo]||'') + '）・' + nd.inyo;
   document.getElementById('hjTitle').dataset.memoKey = 'kan_' + kanName + '_' + colIdx;
-  document.getElementById('hjYomi').textContent = nd.image + '　' + nd.gogyo + '（' + (gogyoYomi[nd.gogyo]||'') + '）・' + nd.inyo;
-  document.getElementById('hjBadge').textContent = pd ? pd.short[colIdx] : nd.gogyo;
+  document.getElementById('hjYomi').textContent = '';
+  document.getElementById('hjBadge').textContent = '';
 
   var mainDesc = pd ? pd.detail[colIdx] : nd.desc;
   var friendKey = 'friend_kan_' + kanName + '_' + colIdx;
@@ -17842,6 +17842,12 @@ function openKanPanel(kanName, colIdx, monthShi, ownShi){
 
   // ラベル表示（KAN_LABELS）
   var kanLabelHTML = '';
+  // 才能タグ（pd.short）をキーワードタグエリアに追加
+  if(pd && pd.short && pd.short[colIdx]) {
+    kanLabelHTML += '<div style="margin-bottom:6px;padding:4px 0;">'
+      + '<span style="display:inline-block;padding:4px 14px;border-radius:20px;font-size:13px;font-weight:600;background:rgba(180,150,46,0.12);color:var(--sk-gold-light);border:1px solid rgba(180,150,46,0.3);">'
+      + pd.short[colIdx] + '</span></div>';
+  }
   // 月干（colIdx=1）のとき：月干×月支の組み合わせを表示
   if(colIdx === 1 && monthShi && typeof MOON_KAN_DESC !== 'undefined') {
     var mkd = MOON_KAN_DESC[kanName] && MOON_KAN_DESC[kanName][monthShi];
@@ -17900,8 +17906,8 @@ function openKanPanel(kanName, colIdx, monthShi, ownShi){
         return '<span style="display:inline-block;margin:2px 3px;padding:4px 10px;border-radius:12px;font-size:12px;background:rgba(61,184,86,0.12);color:var(--text);border:1px solid rgba(61,184,86,0.25);">' + l + '</span>';
       }).join('') + '</div>';
   }
-  var kanDetailHTML = mainDesc ? '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">詳細</summary><p style="font-size:12px;line-height:1.8;color:var(--text);margin-top:6px;">' + mainDesc + '</p>' + chokoBaseHTML + '</details>' : chokoBaseHTML;
-  document.getElementById('hjDesc').innerHTML = kanLabelHTML + friendTopHTML + kanDetailHTML;
+  var kanDetailHTML = mainDesc ? '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">▶ 干支の詳細・解説</summary><p style="font-size:12px;line-height:1.8;color:var(--text);margin-top:6px;">' + mainDesc + '</p>' + chokoBaseHTML + '</details>' : chokoBaseHTML;
+  document.getElementById('hjDesc').innerHTML = friendTopHTML + kanLabelHTML + kanDetailHTML;
 
   document.getElementById('hjContext').innerHTML = '';
 
@@ -18128,7 +18134,7 @@ function openShiPanel(shiName, colIdx, dayKan){
       }
     }
   }
-  var shiDetailHTML = mainDesc ? '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">詳細</summary>' + shiThemeHTML + '<p style="font-size:12px;line-height:1.8;color:var(--text);margin-top:6px;">' + mainDesc + '</p>' + chokoShiHTML + '</details>' : shiThemeHTML + chokoShiHTML;
+  var shiDetailHTML = mainDesc ? '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">▶ 干支の詳細・解説</summary>' + shiThemeHTML + '<p style="font-size:12px;line-height:1.8;color:var(--text);margin-top:6px;">' + mainDesc + '</p>' + chokoShiHTML + '</details>' : shiThemeHTML + chokoShiHTML;
   document.getElementById('hjDesc').innerHTML = juniunHTML + shiFriendHTML + shiLabelHTML + shiDetailHTML;
   document.getElementById('hjContext').innerHTML = '';
   document.getElementById('hjTitle').dataset.memoKey = 'memo_shi_' + shiName + '_' + colIdx2;
