@@ -4239,6 +4239,56 @@ var BAD_REASONS = {
 /** 宮名（宮番号→漢字、短縮版。年運/月運サイクルパネルでの表示用） */
 var KYU_NAME_SHORT = {1:'坎宮',2:'坤宮',3:'震宮',4:'巽宮',5:'中宮',6:'乾宮',7:'兌宮',8:'艮宮',9:'離宮'};
 var KYU_DIRECTION = {1:'北',2:'南西',3:'東',4:'東南',5:'中央',6:'北西',7:'西',8:'北東',9:'南'};
+var HENSEI_KEYWORD_TABLE = {
+  '負けず嫌い':{top:'劫財',next:['比肩','偏官']},
+  '競争心':{top:'劫財',next:['比肩','偏官']},
+  'プライド':{top:'傷官',next:['劫財','正官']},
+  '自立心':{top:'比肩',next:['劫財','偏印']},
+  '行動力':{top:'偏官',next:['劫財','偏財']},
+  '社交性':{top:'偏財',next:['食神','劫財']},
+  '人付き合い':{top:'食神',next:['偏財','印綬']},
+  'おしゃべり':{top:'食神',next:['傷官','偏財']},
+  '慎重さ':{top:'正財',next:['正官','印綬']},
+  '真面目さ':{top:'正官',next:['正財','印綬']},
+  '責任感':{top:'正官',next:['偏官','正財']},
+  '自由さ':{top:'偏印',next:['食神','比肩']},
+  'マイペース':{top:'比肩',next:['偏印','食神']},
+  '頑固さ':{top:'比肩',next:['正財','正官']},
+  '繊細さ':{top:'傷官',next:['偏印','印綬']},
+  '直感':{top:'偏印',next:['傷官','印綬']},
+  '想像力':{top:'偏印',next:['傷官','食神']},
+  '分析力':{top:'傷官',next:['印綬','偏印']},
+  '知性':{top:'印綬',next:['偏印','傷官']},
+  '向上心':{top:'正官',next:['偏官','劫財']},
+  '野心':{top:'偏官',next:['劫財','比肩']},
+  'リーダーシップ':{top:'偏官',next:['正官','比肩']},
+  '商才':{top:'偏財',next:['食神','劫財']},
+  '金銭感覚':{top:'正財',next:['偏財','食神']},
+  '面倒見の良さ':{top:'印綬',next:['食神','偏財']},
+  '包容力':{top:'印綬',next:['食神','正財']},
+  '批判力':{top:'傷官',next:['偏印','偏官']},
+  'こだわり':{top:'傷官',next:['偏印','比肩']},
+  '独創性':{top:'偏印',next:['傷官','食神']},
+};
+var HENSEI_RANKING = {
+  '負けず嫌い':['劫財','比肩','偏官','傷官','正官'],
+  '行動力':['偏官','劫財','偏財','比肩','食神'],
+  '自立心':['比肩','劫財','偏印','偏官','傷官'],
+  '社交性':['偏財','食神','劫財','印綬','正官'],
+  '真面目さ':['正官','正財','印綬','偏官','比肩'],
+  '繊細さ':['傷官','偏印','印綬','正財','食神'],
+  'プライド':['傷官','劫財','正官','偏官','比肩'],
+};
+var HENSEI_TENKAN_ZOUGAN = [
+  {item:'出方のイメージ',tenkan:'表舞台に立つ役者',zougan:'舞台の裏で動く演出家'},
+  {item:'本人の自覚',tenkan:'比較的自覚しやすい傾向',zougan:'自覚していないことも多い傾向'},
+  {item:'周囲からの見え方',tenkan:'他人からも見えやすい',zougan:'親しい人にだけ見える'},
+  {item:'いつ出るか',tenkan:'日常の言動・行動・対人関係',zougan:'本音・ストレス時・深い関係の中'},
+  {item:'変化のしやすさ',tenkan:'状況によって意識的に変えられる',zougan:'無意識ゆえに変えにくい'},
+  {item:'鑑定での使い方',tenkan:'「普段のあなた」を読む',zougan:'「本音のあなた・根底にある動機」を読む'},
+  {item:'具体例',tenkan:'月干に食神→話好き・楽しい人と自覚',zougan:'日支蔵干に偏官→追い詰められると突然強くなる'},
+];
+
 var YEAR_HENSEI_DESC = {
   '比肩': {trend:'エネルギー充電・自立心UP', detail:'独立・自分らしさが増す年。自分のペースで動くと吉。競争心が高まることも。', chara:'対等なライバル・仲間のような存在感'},
   '劫財': {trend:'勝負・刺激・変化', detail:'動きが激しく変化が多い年。積極的に動くとチャンスあり。金銭管理に注意。', chara:'ちょっと油断できない、対等だけど癖のある相手のような存在感'},
@@ -5375,6 +5425,28 @@ function toggleFriendBox(el) {
     : (type === 'f' ? 'rgba(168,154,255,0.3)' : 'rgba(255,215,0,0.25)');
 }
 
+
+
+function showTenkanZouganTable() {
+  var titleEl = document.getElementById('hjTitle');
+  var descEl = document.getElementById('hjDesc');
+  if(!titleEl || !descEl) return;
+  titleEl.textContent = '天干の通変星 vs 蔵干星';
+  document.getElementById('hjYomi').textContent = '';
+  document.getElementById('hjBadge').textContent = '出方の違い';
+  document.getElementById('hjContext').innerHTML = '';
+  var html = '<div style="margin-bottom:10px;padding:8px 12px;background:rgba(168,154,255,0.08);border-radius:8px;font-size:12px;color:var(--text);line-height:1.8;"><b style="color:#b8a8ff;">天干の通変星</b>は「自分でも知っている自分」。<br><b style="color:#ffd700;">蔵干星</b>は「気づいていないけど確かにある自分」。<br>どちらが本当かではなく、どちらも本物の自分です。</div>';
+  if(typeof HENSEI_TENKAN_ZOUGAN !== 'undefined'){
+    html += '<table style="width:100%;border-collapse:collapse;font-size:11px;"><tr><th style="padding:6px 8px;background:rgba(255,255,255,0.06);color:var(--muted);text-align:left;border-bottom:1px solid rgba(255,255,255,0.1);">項目</th><th style="padding:6px 8px;background:rgba(168,154,255,0.1);color:#b8a8ff;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1);">天干（表）</th><th style="padding:6px 8px;background:rgba(255,215,0,0.08);color:#ffd700;text-align:left;border-bottom:1px solid rgba(255,255,255,0.1);">蔵干（内面）</th></tr>';
+    HENSEI_TENKAN_ZOUGAN.forEach(function(row){
+      html += '<tr><td style="padding:6px 8px;color:var(--muted);border-bottom:1px solid rgba(255,255,255,0.05);font-size:10px;">'+row.item+'</td><td style="padding:6px 8px;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.05);">'+row.tenkan+'</td><td style="padding:6px 8px;color:var(--text);border-bottom:1px solid rgba(255,255,255,0.05);">'+row.zougan+'</td></tr>';
+    });
+    html += '</table>';
+  }
+  descEl.innerHTML = html;
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
 
 function showJuniunDetail(name) {
   if(typeof JUNIUN_DESC === 'undefined' || !JUNIUN_DESC[name]) return;
@@ -14017,6 +14089,26 @@ var HENSEI_DESC = {
     taijin:'対等な関係を好む。上下関係が苦手。友達感覚での付き合いが得意',
     shigoto:'自分のペースで動く。独立・起業向き。チームより個人プレーが得意',
     combo:'劫財と並ぶと競争心が極端に強まる。印綬と並ぶと自己完結型の強い個性になる',
+    jikaku:'「勉強・学びが好き」「人の面倒を見たい」',
+    muishiki:'気づくと誰かを助けている。放っておけない性質',
+    jikaku:'「普通じゃつまらない」「独自の視点を持ちたい」',
+    muishiki:'気づくと全然違う分野に興味が移っている',
+    jikaku:'「ちゃんとしなければ」「評価されたい」という意識',
+    muishiki:'人の目を常に意識している。「どう見られているか」が頭から離れない',
+    jikaku:'「やると決めたらやる」「弱い自分が嫌い」',
+    muishiki:'知らず知らず周囲をコントロールしようとしている',
+    jikaku:'「きちんとしていたい」「無駄遣いしたくない」',
+    muishiki:'無意識にリスクを避けている。安全な選択をしがち',
+    jikaku:'「人と会うのが好き」「チャンスがあればすぐ動く」',
+    muishiki:'自然と人脈が広がっている。気づくと色々な人を知っている',
+    jikaku:'「なぜそのルールに従わなければいけないの？」という違和感',
+    muishiki:'気づくと批評している。「もっとこうすればいいのに」が口から出る',
+    jikaku:'「楽しいことが好き」「おいしいもの・好きなことに時間を使いたい」',
+    muishiki:'自然と人に話しかけている。無意識に周囲を和ませている',
+    jikaku:'「勝ちたい」「負けたくない」という強い感情',
+    muishiki:'無意識に競争している。比べていないつもりでも比べている',
+    jikaku:'「自分でやりたい」「人に頼りたくない」という気持ち',
+    muishiki:'対等でない関係に無意識に反発する。「なぜあの人が上なの？」という感覚',
     tenkan:'「自分の軸がしっかりしていて、人に流されないタイプですね。独立心が強く見られがちですが、実は仲間をとても大切にする一面もお持ちです。自分のペースで着実に歩んでいく、芯のある方ですよ」',
     love:'「恋愛では対等な関係を大切にされますね。束縛されるのが苦手で、お互いの自由を尊重できる相手と長続きするタイプです。友達のような自然体の関係が、一番あなたに合っていますよ」',
     work:'「独立心が強く、自分のやり方を貫ける環境で力が出るタイプですね。人に指図されるより、自分で判断できる仕事の方が本領発揮できる方ですよ」' },
@@ -17486,11 +17578,39 @@ function openHenseiPanel(name, context){
     if(d.shigoto) html += '<div style="padding:7px 10px;background:rgba(100,180,255,0.06);border-radius:8px;"><div style="font-size:10px;color:#6af;margin-bottom:3px;">💼 仕事・行動</div><div style="font-size:11px;color:var(--text);line-height:1.6;">'+d.shigoto+'</div></div>';
     html += '</div>';
   }
+  // 自覚しやすい・無意識に出やすい
+  if(d.jikaku || d.muishiki){
+    html += '<div style="margin-top:8px;display:grid;grid-template-columns:1fr 1fr;gap:6px;">';
+    if(d.jikaku)   html += '<div style="padding:7px 10px;background:rgba(255,220,100,0.07);border-radius:8px;border:1px solid rgba(255,220,100,0.2);"><div style="font-size:10px;color:#fc8;margin-bottom:3px;">💡 自覚しやすい</div><div style="font-size:11px;color:var(--text);line-height:1.6;">'+d.jikaku+'</div></div>';
+    if(d.muishiki) html += '<div style="padding:7px 10px;background:rgba(150,100,255,0.07);border-radius:8px;border:1px solid rgba(150,100,255,0.2);"><div style="font-size:10px;color:#b8a;margin-bottom:3px;">🌙 無意識に出やすい</div><div style="font-size:11px;color:var(--text);line-height:1.6;">'+d.muishiki+'</div></div>';
+    html += '</div>';
+  }
   // 組み合わせ傾向
   if(d.combo){
     html += '<div style="margin-top:8px;padding:7px 10px;background:rgba(180,140,220,0.08);border-radius:8px;border:1px solid rgba(180,140,220,0.2);">'
       +'<div style="font-size:10px;color:#b8a8ff;margin-bottom:3px;">🔗 他の星との組み合わせ</div>'
       +'<div style="font-size:11px;color:var(--text);line-height:1.6;">'+d.combo+'</div></div>';
+  }
+  // 関連キーワード
+  if(typeof HENSEI_KEYWORD_TABLE !== 'undefined'){
+    var _relKws = [];
+    Object.keys(HENSEI_KEYWORD_TABLE).forEach(function(kw){
+      var entry = HENSEI_KEYWORD_TABLE[kw];
+      if(entry.top === name) _relKws.push({kw:kw, rank:1});
+      else if(entry.next.indexOf(name) !== -1) _relKws.push({kw:kw, rank:2});
+    });
+    if(_relKws.length > 0){
+      html += '<div style="margin-top:8px;padding:7px 10px;background:rgba(255,255,255,0.03);border-radius:8px;border:1px solid rgba(255,255,255,0.08);">'
+        +'<div style="font-size:10px;color:var(--muted);margin-bottom:6px;">🏷️ 関連する性格キーワード</div><div>';
+      _relKws.forEach(function(r){
+        var _bg = r.rank===1 ? 'rgba(255,215,0,0.15)' : 'rgba(255,255,255,0.06)';
+        var _bc = r.rank===1 ? 'rgba(255,215,0,0.4)' : 'rgba(255,255,255,0.15)';
+        var _col = r.rank===1 ? '#ffd700' : 'var(--muted)';
+        var _lbl = r.rank===1 ? '◎' : '○';
+        html += '<span style="display:inline-block;margin:2px 3px;padding:2px 8px;border-radius:8px;font-size:10px;background:'+_bg+';color:'+_col+';border:1px solid '+_bc+';">'+_lbl+' '+r.kw+'</span>';
+      });
+      html += '</div></div>';
+    }
   }
   // お客様への伝え方（折りたたみ）
   var serifHTML = '';
@@ -17537,7 +17657,7 @@ function openHenseiPanel(name, context){
     }
   }
   document.getElementById('hjDesc').innerHTML = hFriendHTML + labelHTML + html + (serifHTML ? '<details style="margin-top:8px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">💬 鑑定セリフを見る</summary>' + serifHTML + '</details>' : '');
-  document.getElementById('hjContext').innerHTML = '<span style="font-size:12px;color:var(--sk-silver-dim);">' + context + '</span>';
+  document.getElementById('hjContext').innerHTML = '<span style="font-size:12px;color:var(--sk-silver-dim);">' + context + '</span> <button onclick="showTenkanZouganTable()" style="font-size:9px;padding:1px 6px;border-radius:4px;background:rgba(168,154,255,0.1);border:1px solid rgba(168,154,255,0.3);color:#b8a8ff;cursor:pointer;">天干vs蔵干</button>';
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
 }
