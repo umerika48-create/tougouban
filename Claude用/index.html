@@ -5452,30 +5452,75 @@ function showShiRelDetail(shiA, shiB, relType) {
   if(!titleEl || !descEl) return;
 
   var relLabels = {
-    '三合': {icon:'🌟', desc:'三合：3つの地支が集まると強いエネルギーを生む関係。チームになると力を発揮しやすい。この月は仲間・チームワークで動くと吉。'},
-    '六合': {icon:'🤝', desc:'六合：自然に引き合う関係。流れに乗りやすく、人との縁が活発になりやすい月。'},
-    '冲': {icon:'⚡', desc:'冲：正反対のエネルギーがぶつかる関係。変化・動き・刺激が起きやすい。良くも悪くも転機になりやすい月。'},
-    '刑': {icon:'⚖️', desc:'刑：価値観のズレや摩擦が生じやすい関係。人間関係に注意が必要な月。ただし自己鍛錬・成長のきっかけにもなる。'},
-    '害': {icon:'🌿', desc:'害：じわじわ消耗しやすい関係。無理をしすぎると体や心が疲れやすい月。ペースを落として丁寧に動くのが吉。'},
-    '破': {icon:'💥', desc:'破：信頼・ペース・計画が崩れやすい関係。想定外のことが起きやすい月。柔軟に対応することが大切。'},
+    '三合': {icon:'🌟', color:'#ff6b9d',
+      desc:'3つの地支が集まると強いエネルギーを生む吉の関係。仲間・チームワークで動くと大きな力を発揮しやすい時期。',
+      love_stars:'★★★★★', love:'人との縁が活発になり、グループや集まりから恋愛に発展しやすい。仲間・友人を通じた出会いが吉。',
+      work_stars:'★★★★★', work:'チームワークで動くと最大の成果が出る時期。協力・連携・仲間を大切にするプロジェクトが吉。',
+      action:'仲間と動く・グループ活動に参加する・チームで勝負する'},
+    '六合': {icon:'🤝', color:'#66bb6a',
+      desc:'自然に引き合う吉の関係。流れに乗りやすく、人との縁が活発になりやすい時期。',
+      love_stars:'★★★★☆', love:'自然な流れで縁がつながりやすい。無理せず普通に過ごしているだけで良い出会いや進展が起きやすい。',
+      work_stars:'★★★★☆', work:'人との協力・連携がスムーズに進む時期。新しい人間関係が仕事につながりやすい。',
+      action:'流れに乗る・縁を大切にする・自然体で行動する'},
+    '冲': {icon:'⚡', color:'#e53935',
+      desc:'正反対のエネルギーがぶつかる関係。変化・動き・刺激が起きやすい。良くも悪くも転機になりやすい時期。',
+      love_stars:'★★★☆☆', love:'関係に変化や刺激が訪れやすい時期。新しい出会いもあるが、既存の関係に波風が立つことも。',
+      work_stars:'★★★☆☆', work:'変化・転機・ターニングポイントが訪れやすい。現状を変えるチャンスでもあるが、安定を保つ工夫も必要。',
+      action:'変化を恐れず受け入れる・転機に備える・柔軟に動く'},
+    '刑': {icon:'⚖️', color:'#ff7043',
+      desc:'価値観のズレや摩擦が生じやすい関係。人間関係に注意が必要な時期。ただし自己鍛錬・成長のきっかけにもなる。',
+      love_stars:'★★☆☆☆', love:'誤解や摩擦が起きやすい時期。コミュニケーションを丁寧に。言葉の行き違いに注意して、じっくり向き合うことが大切。',
+      work_stars:'★★☆☆☆', work:'上司・同僚との意見の食い違いが起きやすい時期。慎重に言葉を選ぶこと。ただし試練を乗り越えると成長できる。',
+      action:'慎重に言葉を選ぶ・トラブルを丁寧に解決する・自己成長のチャンスと捉える'},
+    '害': {icon:'🌿', color:'#a1887f',
+      desc:'じわじわ消耗しやすい関係。無理をしすぎると体や心が疲れやすい時期。ペースを落として丁寧に動くのが吉。',
+      love_stars:'★★☆☆☆', love:'エネルギーが消耗しやすく、感情的になりやすい時期。無理せずゆっくり向き合うことが大切。',
+      work_stars:'★★☆☆☆', work:'体と心を消耗しやすい時期。無理なスケジュールは避け、休息を優先。丁寧にこなすことで乗り越えられる。',
+      action:'無理をしない・ペースを落とす・休息を優先・丁寧に行動する'},
+    '破': {icon:'💥', color:'#7986cb',
+      desc:'信頼・ペース・計画が崩れやすい関係。想定外のことが起きやすい時期。柔軟に対応することが大切。',
+      love_stars:'★★☆☆☆', love:'計画が崩れたり、予期しない展開になりやすい時期。こだわりすぎず、臨機応変に動くことが大切。',
+      work_stars:'★★☆☆☆', work:'想定外のことが起きやすいため、余裕を持ったスケジュールを組むこと。変化に柔軟に対応する姿勢が吉。',
+      action:'柔軟に対応する・こだわりを手放す・想定外に備える'},
   };
 
-  var rel = relLabels[relType] || {icon:'', desc:'特別な関係なし（中立）。普通の月として過ごしやすい。'};
+  var rel = relLabels[relType] || {icon:'', color:'#b8a8ff', desc:'特別な関係なし（中立）。普通の月として過ごしやすい。', love_stars:'★★★☆☆', love:'特別な動きはなし。普通に過ごすと吉。', work_stars:'★★★☆☆', work:'平常通り。コツコツ継続することが大切。', action:'普通に過ごす・継続する'};
 
   titleEl.textContent = shiA + ' × ' + shiB + '　' + rel.icon + ' ' + relType;
   document.getElementById('hjYomi').textContent = '';
   document.getElementById('hjBadge').textContent = '';
   document.getElementById('hjContext').innerHTML = '';
 
-  var relColors = {'三合':'#ff6b9d','六合':'#66bb6a','冲':'#e53935','刑':'#ff7043','害':'#a1887f','破':'#7986cb'};
-  var relColor = relColors[relType] || '#b8a8ff';
+  var relColor = rel.color || '#b8a8ff';
 
-  descEl.innerHTML =
-    '<div style="padding:12px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid ' + relColor + '40;">' +
-    '<div style="font-size:24px;text-align:center;margin-bottom:10px;">' + rel.icon + '</div>' +
-    '<div style="display:inline-block;margin-bottom:10px;padding:3px 12px;border-radius:12px;font-size:13px;font-weight:700;background:rgba(255,255,255,0.06);color:' + relColor + ';border:1px solid ' + relColor + '40;">' + relType + '</div>' +
-    '<p style="font-size:13px;color:var(--text);line-height:1.8;margin:0;">' + rel.desc + '</p>' +
-    '</div>';
+  var html = '<div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid ' + relColor + '40;margin-bottom:10px;">'
+    + '<div style="font-size:24px;text-align:center;margin-bottom:8px;">' + rel.icon + '</div>'
+    + '<div style="display:inline-block;margin-bottom:8px;padding:3px 12px;border-radius:12px;font-size:13px;font-weight:700;background:rgba(255,255,255,0.06);color:' + relColor + ';border:1px solid ' + relColor + '40;">' + relType + '</div>'
+    + '<p style="font-size:12px;color:var(--text);line-height:1.8;margin:0;">' + rel.desc + '</p>'
+    + '</div>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">';
+  if(rel.love_stars) {
+    html += '<div style="padding:8px 10px;background:rgba(255,100,150,0.08);border-radius:8px;border:1px solid rgba(255,100,150,0.2);">'
+      +'<div style="font-size:10px;color:#f08;margin-bottom:4px;">💕 恋愛</div>'
+      +'<div style="font-size:13px;color:#f08;letter-spacing:1px;margin-bottom:4px;">'+rel.love_stars+'</div>'
+      +'<div style="font-size:10px;color:var(--text);line-height:1.6;">'+rel.love+'</div>'
+      +'</div>';
+  }
+  if(rel.work_stars) {
+    html += '<div style="padding:8px 10px;background:rgba(100,180,255,0.08);border-radius:8px;border:1px solid rgba(100,180,255,0.2);">'
+      +'<div style="font-size:10px;color:#6af;margin-bottom:4px;">💼 仕事</div>'
+      +'<div style="font-size:13px;color:#6af;letter-spacing:1px;margin-bottom:4px;">'+rel.work_stars+'</div>'
+      +'<div style="font-size:10px;color:var(--text);line-height:1.6;">'+rel.work+'</div>'
+      +'</div>';
+  }
+  html += '</div>';
+  if(rel.action) {
+    html += '<div style="padding:7px 10px;background:rgba(255,215,0,0.08);border-radius:8px;border-left:2px solid var(--sk-gold-light);">'
+      +'<div style="font-size:10px;color:var(--sk-gold-light);margin-bottom:3px;">✦ この時期にすること</div>'
+      +'<div style="font-size:11px;color:var(--text);line-height:1.7;">'+rel.action+'</div>'
+      +'</div>';
+  }
+  descEl.innerHTML = html;
 
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
@@ -14335,29 +14380,65 @@ var HENSEI_DESC = {
 // ========================================================
 var JYU12_DESC = {
   '長生': { yomi:'ちょうせい', power:'強', image:'🌱', keyword:'誕生・純粋・可能性',
-    desc:'生まれたての赤ちゃんのようなエネルギー。純粋で可能性に満ち、物事の始まりと縁が深い。新しいことへの適応力が高く、長く愛される力があります。' },
+    desc:'生まれたての赤ちゃんのようなエネルギー。純粋で可能性に満ち、物事の始まりと縁が深い。新しいことへの適応力が高く、長く愛される力があります。',
+    love_stars:'★★★★☆', love:'新しい出会いに恵まれやすい時期。純粋な気持ちで向き合うと縁が広がる。初々しい展開や新鮮な関係が生まれやすい。',
+    work_stars:'★★★★☆', work:'新しいことを始めるのに最適な時期。スタートダッシュが利きやすく、初めての挑戦が吉。長期的な視点で種まきをするタイミング。',
+    action:'新しいことを始める・出会いの場に出る・純粋な気持ちで動く' },
   '沐浴': { yomi:'もくよく', power:'中', image:'💧', keyword:'感受性・魅力・不安定',
-    desc:'産湯につかる幼児のエネルギー。感受性が豊かで魅力的ですが、気まぐれな面も。恋愛や芸術の才能に恵まれ、異性を引き付ける力があります。' },
+    desc:'産湯につかる幼児のエネルギー。感受性が豊かで魅力的ですが、気まぐれな面も。恋愛や芸術の才能に恵まれ、異性を引き付ける力があります。',
+    love_stars:'★★★★★', love:'異性を引き付ける魅力が最も高まる時期。色気・感受性が増し、恋愛のドラマが生まれやすい。ただし流されやすくなるので注意。',
+    work_stars:'★★☆☆☆', work:'集中力が散りやすい時期。一つのことに絞って丁寧に取り組むこと。芸術・感性系の仕事では才能が光る。',
+    action:'感性を磨く・人の話をよく聞く・流されすぎないよう軸を持つ' },
   '冠帯': { yomi:'かんたい', power:'強', image:'🎓', keyword:'成長・自信・積極性',
-    desc:'元服（成人式）を迎えたエネルギー。自信と積極性が高まり、社会に出て力を発揮し始める段階。向上心が強く、自己表現が豊かです。' },
+    desc:'元服（成人式）を迎えたエネルギー。自信と積極性が高まり、社会に出て力を発揮し始める段階。向上心が強く、自己表現が豊かです。',
+    love_stars:'★★★★☆', love:'積極的に動けば恋愛が発展する時期。自信を持って行動することで相手に魅力が伝わりやすい。アプローチするなら今。',
+    work_stars:'★★★★☆', work:'実力を発揮するチャンス。自信を持って動くと評価が上がる。新しいスキル習得・資格取得にも向いている。',
+    action:'積極的に行動する・自信を持って発言する・スキルアップに投資する' },
   '建禄': { yomi:'けんろく', power:'最強', image:'⭐', keyword:'実力・独立・充実',
-    desc:'働き盛りの壮年期のエネルギー。自分の力が最も充実し、独立心と実力が際立つ星。自分のやり方で道を切り拓く力があります。十二運の中でも特に強い運勢。' },
+    desc:'働き盛りの壮年期のエネルギー。自分の力が最も充実し、独立心と実力が際立つ星。自分のやり方で道を切り拓く力があります。十二運の中でも特に強い運勢。',
+    love_stars:'★★★☆☆', love:'仕事への集中度が高まるため恋愛は後回しになりやすい。ただし自分の魅力が充実するので、気を向ければ良い縁もある。',
+    work_stars:'★★★★★', work:'実力が最大限に発揮できる最高の時期。独立・起業・新しいプロジェクトの立ち上げに最適。自分のやり方で動くと最大の結果が出る。',
+    action:'実力を全力で発揮する・独立・起業の検討・自分のペースで進める' },
   '帝旺': { yomi:'ていおう', power:'最強', image:'👑', keyword:'頂点・カリスマ・支配力',
-    desc:'人生の絶頂期のエネルギー。強烈なカリスマ性と支配力を持ち、周囲を動かす力があります。建禄と並ぶ最強の運勢。自己主張が強く、リーダー的存在になります。' },
+    desc:'人生の絶頂期のエネルギー。強烈なカリスマ性と支配力を持ち、周囲を動かす力があります。建禄と並ぶ最強の運勢。自己主張が強く、リーダー的存在になります。',
+    love_stars:'★★★★☆', love:'存在感・カリスマ性が最大に高まる時期。自然と注目を集め、告白されることも。ただし自己主張が強くなりすぎて摩擦が出ることも。',
+    work_stars:'★★★★★', work:'リーダーシップを発揮する最高のタイミング。重要な決断・プレゼン・交渉で圧倒的な力が出る。この時期の行動が長期的な評価につながる。',
+    action:'リーダーとして行動する・重要な決断をする・大きな目標を掲げる' },
   '衰': { yomi:'すい', power:'中', image:'🍂', keyword:'安定・落ち着き・知恵',
-    desc:'壮年期を過ぎた円熟のエネルギー。勢いは落ちますが、経験と知恵が身につく段階。堅実で安定した行動ができ、派手さはなくても着実に結果を出します。' },
+    desc:'壮年期を過ぎた円熟のエネルギー。勢いは落ちますが、経験と知恵が身につく段階。堅実で安定した行動ができ、派手さはなくても着実に結果を出します。',
+    love_stars:'★★★☆☆', love:'激しい恋より安定した関係を求める時期。深い会話や信頼関係を育てることで縁が深まる。焦らず丁寧に向き合うことが大切。',
+    work_stars:'★★★☆☆', work:'勢いより安定・継続を重視する時期。コツコツと積み上げる作業が向いている。新しいチャレンジより既存の仕事を深める方が吉。',
+    action:'焦らず継続する・経験と知恵を活かす・安定を大切にする' },
   '病': { yomi:'びょう', power:'弱', image:'🌙', keyword:'繊細・感受性・内省',
-    desc:'体が弱まるエネルギー。体力的には落ちますが、精神的・芸術的な感受性が高まります。内省的で繊細な感性を持ち、クリエイティブな才能が開花しやすい面も。' },
+    desc:'体が弱まるエネルギー。体力的には落ちますが、精神的・芸術的な感受性が高まります。内省的で繊細な感性を持ち、クリエイティブな才能が開花しやすい面も。',
+    love_stars:'★★★☆☆', love:'感受性が豊かになり、相手の気持ちを深く感じ取れる時期。共感力が高まるので、心のつながりを育てる恋愛ができる。体調管理は忘れずに。',
+    work_stars:'★★☆☆☆', work:'無理は禁物な時期。体調を最優先にしながら丁寧に動くこと。感性・芸術・内省が必要な仕事では力を発揮できる。',
+    action:'体を大切にする・無理をしない・感性を磨く・休息を優先する' },
   '死': { yomi:'し', power:'弱', image:'🕯️', keyword:'集中・完成・一途',
-    desc:'一つの周期の終わりのエネルギー。一点集中の力があり、好きなことへの没頭力は抜群。変化を嫌う面がありますが、深く極める専門家的才能を持ちます。' },
+    desc:'一つの周期の終わりのエネルギー。一点集中の力があり、好きなことへの没頭力は抜群。変化を嫌う面がありますが、深く極める専門家的才能を持ちます。',
+    love_stars:'★★☆☆☆', love:'新しい出会いより今ある関係を深める時期。一点集中の愛情は深いが、広げることは難しい。既存の関係を大切にすることが吉。',
+    work_stars:'★★★☆☆', work:'一つのことに深く集中すると力が出る時期。広く動くより専門性を磨く・一つのプロジェクトを完成させることに向いている。',
+    action:'一つのことに集中する・手放す覚悟を持つ・次のサイクルの準備をする' },
   '墓': { yomi:'ぼ', power:'中', image:'🗺️', keyword:'蓄積・執着・財運',
-    desc:'倉庫に納めるエネルギー。財を蓄える力があり、コレクター的な傾向も。表に出ないところで力を蓄え、じっくりと資産や実力を積み上げます。' },
+    desc:'倉庫に納めるエネルギー。財を蓄える力があり、コレクター的な傾向も。表に出ないところで力を蓄え、じっくりと資産や実力を積み上げます。',
+    love_stars:'★★☆☆☆', love:'内向きなエネルギーが強く、恋愛より自分の世界に集中しやすい時期。ただし一度縁がつながると深く長い関係になりやすい。',
+    work_stars:'★★★★☆', work:'財運・蓄積に向いた時期。貯蓄・資産形成・知識のストック・地道な積み上げが吉。表には出なくても着実に力をつけることができる。',
+    action:'蓄える・貯める・整理する・執着を手放す・内側を充実させる' },
   '絶': { yomi:'ぜつ', power:'弱', image:'🌌', keyword:'変化・解放・新しい始まり',
-    desc:'ゼロに戻るエネルギー。既存のものが終わり、次の始まりへの移行期。環境の変化や転換点と縁が深く、変化の多い人生になりやすいですが、そこに活路があります。' },
+    desc:'ゼロに戻るエネルギー。既存のものが終わり、次の始まりへの移行期。環境の変化や転換点と縁が深く、変化の多い人生になりやすいですが、そこに活路があります。',
+    love_stars:'★★★☆☆', love:'関係の転換点が訪れやすい時期。終わる縁と新しく始まる縁が交差する。手放すことで次の出会いへの扉が開く。',
+    work_stars:'★★☆☆☆', work:'今のやり方を手放す勇気が必要な時期。変化・転職・方向転換のタイミング。無理に現状維持より流れに乗って変化を受け入れる方が吉。',
+    action:'手放す・変化を受け入れる・次のステージへの準備をする' },
   '胎': { yomi:'たい', power:'中', image:'🥚', keyword:'準備・可能性・秘める力',
-    desc:'母の胎内にいる段階のエネルギー。まだ表には出ていませんが、大きな可能性を内に秘めています。準備期間として充実した内面を育てている段階。' },
+    desc:'母の胎内にいる段階のエネルギー。まだ表には出ていませんが、大きな可能性を内に秘めています。準備期間として充実した内面を育てている段階。',
+    love_stars:'★★★☆☆', love:'すぐには花開かないが、じっくり育てる縁が生まれやすい時期。焦らずゆっくり関係を育てることが大切。長い目で見ると良い縁になる。',
+    work_stars:'★★★☆☆', work:'今は準備の時期。すぐに結果を求めず、土台を作ることに集中する。インプット・学習・計画立案に最適なタイミング。',
+    action:'準備する・学ぶ・内側を充実させる・焦らず育てる' },
   '養': { yomi:'よう', power:'中', image:'🌿', keyword:'育まれる・守られる・素直',
-    desc:'大切に育てられる段階のエネルギー。人から助けてもらえる素直さと、周囲を和ませる温かさがあります。良い人間関係に恵まれ、サポートを受けながら成長します。' },
+    desc:'大切に育てられる段階のエネルギー。人から助けてもらえる素直さと、周囲を和ませる温かさがあります。良い人間関係に恵まれ、サポートを受けながら成長します。',
+    love_stars:'★★★★☆', love:'周囲から助けてもらいやすい時期。素直に甘えることで関係が深まる。温かい人間関係から恋愛に発展することも。',
+    work_stars:'★★★☆☆', work:'上司・先輩・メンターのサポートを受けながら成長できる時期。素直に学ぶ姿勢が評価される。無理な独立より、育ててもらえる環境で力をつける。',
+    action:'素直にサポートを受ける・人に甘える・感謝を伝える・丁寧に育てる' },
 };
 
 
@@ -17807,10 +17888,35 @@ function openHenseiPanel(name, context){
 function openJyu12Panel(name, context){
   var d = JYU12_DESC[name];
   if(!d) return;
+  var powerColors = {'最強':'#ffd700','強':'#80ff80','中':'#b8a8ff','弱':'#ff9999'};
+  var pCol = powerColors[d.power] || '#b8a8ff';
   document.getElementById('hjTitle').textContent = name + '　' + d.image;
   document.getElementById('hjYomi').textContent = '（' + d.yomi + '）';
-  document.getElementById('hjBadge').textContent = '運勢の強さ: ' + d.power + '　／　' + d.keyword;
-  document.getElementById('hjDesc').textContent = d.desc;
+  document.getElementById('hjBadge').textContent = d.keyword;
+  var html = '<p style="font-size:12px;line-height:1.8;color:var(--text);margin-bottom:10px;">'+d.desc+'</p>';
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">';
+  if(d.love_stars) {
+    html += '<div style="padding:8px 10px;background:rgba(255,100,150,0.08);border-radius:8px;border:1px solid rgba(255,100,150,0.2);">'
+      +'<div style="font-size:10px;color:#f08;margin-bottom:4px;">💕 恋愛</div>'
+      +'<div style="font-size:14px;color:#f08;letter-spacing:1px;margin-bottom:4px;">'+d.love_stars+'</div>'
+      +'<div style="font-size:10px;color:var(--text);line-height:1.6;">'+d.love+'</div>'
+      +'</div>';
+  }
+  if(d.work_stars) {
+    html += '<div style="padding:8px 10px;background:rgba(100,180,255,0.08);border-radius:8px;border:1px solid rgba(100,180,255,0.2);">'
+      +'<div style="font-size:10px;color:#6af;margin-bottom:4px;">💼 仕事</div>'
+      +'<div style="font-size:14px;color:#6af;letter-spacing:1px;margin-bottom:4px;">'+d.work_stars+'</div>'
+      +'<div style="font-size:10px;color:var(--text);line-height:1.6;">'+d.work+'</div>'
+      +'</div>';
+  }
+  html += '</div>';
+  if(d.action) {
+    html += '<div style="padding:7px 10px;background:rgba(255,215,0,0.08);border-radius:8px;border-left:2px solid var(--sk-gold-light);">'
+      +'<div style="font-size:10px;color:var(--sk-gold-light);margin-bottom:3px;">✦ この時期にすること</div>'
+      +'<div style="font-size:11px;color:var(--text);line-height:1.7;">'+d.action+'</div>'
+      +'</div>';
+  }
+  document.getElementById('hjDesc').innerHTML = html;
   document.getElementById('hjContext').textContent = context;
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
