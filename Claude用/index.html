@@ -7552,18 +7552,6 @@ function syncBirthdate() {
     }
   }
   else if(m2){ y=parseInt(m2[1]); m=parseInt(m2[2]); d=parseInt(m2[3]); }
-  else if(m4 && !m3){
-    /* 日付8桁+出生地のみ（時刻なし）*/
-    y=parseInt(m4[1]); m=parseInt(m4[2]); d=parseInt(m4[3]);
-    var place4=m4[4].trim();
-    if(place4){
-      window._normalBirthPlace = place4;
-      window._normalCityData = lookupCity(place4);
-      if(!window._normalCityData){
-        err.textContent='⚠ 出生地が見つかりません。日付のみで計算します';
-      }
-    }
-  }
   else if(m3){
     y=parseInt(m3[1]); m=parseInt(m3[2]); d=parseInt(m3[3]);
     var hh=parseInt(m3[4]), mi=parseInt(m3[5]), place=m3[6].trim();
@@ -7575,6 +7563,18 @@ function syncBirthdate() {
         if(!window._normalCityData){
           err.textContent='⚠ 出生地が見つかりません（都道府県名や主要都市、海外の主要都市に対応）。日付のみで計算します';
         }
+      }
+    }
+  }
+  else if(m4){
+    /* 日付8桁+出生地のみ（時刻なし）*/
+    y=parseInt(m4[1]); m=parseInt(m4[2]); d=parseInt(m4[3]);
+    var place4=m4[4].trim();
+    if(place4){
+      window._normalBirthPlace = place4;
+      window._normalCityData = lookupCity(place4);
+      if(!window._normalCityData){
+        err.textContent='⚠ 出生地が見つかりません。日付のみで計算します';
       }
     }
   }
@@ -7904,8 +7904,10 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
       window._lastIsShinkyou = supportb > drainb;
     })();
 
-    return renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime,hideTabs)
-      + buildUnseiHTML(dauResult,yr,day_p?day_p.kan:0);
+    var _resultHTML = renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime,hideTabs);
+    // 基本性格カードを折りたたみ式にして五行バランスカードより後に移動
+    _resultHTML = reorderResultCards(_resultHTML);
+    return _resultHTML + buildUnseiHTML(dauResult,yr,day_p?day_p.kan:0);
   } catch(e){ 
     console.error('buildShichuuCardHTML error:', e);
     return '<p style="color:#ff8080;padding:10px;">命式の計算中にエラーが発生しました：' + e.message + '</p>'; 
@@ -16453,6 +16455,48 @@ function calcNenun(year){
 // ========================================================
 //  大運・年運 HTML生成
 // ========================================================
+
+function reorderResultCards(html) {
+  // 基本性格カードと五行バランスカードの順序を入れ替え
+  // 基本性格カードを折りたたみ式にする
+  var parser = typeof DOMParser !== 'undefined' ? new DOMParser() : null;
+  if(!parser) return html;
+
+  var doc = parser.parseFromString(html, 'text/html');
+  var grid = doc.querySelector('.interp-grid');
+  if(!grid) return html;
+
+  var cards = grid.querySelectorAll('.interp-card');
+  if(cards.length < 2) return html;
+
+  // 最初のカード（基本性格）を折りたたみに
+  var basicCard = cards[0];
+  var basicTitle = basicCard.querySelector('.interp-card-title');
+  var titleText = basicTitle ? basicTitle.textContent : '基本性格';
+
+  var details = doc.createElement('details');
+  var summary = doc.createElement('summary');
+  summary.style.cssText = 'font-size:14px;font-weight:700;color:#d4af5a;cursor:pointer;padding:8px 0;list-style:none;display:flex;align-items:center;gap:6px;';
+  summary.innerHTML = '<span>▶</span>' + titleText;
+  details.appendChild(summary);
+
+  var wrapper = doc.createElement('div');
+  wrapper.className = 'interp-card';
+  // basicCardの子要素を移動（タイトルdivを除く）
+  var children = Array.prototype.slice.call(basicCard.children);
+  children.forEach(function(child) {
+    wrapper.appendChild(child);
+  });
+  details.appendChild(wrapper);
+
+  // 五行バランスカード（2番目）を先頭に、基本性格を後に
+  var gogyoCard = cards[1];
+  grid.insertBefore(gogyoCard, cards[0]);
+  grid.replaceChild(details, basicCard);
+
+  return doc.documentElement.outerHTML.replace(/^.*<body>|<\/body>.*$/gs, '').trim();
+}
+
 function buildUnseiHTML(dauResult, birthYear, nik){
   if(!dauResult) return '';
 
