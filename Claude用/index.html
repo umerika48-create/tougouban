@@ -5564,25 +5564,50 @@ function showTenkanZouganTable() {
 }
 
 function showJuniunDetail(name) {
-  if(typeof JUNIUN_DESC === 'undefined' || !JUNIUN_DESC[name]) return;
-  var jd = JUNIUN_DESC[name];
+  var jCol = {'長生':'#80ff80','沐浴':'#a8c8ff','冠帯':'#b8a8ff','建禄':'#ffd700','帝旺':'#ffd700',
+    '衰':'#ffb347','病':'#ff9999','死':'#ff6b6b','墓':'#ff9999','絶':'#ff6b6b','胎':'#98e698','養':'#98e698'}[name]||'#b8a8ff';
   var titleEl = document.getElementById('hjTitle');
   var descEl = document.getElementById('hjDesc');
   if(!titleEl || !descEl) return;
-  var jCol = {'長生':'#80ff80','沐浴':'#a8c8ff','冠帯':'#b8a8ff','建禄':'#ffd700','帝旺':'#ffd700',
-    '衰':'#ffb347','病':'#ff9999','死':'#ff6b6b','墓':'#ff9999','絶':'#ff6b6b','胎':'#98e698','養':'#98e698'}[name]||'#b8a8ff';
-  titleEl.textContent = name + '（' + jd.yomi + '）';
+
+  // JYU12_DESCを優先、なければJUNIUN_DESCにフォールバック
+  var d = (typeof JYU12_DESC !== 'undefined' && JYU12_DESC[name]) ? JYU12_DESC[name] : null;
+  var jd = (typeof JUNIUN_DESC !== 'undefined' && JUNIUN_DESC[name]) ? JUNIUN_DESC[name] : null;
+  if(!d && !jd) return;
+
+  var yomi = d ? d.yomi : (jd ? jd.yomi : '');
+  var keyword = d ? d.keyword : '';
+  titleEl.textContent = name + (d ? '　'+d.image : '') + '（' + yomi + '）';
   document.getElementById('hjYomi').textContent = '';
-  document.getElementById('hjBadge').textContent = '';
+  document.getElementById('hjBadge').textContent = keyword;
   document.getElementById('hjContext').innerHTML = '';
-  descEl.innerHTML =
-    '<div style="padding:12px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid ' + jCol + '40;">'
-    + '<div style="font-size:22px;font-weight:700;color:' + jCol + ';margin-bottom:10px;">' + name + '</div>'
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">🌱 人生でいうと</div>'
-    + '<div style="font-size:14px;color:var(--text);font-weight:700;margin-bottom:12px;">' + jd.life + '</div>'
-    + '<div style="font-size:12px;color:var(--muted);margin-bottom:6px;">⚡ エネルギー状態</div>'
-    + '<div style="font-size:13px;color:' + jCol + ';font-weight:700;">' + jd.energy + '</div>'
-    + '</div>';
+
+  var html = '<div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid '+jCol+'40;margin-bottom:10px;">'
+    + '<div style="font-size:22px;font-weight:700;color:'+jCol+';margin-bottom:8px;">'+name+'</div>';
+  // desc（JYU12_DESC）またはlife/energy（JUNIUN_DESC）
+  if(d && d.desc) {
+    html += '<p style="font-size:12px;color:var(--text);line-height:1.8;margin:0;">'+d.desc+'</p>';
+  } else if(jd) {
+    html += '<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">🌱 人生でいうと</div>'
+      +'<div style="font-size:14px;color:var(--text);font-weight:700;margin-bottom:10px;">'+jd.life+'</div>'
+      +'<div style="font-size:12px;color:var(--muted);margin-bottom:4px;">⚡ エネルギー状態</div>'
+      +'<div style="font-size:13px;color:'+jCol+';font-weight:700;">'+jd.energy+'</div>';
+  }
+  html += '</div>';
+  // 恋愛・仕事★
+  if(d && (d.love_stars || d.work_stars)) {
+    html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">';
+    if(d.love_stars) html += '<div style="padding:8px 10px;background:rgba(255,100,150,0.08);border-radius:8px;border:1px solid rgba(255,100,150,0.2);"><div style="font-size:10px;color:#f08;margin-bottom:4px;">💕 恋愛</div><div style="font-size:13px;color:#f08;letter-spacing:1px;margin-bottom:4px;">'+d.love_stars+'</div><div style="font-size:10px;color:var(--text);line-height:1.6;">'+d.love+'</div></div>';
+    if(d.work_stars) html += '<div style="padding:8px 10px;background:rgba(100,180,255,0.08);border-radius:8px;border:1px solid rgba(100,180,255,0.2);"><div style="font-size:10px;color:#6af;margin-bottom:4px;">💼 仕事</div><div style="font-size:13px;color:#6af;letter-spacing:1px;margin-bottom:4px;">'+d.work_stars+'</div><div style="font-size:10px;color:var(--text);line-height:1.6;">'+d.work+'</div></div>';
+    html += '</div>';
+  }
+  // 行動アドバイス
+  if(d && d.action) {
+    html += '<div style="padding:7px 10px;background:rgba(255,215,0,0.08);border-radius:8px;border-left:2px solid var(--sk-gold-light);">'
+      +'<div style="font-size:10px;color:var(--sk-gold-light);margin-bottom:3px;">✦ この時期にすること</div>'
+      +'<div style="font-size:11px;color:var(--text);line-height:1.7;">'+d.action+'</div></div>';
+  }
+  descEl.innerHTML = html;
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
 }
