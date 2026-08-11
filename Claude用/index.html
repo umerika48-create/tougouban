@@ -8070,9 +8070,24 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
       window._lastIsShinkyou = supportb > drainb;
     })();
 
+    // 太陽星座・月星座を計算してグローバル変数に保持
+    window._pendingSunSign = '';
+    window._pendingMoonSign = '';
+    if(typeof lt_getSunSign === 'function' && typeof lt_getMoonSign === 'function') {
+      try {
+        var _sun = lt_getSunSign(yr, mo, da);
+        var _moon = lt_getMoonSign(yr, mo, da);
+        window._pendingSunSign = _sun ? (_sun.uncertain && _sun.alt ? _sun.sign+'or'+_sun.alt : _sun.sign) : '';
+        window._pendingMoonSign = _moon ? (_moon.uncertain && _moon.alt ? _moon.sign+'or'+_moon.alt : _moon.sign) : '';
+      } catch(e) {}
+    }
     var _resultHTML = renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime,hideTabs);
     // 基本性格カードを折りたたみ式にして五行バランスカードより後に移動
     _resultHTML = reorderResultCards(_resultHTML);
+    // 星座ラベルを追加（DOM操作）
+    if(window._pendingSunSign || window._pendingMoonSign) {
+      window._pendingAddSigns = {sun: window._pendingSunSign, moon: window._pendingMoonSign};
+    }
     return _resultHTML + buildUnseiHTML(dauResult,yr,day_p?day_p.kan:0);
   } catch(e){ 
     console.error('buildShichuuCardHTML error:', e);
@@ -11036,6 +11051,7 @@ function calculate() {
 
     var resultEl = document.getElementById('result');
     resultEl.innerHTML = html;
+  addSignLabelsToMeishiki();
     resultEl.style.display = 'block';
 
     setTimeout(function() {
@@ -16658,6 +16674,41 @@ function calcNenun(year){
 // ========================================================
 //  大運・年運 HTML生成
 // ========================================================
+
+
+function addSignLabelsToMeishiki() {
+  if(!window._pendingAddSigns) return;
+  var sun = window._pendingAddSigns.sun;
+  var moon = window._pendingAddSigns.moon;
+  window._pendingAddSigns = null;
+
+  // 日柱の天干セル（.day.kan）に太陽星座を追加
+  if(sun) {
+    var dayKanCells = document.querySelectorAll('.day.kan');
+    dayKanCells.forEach(function(cell) {
+      if(!cell.querySelector('.sign-label')) {
+        var div = document.createElement('div');
+        div.className = 'sign-label';
+        div.style.cssText = 'font-size:9px;color:var(--muted);margin-top:2px;text-align:center;';
+        div.textContent = '(' + sun + ')';
+        cell.appendChild(div);
+      }
+    });
+  }
+  // 日柱の地支セル（.day.shi）に月星座を追加
+  if(moon) {
+    var dayShiCells = document.querySelectorAll('.day.shi');
+    dayShiCells.forEach(function(cell) {
+      if(!cell.querySelector('.sign-label')) {
+        var div = document.createElement('div');
+        div.className = 'sign-label';
+        div.style.cssText = 'font-size:9px;color:var(--muted);margin-top:2px;text-align:center;';
+        div.textContent = '(' + moon + ')';
+        cell.appendChild(div);
+      }
+    });
+  }
+}
 
 function reorderResultCards(html) {
   // 基本性格カードと五行バランスカードの順序を入れ替え
