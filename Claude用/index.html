@@ -17774,16 +17774,6 @@ function openKanPanel(kanName, colIdx, monthShi, ownShi){
 
   // 日柱（colIdx=2）のとき、CHOKO_DESCのbase文章を追加
   var chokoBaseHTML = '';
-  // CHOKO_SERIF（日干・月干共通）：自柱の地支で参照
-  if(shiForSerif && typeof CHOKO_SERIF !== 'undefined' && CHOKO_SERIF[kanName] && CHOKO_SERIF[kanName][shiForSerif] && colIdx === 2) {
-    var cs2 = CHOKO_SERIF[kanName][shiForSerif];
-    var ax2 = CHOKO_SERIF[kanName]._axis || '';
-    chokoBaseHTML += '<div style="margin-top:10px;padding:10px;background:rgba(255,255,255,0.04);border-radius:8px;">' +
-      (ax2 ? '<div style="font-size:10px;color:var(--sk-gold-light);margin-bottom:4px;letter-spacing:0.05em;">' + ax2 + '</div>' : '') +
-      '<div style="font-size:16px;letter-spacing:2px;color:var(--sk-gold-light);margin-bottom:6px;">' + cs2.stars + '</div>' +
-      '<div style="padding:6px 10px;border-radius:10px;background:rgba(255,255,255,0.06);font-size:12px;color:var(--text);line-height:1.7;">' + cs2.serif + '</div>' +
-      '</div>';
-  }
   if(colIdx === 2 && typeof CHOKO_DESC !== 'undefined' && CHOKO_DESC[kanName]) {
     // 月支を取得（命式表から）
     var moonShiEl = document.querySelector('.meishiki-table td[data-col="1"][data-row="shi"]');
