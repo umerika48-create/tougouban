@@ -11056,7 +11056,10 @@ function calculate() {
     resultEl.innerHTML = html;
   setTimeout(function(){
     console.log('pendingAddSigns:', JSON.stringify(window._pendingAddSigns));
-    console.log('dayKanCells:', document.querySelectorAll('.day-pillar-col.kan').length);
+    var allTds = document.querySelectorAll('td[class]');
+    var classes = [];
+    for(var i=0;i<Math.min(allTds.length,20);i++) classes.push(allTds[i].className);
+    console.log('td classes:', classes.join(' | '));
     addSignLabelsToMeishiki();
   }, 50);
     resultEl.style.display = 'block';
