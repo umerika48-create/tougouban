@@ -7956,6 +7956,7 @@ function toggleAccordion(id) {
             var _ts = (_t||'').replace(':','').replace(/[^0-9]/g,'');
             if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(_ts, !_ts);
             cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, false);
+              setTimeout(function(){ addSignLabelsToMeishiki(); }, 100);
           }
         }
       }
@@ -8926,6 +8927,7 @@ function switchShichuuCard(view) {
   var _unknownTime = !_timeStr4 || _timeStr4.length < 4;
   if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(_timeStr4, _unknownTime);
   container.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner);
+              setTimeout(function(){ addSignLabelsToMeishiki(); }, 100);
 }
 
 function switchSanmeiCard(view) {
@@ -11051,7 +11053,7 @@ function calculate() {
 
     var resultEl = document.getElementById('result');
     resultEl.innerHTML = html;
-  addSignLabelsToMeishiki();
+  setTimeout(function(){ addSignLabelsToMeishiki(); }, 50);
     resultEl.style.display = 'block';
 
     setTimeout(function() {
@@ -16682,31 +16684,33 @@ function addSignLabelsToMeishiki() {
   var moon = window._pendingAddSigns.moon;
   window._pendingAddSigns = null;
 
-  // 日柱の天干セル（.day.kan）に太陽星座を追加
+  // 日柱の天干セル（.day-pillar-col.kan）に太陽星座を追加
   if(sun) {
-    var dayKanCells = document.querySelectorAll('.day.kan');
-    dayKanCells.forEach(function(cell) {
-      if(!cell.querySelector('.sign-label')) {
-        var div = document.createElement('div');
-        div.className = 'sign-label';
-        div.style.cssText = 'font-size:9px;color:var(--muted);margin-top:2px;text-align:center;';
-        div.textContent = '(' + sun + ')';
-        cell.appendChild(div);
+    var dayKanCells = document.querySelectorAll('.day-pillar-col.kan');
+    for(var _ki=0;_ki<dayKanCells.length;_ki++){
+      var _kc = dayKanCells[_ki];
+      if(!_kc.querySelector('.sign-label')) {
+        var _kdiv = document.createElement('div');
+        _kdiv.className = 'sign-label';
+        _kdiv.style.cssText = 'font-size:9px;color:var(--muted);margin-top:2px;text-align:center;';
+        _kdiv.textContent = '(' + sun + ')';
+        _kc.appendChild(_kdiv);
       }
-    });
+    }
   }
-  // 日柱の地支セル（.day.shi）に月星座を追加
+  // 日柱の地支セル（.day-pillar-col.shi）に月星座を追加
   if(moon) {
-    var dayShiCells = document.querySelectorAll('.day.shi');
-    dayShiCells.forEach(function(cell) {
-      if(!cell.querySelector('.sign-label')) {
-        var div = document.createElement('div');
-        div.className = 'sign-label';
-        div.style.cssText = 'font-size:9px;color:var(--muted);margin-top:2px;text-align:center;';
-        div.textContent = '(' + moon + ')';
-        cell.appendChild(div);
+    var dayShiCells = document.querySelectorAll('.day-pillar-col.shi');
+    for(var _si=0;_si<dayShiCells.length;_si++){
+      var _sc2 = dayShiCells[_si];
+      if(!_sc2.querySelector('.sign-label')) {
+        var _sdiv = document.createElement('div');
+        _sdiv.className = 'sign-label';
+        _sdiv.style.cssText = 'font-size:9px;color:var(--muted);margin-top:2px;text-align:center;';
+        _sdiv.textContent = '(' + moon + ')';
+        _sc2.appendChild(_sdiv);
       }
-    });
+    }
   }
 }
 
@@ -18523,6 +18527,7 @@ function setYakodoki(enabled) {
   if(cardBody && bd && typeof buildShichuuCardHTML === 'function') {
     // 開閉状態に関わらず常に再描画（次回開いたとき正しく表示されるよう）
     cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner, false);
+              setTimeout(function(){ addSignLabelsToMeishiki(); }, 100);
   } else if(bd && typeof buildShichuuCardHTML === 'function') {
     if(typeof switchShichuuCard === 'function') {
       switchShichuuCard(isPartner ? 'partner' : 'me');
