@@ -8080,8 +8080,9 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
         var _moon = lt_getMoonSign(yr, mo, da);
         window._pendingSunSign = _sun ? (_sun.uncertain && _sun.alt ? _sun.sign+'or'+_sun.alt : _sun.sign) : '';
         window._pendingMoonSign = _moon ? (_moon.uncertain && _moon.alt ? _moon.sign+'or'+_moon.alt : _moon.sign) : '';
-      } catch(e) {}
-    }
+        console.log('sun:', window._pendingSunSign, 'moon:', window._pendingMoonSign);
+      } catch(e) { console.log('sign error:', e); }
+    } else { console.log('lt_getSunSign not found'); }
     var _resultHTML = renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime,hideTabs);
     // 基本性格カードを折りたたみ式にして五行バランスカードより後に移動
     _resultHTML = reorderResultCards(_resultHTML);
