@@ -8080,9 +8080,8 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
         var _moon = lt_getMoonSign(yr, mo, da);
         window._pendingSunSign = _sun ? (_sun.uncertain && _sun.alt ? _sun.sign+'or'+_sun.alt : _sun.sign) : '';
         window._pendingMoonSign = _moon ? (_moon.uncertain && _moon.alt ? _moon.sign+'or'+_moon.alt : _moon.sign) : '';
-        console.log('sun:', window._pendingSunSign, 'moon:', window._pendingMoonSign);
-      } catch(e) { console.log('sign error:', e); }
-    } else { console.log('lt_getSunSign not found'); }
+      } catch(e) {}
+    }
     var _resultHTML = renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime,hideTabs);
     // 基本性格カードを折りたたみ式にして五行バランスカードより後に移動
     _resultHTML = reorderResultCards(_resultHTML);
@@ -8928,7 +8927,19 @@ function switchShichuuCard(view) {
   var _unknownTime = !_timeStr4 || _timeStr4.length < 4;
   if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(_timeStr4, _unknownTime);
   container.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner);
-              setTimeout(function(){ addSignLabelsToMeishiki(); }, 100);
+  // 星座ラベルを注入
+  if(!isPartner && typeof lt_getSunSign === 'function') {
+    try {
+      var _bdParts = bd.split('-');
+      var _bdY = parseInt(_bdParts[0]), _bdM = parseInt(_bdParts[1]), _bdD = parseInt(_bdParts[2]);
+      var _bdSun = lt_getSunSign(_bdY, _bdM, _bdD);
+      var _bdMoon = lt_getMoonSign(_bdY, _bdM, _bdD);
+      var _sunLbl = _bdSun ? (_bdSun.uncertain && _bdSun.alt ? _bdSun.sign+'or'+_bdSun.alt : _bdSun.sign) : '';
+      var _moonLbl = _bdMoon ? (_bdMoon.uncertain && _bdMoon.alt ? _bdMoon.sign+'or'+_bdMoon.alt : _bdMoon.sign) : '';
+      window._pendingAddSigns = {sun: _sunLbl, moon: _moonLbl};
+    } catch(e) {}
+  }
+  setTimeout(function(){ addSignLabelsToMeishiki(); }, 100);
 }
 
 function switchSanmeiCard(view) {
@@ -11054,14 +11065,7 @@ function calculate() {
 
     var resultEl = document.getElementById('result');
     resultEl.innerHTML = html;
-  setTimeout(function(){
-    console.log('pendingAddSigns:', JSON.stringify(window._pendingAddSigns));
-    var allTds = document.querySelectorAll('td[class]');
-    var classes = [];
-    for(var i=0;i<Math.min(allTds.length,20);i++) classes.push(allTds[i].className);
-    console.log('td classes:', classes.join(' | '));
-    addSignLabelsToMeishiki();
-  }, 50);
+  setTimeout(function(){ addSignLabelsToMeishiki(); }, 50);
     resultEl.style.display = 'block';
 
     setTimeout(function() {
@@ -16700,7 +16704,7 @@ function addSignLabelsToMeishiki() {
       if(!_kc.querySelector('.sign-label')) {
         var _kdiv = document.createElement('div');
         _kdiv.className = 'sign-label';
-        _kdiv.style.cssText = 'font-size:9px;color:var(--muted);margin-top:2px;text-align:center;';
+        _kdiv.style.cssText = 'font-size:9px;color:var(--sk-gold-light);margin-top:2px;text-align:center;';
         _kdiv.textContent = '(' + sun + ')';
         _kc.appendChild(_kdiv);
       }
@@ -16714,7 +16718,7 @@ function addSignLabelsToMeishiki() {
       if(!_sc2.querySelector('.sign-label')) {
         var _sdiv = document.createElement('div');
         _sdiv.className = 'sign-label';
-        _sdiv.style.cssText = 'font-size:9px;color:var(--muted);margin-top:2px;text-align:center;';
+        _sdiv.style.cssText = 'font-size:9px;color:var(--sk-gold-light);margin-top:2px;text-align:center;';
         _sdiv.textContent = '(' + moon + ')';
         _sc2.appendChild(_sdiv);
       }
