@@ -11053,7 +11053,11 @@ function calculate() {
 
     var resultEl = document.getElementById('result');
     resultEl.innerHTML = html;
-  setTimeout(function(){ addSignLabelsToMeishiki(); }, 50);
+  setTimeout(function(){
+    console.log('pendingAddSigns:', JSON.stringify(window._pendingAddSigns));
+    console.log('dayKanCells:', document.querySelectorAll('.day-pillar-col.kan').length);
+    addSignLabelsToMeishiki();
+  }, 50);
     resultEl.style.display = 'block';
 
     setTimeout(function() {
