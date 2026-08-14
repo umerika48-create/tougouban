@@ -1063,7 +1063,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     width: 100%;
     border-collapse: collapse;
     border: 1px solid rgba(184,150,46,0.25);
-    table-layout: auto;
+    table-layout: fixed;
   }
   .meishiki-table th, .meishiki-table td {
     border: 1px solid rgba(184,150,46,0.15);
@@ -1099,6 +1099,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   .kan.year, .kan.month, .kan.hour { opacity: 0.85; }
 
   .shi { font-size: 2rem; font-weight: 300; padding: 0.7rem 0.4rem !important; }
+
   .zougan-cell { font-size: 0.75rem; line-height: 1.8; color: var(--sk-silver); padding: 0.5rem 0.3rem !important; }
   .zougan-item { display: block; }
   .zougan-item span { color: var(--sk-silver-dim); font-size: 0.65rem; }
@@ -1150,18 +1151,17 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   .jyu12-taikyoku { color: var(--sk-gold-light); font-weight: 500; }
   .jyu12-keibo { color: #e05c40; }
 
-  /* day pillar highlight */
-  .day-pillar-col td {
-    background: rgba(184,150,46,0.06) !important;
+  /* day pillar highlight（day-pillar-colとtd/kan/shiは同じ要素についているクラス。マーク配置に必要なposition:relativeのみ有効化し、
+     セルごとに途切れて見えるグラデーションの縦ラインと背景ハイライトは元の状態（非表示）に戻す） */
+  .day-pillar-col {
     position: relative;
   }
-  .day-pillar-col td::after {
+
+  /* 星座マークの実タップ領域を広げる（見た目のサイズは変えず、周囲に余白分の当たり判定を追加） */
+  .sign-label::before {
     content: '';
     position: absolute;
-    top: 0; left: 0;
-    width: 2px; height: 100%;
-    background: linear-gradient(180deg, transparent, var(--sk-gold), transparent);
-    opacity: 0.4;
+    top: -8px; left: -8px; right: -8px; bottom: -8px;
   }
 
   /* no hour mode */
@@ -1826,6 +1826,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
         <option value="meeting">通常鑑定</option>
         <option value="horoscope">✦ Horoscope</option>
         <option value="shichuu">☯ 四柱推命</option>
+        <option value="togo">☯✦ 東西統合</option>
         <option value="lovetype">✦ 恋愛タイプ</option>
         <option value="crush">片思い中</option>
         <option value="reunion">復縁を考えている</option>
@@ -1834,6 +1835,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
       <button id="btn-lovetype" class="btn" onclick="runLovetype()" style="display:none;background:linear-gradient(135deg,#a89aff,#7b68ee);">✦ 恋愛タイプ</button>
       <button id="btn-horoscope" class="btn" onclick="runHoroscope()" style="display:none;background:linear-gradient(135deg,#60a5fa,#a78bfa);">✦ Horoscope</button>
       <button id="btn-shichuu" class="btn" onclick="runShichuu()" style="display:none;background:linear-gradient(135deg,#c9a84c,#8a6d1f);">☯ 四柱推命</button>
+      <button id="btn-togo" class="btn" onclick="runTogoTaisei()" style="display:none;background:linear-gradient(135deg,#60a5fa,#c9a84c);">☯✦ 東西統合</button>
     </div>
 
 
@@ -10214,10 +10216,11 @@ function switchCompatTab(tab, source) {
 
 /* ── Horoscope ── */
 function onSituationChange(v) {
-  document.getElementById('btn-fortune').style.display    = (v==='lovetype'||v==='horoscope'||v==='shichuu') ? 'none' : 'block';
+  document.getElementById('btn-fortune').style.display    = (v==='lovetype'||v==='horoscope'||v==='shichuu'||v==='togo') ? 'none' : 'block';
   document.getElementById('btn-lovetype').style.display   = (v==='lovetype') ? 'block' : 'none';
   document.getElementById('btn-horoscope').style.display  = (v==='horoscope') ? 'block' : 'none';
   document.getElementById('btn-shichuu').style.display    = (v==='shichuu') ? 'block' : 'none';
+  document.getElementById('btn-togo').style.display       = (v==='togo') ? 'block' : 'none';
   document.getElementById('area-horoscope-inputs').style.display = (v==='horoscope') ? 'block' : 'none';
 }
 
@@ -11754,6 +11757,11 @@ function calculate() {
 
 
 var LT_SIGNS=["牡羊座","牡牛座","双子座","蟹座","獅子座","乙女座","天秤座","蠍座","射手座","山羊座","水瓶座","魚座"];
+var LT_SIGN_SYMBOLS=["\u2648","\u2649","\u264A","\u264B","\u264C","\u264D","\u264E","\u264F","\u2650","\u2651","\u2652","\u2653"];
+function ltSignToSymbol(name) {
+  var idx = LT_SIGNS.indexOf(name);
+  return idx >= 0 ? LT_SIGN_SYMBOLS[idx] : name;
+}
 var LT_VENUS_TABLE=[[19400101,10],[19400119,11],[19400212,0],[19400309,1],[19400405,2],[19400507,3],[19400706,2],[19400801,3],[19400909,4],[19401007,5],[19401102,6],[19401127,7],[19401221,8],[19410114,9],[19410207,10],[19410303,11],[19410327,0],[19410420,1],[19410515,2],[19410608,3],[19410703,4],[19410727,5],[19410821,6],[19410915,7],[19411011,8],[19411106,9],[19411206,10],[19420407,11],[19420506,0],[19420602,1],[19420628,2],[19420723,3],[19420817,4],[19420911,5],[19421005,6],[19421029,7],[19421122,8],[19421216,9],[19430108,10],[19430201,11],[19430226,0],[19430322,1],[19430416,2],[19430511,3],[19430608,4],[19430708,5],[19431110,6],[19431208,7],[19440103,8],[19440128,9],[19440222,10],[19440317,11],[19440411,0],[19440505,1],[19440529,2],[19440623,3],[19440717,4],[19440811,5],[19440904,6],[19440928,7],[19441023,8],[19441116,9],[19441211,10],[19450106,11],[19450202,0],[19450311,1],[19450408,0],[19450605,1],[19450708,2],[19450804,3],[19450831,4],[19450925,5],[19451019,6],[19451112,7],[19451206,8],[19451230,9],[19460123,10],[19460216,11],[19460312,0],[19460405,1],[19460429,2],[19460524,3],[19460618,4],[19460714,5],[19460809,6],[19460907,7],[19461016,8],[19461108,7],[19470106,8],[19470206,9],[19470305,10],[19470331,11],[19470425,0],[19470520,1],[19470614,2],[19470709,3],[19470802,4],[19470826,5],[19470920,6],[19471014,7],[19471107,8],[19471201,9],[19471225,10],[19480118,11],[19480212,0],[19480308,1],[19480405,2],[19480507,3],[19480629,2],[19480803,3],[19480909,4],[19481007,5],[19481101,6],[19481126,7],[19481220,8],[19490113,9],[19490206,10],[19490302,11],[19490326,0],[19490420,1],[19490514,2],[19490607,3],[19490702,4],[19490727,5],[19490821,6],[19490915,7],[19491010,8],[19491106,9],[19491206,10],[19500407,11],[19500506,0],[19500602,1],[19500627,2],[19500723,3],[19500817,4],[19500910,5],[19501004,6],[19501028,7],[19501121,8],[19501215,9],[19510108,10],[19510201,11],[19510225,0],[19510321,1],[19510415,2],[19510511,3],[19510607,4],[19510708,5],[19511110,6],[19511208,7],[19520103,8],[19520128,9],[19520221,10],[19520317,11],[19520410,0],[19520504,1],[19520529,2],[19520622,3],[19520717,4],[19520810,5],[19520903,6],[19520928,7],[19521022,8],[19521116,9],[19521211,10],[19530105,11],[19530202,0],[19530315,1],[19530331,0],[19530605,1],[19530707,2],[19530804,3],[19530830,4],[19530924,5],[19531019,6],[19531112,7],[19531206,8],[19531230,9],[19540122,10],[19540215,11],[19540311,0],[19540404,1],[19540429,2],[19540524,3],[19540618,4],[19540713,5],[19540809,6],[19540907,7],[19541024,8],[19541027,7],[19550106,8],[19550206,9],[19550305,10],[19550330,11],[19550425,0],[19550520,1],[19550613,2],[19550708,3],[19550801,4],[19550826,5],[19550919,6],[19551013,7],[19551106,8],[19551130,9],[19551224,10],[19560118,11],[19560211,0],[19560308,1],[19560404,2],[19560508,3],[19560624,2],[19560804,3],[19560908,4],[19561006,5],[19561101,6],[19561126,7],[19561220,8],[19570113,9],[19570206,10],[19570302,11],[19570326,0],[19570419,1],[19570513,2],[19570607,3],[19570701,4],[19570726,5],[19570820,6],[19570914,7],[19571010,8],[19571106,9],[19571207,10],[19580407,11],[19580505,0],[19580601,1],[19580627,2],[19580722,3],[19580816,4],[19580910,5],[19581004,6],[19581028,7],[19581121,8],[19581214,9],[19590107,10],[19590131,11],[19590224,0],[19590321,1],[19590415,2],[19590511,3],[19590607,4],[19590709,5],[19590920,4],[19590925,5],[19591110,6],[19591208,7],[19600102,8],[19600127,9],[19600221,10],[19600316,11],[19600409,0],[19600504,1],[19600528,2],[19600622,3],[19600716,4],[19600809,5],[19600903,6],[19600927,7],[19601022,8],[19601115,9],[19601210,10],[19610105,11],[19610202,0],[19610606,1],[19610707,2],[19610804,3],[19610830,4],[19610924,5],[19611018,6],[19611111,7],[19611205,8],[19611229,9],[19620122,10],[19620215,11],[19620311,0],[19620404,1],[19620428,2],[19620523,3],[19620617,4],[19620713,5],[19620809,6],[19620907,7],[19630107,8],[19630206,9],[19630304,10],[19630330,11],[19630424,0],[19630519,1],[19630613,2],[19630707,3],[19630801,4],[19630825,5],[19630918,6],[19631012,7],[19631106,8],[19631130,9],[19631224,10],[19640117,11],[19640211,0],[19640308,1],[19640404,2],[19640509,3],[19640618,2],[19640805,3],[19640908,4],[19641006,5],[19641031,6],[19641125,7],[19641219,8],[19650112,9],[19650205,10],[19650301,11],[19650325,0],[19650419,1],[19650513,2],[19650606,3],[19650701,4],[19650726,5],[19650820,6],[19650914,7],[19651010,8],[19651106,9],[19651207,10],[19660207,9],[19660225,10],[19660407,11],[19660505,0],[19660601,1],[19660626,2],[19660722,3],[19660816,4],[19660909,5],[19661003,6],[19661027,7],[19661120,8],[19661214,9],[19670107,10],[19670131,11],[19670224,0],[19670320,1],[19670414,2],[19670510,3],[19670607,4],[19670709,5],[19670909,4],[19671002,5],[19671110,6],[19671207,7],[19680102,8],[19680127,9],[19680220,10],[19680316,11],[19680409,0],[19680503,1],[19680528,2],[19680621,3],[19680716,4],[19680809,5],[19680902,6],[19680927,7],[19681021,8],[19681115,9],[19681210,10],[19690105,11],[19690202,0],[19690606,1],[19690707,2],[19690803,3],[19690829,4],[19690923,5],[19691018,6],[19691111,7],[19691205,8],[19691228,9],[19700121,10],[19700214,11],[19700310,0],[19700403,1],[19700428,2],[19700523,3],[19700617,4],[19700713,5],[19700808,6],[19700907,7],[19710107,8],[19710206,9],[19710304,10],[19710330,11],[19710424,0],[19710519,1],[19710612,2],[19710707,3],[19710731,4],[19710825,5],[19710918,6],[19711012,7],[19711105,8],[19711129,9],[19711223,10],[19720117,11],[19720210,0],[19720307,1],[19720404,2],[19720511,3],[19720612,2],[19720806,3],[19720908,4],[19721005,5],[19721031,6],[19721125,7],[19721219,8],[19730112,9],[19730205,10],[19730301,11],[19730325,0],[19730418,1],[19730512,2],[19730606,3],[19730630,4],[19730725,5],[19730819,6],[19730913,7],[19731009,8],[19731106,9],[19731208,10],[19740130,9],[19740301,10],[19740407,11],[19740505,0],[19740531,1],[19740626,2],[19740721,3],[19740815,4],[19740908,5],[19741003,6],[19741027,7],[19741119,8],[19741213,9],[19750106,10],[19750130,11],[19750223,0],[19750320,1],[19750414,2],[19750510,3],[19750606,4],[19750709,5],[19750903,4],[19751004,5],[19751110,6],[19751207,7],[19760102,8],[19760126,9],[19760220,10],[19760315,11],[19760408,0],[19760503,1],[19760527,2],[19760621,3],[19760715,4],[19760808,5],[19760902,6],[19760926,7],[19761021,8],[19761114,9],[19761210,10],[19770105,11],[19770202,0],[19770606,1],[19770707,2],[19770803,3],[19770829,4],[19770923,5],[19771017,6],[19771110,7],[19771204,8],[19771228,9],[19780121,10],[19780214,11],[19780310,0],[19780403,1],[19780427,2],[19780522,3],[19780616,4],[19780712,5],[19780808,6],[19780907,7],[19790107,8],[19790205,9],[19790304,10],[19790329,11],[19790423,0],[19790518,1],[19790612,2],[19790706,3],[19790731,4],[19790824,5],[19790917,6],[19791011,7],[19791104,8],[19791129,9],[19791223,10],[19800116,11],[19800210,0],[19800307,1],[19800404,2],[19800513,3],[19800605,2],[19800807,3],[19800908,4],[19801005,5],[19801030,6],[19801124,7],[19801218,8],[19810111,9],[19810204,10],[19810228,11],[19810324,0],[19810418,1],[19810512,2],[19810605,3],[19810630,4],[19810725,5],[19810819,6],[19810913,7],[19811009,8],[19811106,9],[19811209,10],[19820123,9],[19820302,10],[19820407,11],[19820505,0],[19820531,1],[19820626,2],[19820721,3],[19820814,4],[19820908,5],[19821002,6],[19821026,7],[19821119,8],[19821213,9],[19830106,10],[19830130,11],[19830223,0],[19830319,1],[19830413,2],[19830509,3],[19830606,4],[19830710,5],[19830827,4],[19831006,5],[19831109,6],[19831207,7],[19840101,8],[19840126,9],[19840219,10],[19840315,11],[19840408,0],[19840502,1],[19840527,2],[19840620,3],[19840714,4],[19840808,5],[19840901,6],[19840926,7],[19841020,8],[19841114,9],[19841209,10],[19850104,11],[19850202,0],[19850606,1],[19850706,2],[19850802,3],[19850828,4],[19850922,5],[19851017,6],[19851110,7],[19851204,8],[19851227,9],[19860120,10],[19860213,11],[19860309,0],[19860402,1],[19860427,2],[19860522,3],[19860616,4],[19860712,5],[19860808,6],[19860907,7],[19870107,8],[19870205,9],[19870303,10],[19870329,11],[19870423,0],[19870517,1],[19870611,2],[19870706,3],[19870730,4],[19870824,5],[19870917,6],[19871011,7],[19871104,8],[19871128,9],[19871222,10],[19880116,11],[19880210,0],[19880306,1],[19880404,2],[19880518,3],[19880527,2],[19880807,3],[19880907,4],[19881005,5],[19881030,6],[19881124,7],[19881218,8],[19890111,9],[19890204,10],[19890228,11],[19890324,0],[19890417,1],[19890511,2],[19890605,3],[19890629,4],[19890724,5],[19890818,6],[19890913,7],[19891009,8],[19891105,9],[19891210,10],[19900117,9],[19900304,10],[19900406,11],[19900504,0],[19900530,1],[19900625,2],[19900720,3],[19900814,4],[19900907,5],[19901002,6],[19901026,7],[19901118,8],[19901212,9],[19910105,10],[19910129,11],[19910222,0],[19910319,1],[19910413,2],[19910509,3],[19910606,4],[19910711,5],[19910822,4],[19911007,5],[19911109,6],[19911206,7],[19920101,8],[19920125,9],[19920219,10],[19920314,11],[19920407,0],[19920502,1],[19920526,2],[19920619,3],[19920714,4],[19920807,5],[19920901,6],[19920925,7],[19921020,8],[19921114,9],[19921209,10],[19930104,11],[19930203,0],[19930606,1],[19930706,2],[19930802,3],[19930828,4],[19930922,5],[19931016,6],[19931109,7],[19931203,8],[19931227,9],[19940120,10],[19940213,11],[19940309,0],[19940402,1],[19940426,2],[19940521,3],[19940615,4],[19940711,5],[19940808,6],[19940908,7],[19950108,8],[19950205,9],[19950303,10],[19950328,11],[19950422,0],[19950517,1],[19950611,2],[19950705,3],[19950730,4],[19950823,5],[19950916,6],[19951010,7],[19951103,8],[19951128,9],[19951222,10],[19960115,11],[19960209,0],[19960306,1],[19960404,2],[19960807,3],[19960907,4],[19961004,5],[19961030,6],[19961123,7],[19961217,8],[19970110,9],[19970203,10],[19970227,11],[19970323,0],[19970416,1],[19970511,2],[19970604,3],[19970629,4],[19970724,5],[19970818,6],[19970912,7],[19971008,8],[19971105,9],[19971212,10],[19980110,9],[19980305,10],[19980406,11],[19980504,0],[19980530,1],[19980625,2],[19980720,3],[19980813,4],[19980907,5],[19981001,6],[19981025,7],[19981118,8],[19981212,9],[19990105,10],[19990129,11],[19990222,0],[19990318,1],[19990413,2],[19990509,3],[19990606,4],[19990713,5],[19990816,4],[19991008,5],[19991109,6],[19991206,7],[19991231,8],[20000125,9],[20000218,10],[20000313,11],[20000407,0],[20000501,1],[20000526,2],[20000619,3],[20000713,4],[20000807,5],[20000831,6],[20000925,7],[20001019,8],[20001113,9],[20001208,10],[20010104,11],[20010203,0],[20010606,1],[20010706,2],[20010802,3],[20010827,4],[20010921,5],[20011015,6],[20011109,7],[20011202,8],[20011226,9],[20020119,10],[20020212,11],[20020308,0],[20020401,1],[20020426,2],[20020521,3],[20020615,4],[20020711,5],[20020807,6],[20020908,7],[20030108,8],[20030205,9],[20030303,10],[20030328,11],[20030422,0],[20030516,1],[20030610,2],[20030705,3],[20030729,4],[20030822,5],[20030916,6],[20031010,7],[20031103,8],[20031127,9],[20031221,10],[20040115,11],[20040209,0],[20040306,1],[20040404,2],[20040807,3],[20040907,4],[20041004,5],[20041029,6],[20041123,7],[20041217,8],[20050110,9],[20050203,10],[20050227,11],[20050323,0],[20050416,1],[20050510,2],[20050604,3],[20050628,4],[20050723,5],[20050817,6],[20050912,7],[20051008,8],[20051105,9],[20051216,10],[20060102,9],[20060305,10],[20060406,11],[20060503,0],[20060530,1],[20060624,2],[20060719,3],[20060813,4],[20060906,5],[20060930,6],[20061024,7],[20061117,8],[20061211,9],[20070104,10],[20070128,11],[20070221,0],[20070318,1],[20070412,2],[20070508,3],[20070606,4],[20070715,5],[20070809,4],[20071008,5],[20071109,6],[20071206,7],[20071231,8],[20080124,9],[20080218,10],[20080313,11],[20080406,0],[20080501,1],[20080525,2],[20080618,3],[20080713,4],[20080806,5],[20080831,6],[20080924,7],[20081019,8],[20081113,9],[20081208,10],[20090104,11],[20090203,0],[20090412,11],[20090424,0],[20090606,1],[20090705,2],[20090801,3],[20090827,4],[20090921,5],[20091015,6],[20091108,7],[20091202,8],[20091226,9],[20100119,10],[20100212,11],[20100308,0],[20100401,1],[20100425,2],[20100520,3],[20100614,4],[20100710,5],[20100807,6],[20100909,7],[20101108,6],[20101130,7],[20110108,8],[20110204,9],[20110302,10],[20110327,11],[20110421,0],[20110516,1],[20110610,2],[20110704,3],[20110729,4],[20110822,5],[20110915,6],[20111009,7],[20111102,8],[20111127,9],[20111221,10],[20120114,11],[20120208,0],[20120305,1],[20120404,2],[20120808,3],[20120907,4],[20121003,5],[20121029,6],[20121122,7],[20121216,8],[20130109,9],[20130202,10],[20130226,11],[20130322,0],[20130415,1],[20130510,2],[20130603,3],[20130628,4],[20130723,5],[20130817,6],[20130911,7],[20131008,8],[20131105,9],[20140306,10],[20140406,11],[20140503,0],[20140529,1],[20140624,2],[20140719,3],[20140812,4],[20140906,5],[20140930,6],[20141024,7],[20141117,8],[20141211,9],[20150104,10],[20150128,11],[20150221,0],[20150317,1],[20150412,2],[20150508,3],[20150606,4],[20150719,5],[20150801,4],[20151009,5],[20151109,6],[20151205,7],[20151230,8],[20160124,9],[20160217,10],[20160312,11],[20160406,0],[20160430,1],[20160524,2],[20160618,3],[20160712,4],[20160806,5],[20160830,6],[20160924,7],[20161018,8],[20161112,9],[20161208,10],[20170103,11],[20170204,0],[20170403,11],[20170429,0],[20170606,1],[20170705,2],[20170801,3],[20170826,4],[20170920,5],[20171014,6],[20171107,7],[20171201,8],[20171225,9],[20180118,10],[20180211,11],[20180307,0],[20180331,1],[20180425,2],[20180520,3],[20180614,4],[20180710,5],[20180807,6],[20180909,7],[20181101,6],[20181203,7],[20190107,8],[20190204,9],[20190302,10],[20190327,11],[20190421,0],[20190515,1],[20190609,2],[20190704,3],[20190728,4],[20190821,5],[20190915,6],[20191009,7],[20191102,8],[20191126,9],[20191220,10],[20200114,11],[20200208,0],[20200305,1],[20200404,2],[20200808,3],[20200906,4],[20201003,5],[20201028,6],[20201122,7],[20201216,8],[20210109,9],[20210202,10],[20210226,11],[20210322,0],[20210415,1],[20210509,2],[20210603,3],[20210627,4],[20210722,5],[20210816,6],[20210911,7],[20211007,8],[20211105,9],[20220306,10],[20220406,11],[20220503,0],[20220529,1],[20220623,2],[20220718,3],[20220812,4],[20220905,5],[20220929,6],[20221023,7],[20221116,8],[20221210,9],[20230103,10],[20230127,11],[20230220,0],[20230317,1],[20230411,2],[20230508,3],[20230606,4],[20231009,5],[20231108,6],[20231205,7],[20231230,8],[20240123,9],[20240217,10],[20240312,11],[20240405,0],[20240429,1],[20240524,2],[20240617,3],[20240712,4],[20240805,5],[20240830,6],[20240923,7],[20241018,8],[20241112,9],[20241207,10],[20250103,11],[20250204,0],[20250327,11],[20250501,0],[20250606,1],[20250705,2],[20250731,3],[20250826,4],[20250920,5],[20251014,6],[20251107,7],[20251201,8],[20251225,9],[20260118,10],[20260210,11],[20260306,0],[20260331,1],[20260424,2],[20260519,3],[20260613,4],[20260710,5],[20260807,6],[20260910,7],[20261025,6],[20261204,7],[20270107,8],[20270204,9],[20270301,10],[20270326,11],[20270420,0],[20270515,1],[20270609,2],[20270703,3],[20270728,4],[20270821,5],[20270914,6],[20271008,7],[20271101,8],[20271125,9],[20271220,10],[20280113,11],[20280207,0],[20280305,1],[20280404,2],[20280808,3],[20280906,4],[20281002,5],[20281028,6],[20281121,7],[20281215,8]];
 var MARS_SIGN_CHANGES=[
   [1940,1,4,0,0,5],[1940,2,17,1,1,53],[1940,4,1,2,18,40],[1940,5,17,3,14,45],[1940,7,3,4,10,31],
@@ -16037,6 +16045,20 @@ function showFriendMeishiki(name, isYakodoki) {
 
   bodyEl.innerHTML = html2;
   modal.style.display = 'flex';
+
+  // 星座ラベルを注入（日柱の天干・地支に太陽星座・月星座マークを表示）
+  if (typeof lt_getSunSign === 'function' && typeof lt_getMoonSign === 'function') {
+    try {
+      var _fParts = f.date.split('-');
+      var _fY = parseInt(_fParts[0], 10), _fM = parseInt(_fParts[1], 10), _fD = parseInt(_fParts[2], 10);
+      var _fSun = lt_getSunSign(_fY, _fM, _fD);
+      var _fMoon = lt_getMoonSign(_fY, _fM, _fD);
+      var _fSunLbl = _fSun ? (_fSun.uncertain && _fSun.alt ? _fSun.sign + 'or' + _fSun.alt : _fSun.sign) : '';
+      var _fMoonLbl = _fMoon ? (_fMoon.uncertain && _fMoon.alt ? _fMoon.sign + 'or' + _fMoon.alt : _fMoon.sign) : '';
+      window._pendingAddSigns = {sun: _fSunLbl, moon: _fMoonLbl};
+      setTimeout(function(){ addSignLabelsToMeishiki(); }, 100);
+    } catch (e) {}
+  }
 }
 
 function closeFriendMeishikiModal() {
@@ -16203,7 +16225,116 @@ function getFriendsWithHensei(henseiName, colIdx) {
   return result;
 }
 
-/* Friend表示用HTML生成 */
+/* ======= 東西統合（日干×太陽星座／日支×月星座） ======= */
+/* 日干＝太陽星座、日支＝月星座とみなし、友達データの中に実在する組み合わせだけを
+   ラベル化する。月・太陽が不確定（コンジャンクション日等）の場合は「orアルト」で
+   両方の可能性を表示する（既存のsunObj/moonObj.uncertain仕様に合わせる）。 */
+function getTogoLabelData() {
+  var meishikis = getFriendMeishiki();
+  var kanGroups = {};
+  var shiGroups = {};
+  for (var i = 0; i < meishikis.length; i++) {
+    var m = meishikis[i];
+    if (!m.day_p) continue;
+    var fd = null;
+    for (var j = 0; j < FRIEND_DATA.length; j++) {
+      if (FRIEND_DATA[j].name === m.name) { fd = FRIEND_DATA[j]; break; }
+    }
+    if (!fd || fd.hidden || !fd.date) continue;
+    var parts = fd.date.split('-');
+    var yr = parseInt(parts[0], 10), mo = parseInt(parts[1], 10), da = parseInt(parts[2], 10);
+    if (!yr || !mo || !da) continue;
+
+    var sunObj = null, moonObj = null;
+    try { if (typeof lt_getSunSign === 'function') sunObj = lt_getSunSign(yr, mo, da); } catch (e) {}
+    try { if (typeof lt_getMoonSign === 'function') moonObj = lt_getMoonSign(yr, mo, da); } catch (e) {}
+
+    var kanChar = KAN10[m.day_p.kan];
+    var shiChar = SHI12[m.day_p.shi];
+
+    if (sunObj) {
+      var sunStr = (sunObj.uncertain && sunObj.alt) ? (sunObj.sign + 'or' + sunObj.alt) : sunObj.sign;
+      var kKey = kanChar + sunStr;
+      if (!kanGroups[kKey]) kanGroups[kKey] = { kanIdx: m.day_p.kan, signMain: sunObj.sign, label: kKey, names: [] };
+      kanGroups[kKey].names.push(m.name);
+    }
+    if (moonObj) {
+      var moonStr = (moonObj.uncertain && moonObj.alt) ? (moonObj.sign + 'or' + moonObj.alt) : moonObj.sign;
+      var sKey = shiChar + moonStr;
+      if (!shiGroups[sKey]) shiGroups[sKey] = { shiIdx: m.day_p.shi, signMain: moonObj.sign, label: sKey, names: [] };
+      shiGroups[sKey].names.push(m.name);
+    }
+  }
+  return { kan: kanGroups, shi: shiGroups };
+}
+
+/* オブジェクト形式のグループを 干/支の並び順→星座並び順 でソートした配列に変換 */
+function togoSortedArray(groupsObj, idxKey) {
+  var arr = [];
+  for (var k in groupsObj) { if (groupsObj.hasOwnProperty(k)) arr.push(groupsObj[k]); }
+  arr.sort(function (a, b) {
+    if (a[idxKey] !== b[idxKey]) return a[idxKey] - b[idxKey];
+    return LT_SIGNS.indexOf(a.signMain) - LT_SIGNS.indexOf(b.signMain);
+  });
+  return arr;
+}
+
+function buildTogoLabelsHTML(groupsArr, sectionTitle, tapFnName) {
+  var h = '<div class="card fade-up" style="margin-top:12px;">';
+  h += '<div class="card-title">' + sectionTitle + '</div>';
+  if (!groupsArr.length) {
+    h += '<div style="font-size:11px;color:var(--muted);margin-top:8px;">該当する友達データがありません。</div>';
+  } else {
+    h += '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">';
+    for (var i = 0; i < groupsArr.length; i++) {
+      var g = groupsArr[i];
+      h += '<button type="button" onclick="' + tapFnName + '(\'' + g.label + '\')" '
+        + 'style="padding:5px 12px;border-radius:14px;border:1px solid rgba(201,168,76,.4);background:rgba(201,168,76,.08);color:var(--gold-light);font-size:12px;cursor:pointer;">'
+        + g.label + '（' + g.names.length + '）</button>';
+    }
+    h += '</div>';
+  }
+  h += '</div>';
+  return h;
+}
+
+function runTogoTaisei() {
+  var ewClear = document.getElementById('enhanced-wrap');
+  if (ewClear) ewClear.innerHTML = '';
+  var groups = getTogoLabelData();
+  window._togoGroups = groups;
+  var kanArr = togoSortedArray(groups.kan, 'kanIdx');
+  var shiArr = togoSortedArray(groups.shi, 'shiIdx');
+
+  var h = '<div class="card fade-up">';
+  h += '<div class="card-title">☯✦ 東西統合</div>';
+  h += '<div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.6;">四柱推命の日干＝太陽星座、日支＝月星座として、友達データに実在する組み合わせだけをラベル化しています。友達データの更新に応じて内容も変わります。</div>';
+  h += '</div>';
+  h += buildTogoLabelsHTML(kanArr, '日干太陽星座', 'showTogoKanDetail');
+  h += buildTogoLabelsHTML(shiArr, '日支月星座', 'showTogoShiDetail');
+
+  var resultEl = document.getElementById('result');
+  if (resultEl) resultEl.innerHTML = h;
+}
+
+function showTogoKanDetail(label) {
+  if (!window._togoGroups) { window._togoGroups = getTogoLabelData(); }
+  var g = window._togoGroups && window._togoGroups.kan ? window._togoGroups.kan[label] : null;
+  if (!g) { showModal('<div style="font-size:13px;color:var(--muted);">該当する友達データが見つかりませんでした。</div>'); return; }
+  var html = '<div style="font-size:14px;font-weight:700;color:var(--gold-light);margin-bottom:10px;">' + label + '</div>'
+    + (typeof buildFriendBadgeHTML === 'function' ? buildFriendBadgeHTML(g.names, true, null) : g.names.join('、'));
+  showModal(html);
+}
+
+function showTogoShiDetail(label) {
+  if (!window._togoGroups) { window._togoGroups = getTogoLabelData(); }
+  var g = window._togoGroups && window._togoGroups.shi ? window._togoGroups.shi[label] : null;
+  if (!g) { showModal('<div style="font-size:13px;color:var(--muted);">該当する友達データが見つかりませんでした。</div>'); return; }
+  var html = '<div style="font-size:14px;font-weight:700;color:var(--gold-light);margin-bottom:10px;">' + label + '</div>'
+    + (typeof buildFriendBadgeHTML === 'function' ? buildFriendBadgeHTML(g.names, true, null) : g.names.join('、'));
+  showModal(html);
+}
+/* ======= 東西統合 END ======= */
 
 function getFriendMoonShi(friendName) {
   // 友達の月支を取得
@@ -16690,39 +16821,121 @@ function calcNenun(year){
 // ========================================================
 
 
+function ltSignStrToSymbols(str) {
+  if (!str) return str;
+  var parts = str.split('or');
+  var out = [];
+  for (var i = 0; i < parts.length; i++) { out.push(ltSignToSymbol(parts[i])); }
+  return out.join('/');
+}
+
+/* 星座が2択（不確定）の場合、横並びではなく縦に積む形のHTMLを返す */
+function ltSignStrToSymbolsHTML(str) {
+  if (!str) return '';
+  var parts = str.split('or');
+  var syms = [];
+  for (var i = 0; i < parts.length; i++) { syms.push(ltSignToSymbol(parts[i])); }
+  if (syms.length <= 1) return syms[0] || '';
+  return syms.join('<br>');
+}
+
 function addSignLabelsToMeishiki() {
   if(!window._pendingAddSigns) return;
   var sun = window._pendingAddSigns.sun;
   var moon = window._pendingAddSigns.moon;
   window._pendingAddSigns = null;
 
+  var STYLE_SINGLE = 'position:absolute;top:50%;transform:translateY(-50%);font-size:12px;color:var(--sk-gold-light);line-height:1;text-align:center;white-space:nowrap;cursor:pointer;';
+  var STYLE_MULTI  = 'position:absolute;top:50%;right:7px;transform:translateY(-50%);font-size:12px;color:var(--sk-gold-light);line-height:1.3;text-align:center;white-space:nowrap;cursor:pointer;';
+
+  // 文字（干支）の右端とセルの右罫線のちょうど中間にマークを配置する
+  function centerMarkInGap(cell, markEl, pillEl) {
+    try {
+      var cellRect = cell.getBoundingClientRect();
+      if (!cellRect || !cellRect.width) { markEl.style.right = '4px'; return; } // レイアウト未確定時のフォールバック
+      var pillRect = pillEl ? pillEl.getBoundingClientRect() : null;
+      var pillRight = pillRect ? pillRect.right : (cellRect.left + cellRect.width / 2);
+      var markRect = markEl.getBoundingClientRect();
+      var gapCenterX = pillRight + (cellRect.right - pillRight) / 2;
+      var leftPx = gapCenterX - cellRect.left - (markRect.width / 2);
+      markEl.style.left = leftPx + 'px';
+    } catch (e) { markEl.style.right = '4px'; }
+  }
+
+  var dayKanCells = document.querySelectorAll('.day-pillar-col.kan');
+  var dayShiCells = document.querySelectorAll('.day-pillar-col.shi');
+  var _newKanMarks = [];
+  var _newShiMarks = [];
+
   // 日柱の天干セル（.day-pillar-col.kan）に太陽星座を追加
   if(sun) {
-    var dayKanCells = document.querySelectorAll('.day-pillar-col.kan');
     for(var _ki=0;_ki<dayKanCells.length;_ki++){
       var _kc = dayKanCells[_ki];
       if(!_kc.querySelector('.sign-label')) {
         var _kdiv = document.createElement('div');
         _kdiv.className = 'sign-label';
-        _kdiv.style.cssText = 'font-size:9px;color:var(--sk-gold-light);margin-top:2px;text-align:center;';
-        _kdiv.textContent = '(' + sun + ')';
+        var _isSingleSun = (sun.indexOf('or') === -1);
+        _kdiv.style.cssText = _isSingleSun ? STYLE_SINGLE : STYLE_MULTI;
+        _kdiv.innerHTML = ltSignStrToSymbolsHTML(sun);
+        var _kPill = _kc.querySelector('.kan-pill');
+        var _kanChar = _kPill ? _kPill.textContent : '';
+        if (_kanChar) {
+          (function(_label){
+            _kdiv.onclick = function(ev){ if(ev) ev.stopPropagation(); showTogoKanDetail(_label); };
+          })(_kanChar + sun);
+        }
         _kc.appendChild(_kdiv);
+        if (_isSingleSun) centerMarkInGap(_kc, _kdiv, _kPill);
+        _newKanMarks[_ki] = {cell: _kc, mark: _kdiv};
       }
     }
   }
   // 日柱の地支セル（.day-pillar-col.shi）に月星座を追加
   if(moon) {
-    var dayShiCells = document.querySelectorAll('.day-pillar-col.shi');
     for(var _si=0;_si<dayShiCells.length;_si++){
       var _sc2 = dayShiCells[_si];
       if(!_sc2.querySelector('.sign-label')) {
         var _sdiv = document.createElement('div');
         _sdiv.className = 'sign-label';
-        _sdiv.style.cssText = 'font-size:9px;color:var(--sk-gold-light);margin-top:2px;text-align:center;';
-        _sdiv.textContent = '(' + moon + ')';
+        var _isSingleMoon = (moon.indexOf('or') === -1);
+        _sdiv.style.cssText = _isSingleMoon ? STYLE_SINGLE : STYLE_MULTI;
+        _sdiv.innerHTML = ltSignStrToSymbolsHTML(moon);
+        var _sPill = _sc2.querySelector('.shi-pill');
+        var _shiChar = _sPill ? _sPill.textContent : '';
+        if (_shiChar) {
+          (function(_label){
+            _sdiv.onclick = function(ev){ if(ev) ev.stopPropagation(); showTogoShiDetail(_label); };
+          })(_shiChar + moon);
+        }
         _sc2.appendChild(_sdiv);
+        if (_isSingleMoon) centerMarkInGap(_sc2, _sdiv, _sPill);
+        _newShiMarks[_si] = {cell: _sc2, mark: _sdiv};
       }
     }
+  }
+
+  // 天干マークと地支マークを同じ列（同じX位置）に揃える
+  // （文字幅の違いで生じるズレを、より右寄り＝余白が少ない方に合わせて統一する）
+  var _pairCount = Math.max(_newKanMarks.length, _newShiMarks.length);
+  for (var _pi = 0; _pi < _pairCount; _pi++) {
+    var _kEntry = _newKanMarks[_pi];
+    var _sEntry = _newShiMarks[_pi];
+    if (!_kEntry || !_sEntry) continue;
+    try {
+      var _kCellRect = _kEntry.cell.getBoundingClientRect();
+      var _sCellRect = _sEntry.cell.getBoundingClientRect();
+      var _kMarkRect = _kEntry.mark.getBoundingClientRect();
+      var _sMarkRect = _sEntry.mark.getBoundingClientRect();
+      if (!_kCellRect.width || !_sCellRect.width) continue;
+      var _kRight = _kCellRect.right - _kMarkRect.right;
+      var _sRight = _sCellRect.right - _sMarkRect.right;
+      var _sharedRight = Math.min(_kRight, _sRight); // 余白が少ない方（より右寄り）に揃える
+      if (_sharedRight < 0) _sharedRight = 0;
+      _kEntry.mark.style.left = 'auto';
+      _kEntry.mark.style.right = _sharedRight + 'px';
+      _sEntry.mark.style.left = 'auto';
+      _sEntry.mark.style.right = _sharedRight + 'px';
+    } catch (e) {}
   }
 }
 
