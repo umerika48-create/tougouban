@@ -1098,7 +1098,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   .kan.day { text-shadow: 0 0 20px rgba(184,150,46,0.3); }
   .kan.year, .kan.month, .kan.hour { opacity: 0.85; }
 
-  .shi { font-size: 2rem; font-weight: 300; padding: 0.7rem 0.4rem !important; }
+  .shi { font-size: 2rem; font-weight: 300; padding: 0.7rem 0.4rem !important; vertical-align: middle !important; }
 
   .zougan-cell { font-size: 0.75rem; line-height: 1.8; color: var(--sk-silver); padding: 0.5rem 0.3rem !important; }
   .zougan-item { display: block; }
@@ -12225,7 +12225,7 @@ function lt_buildBadges(birthdate){
   var mars=lt_getMarsSign(p.ymd);
   var vd2=LT_VD[venus]||{};
   var md2=LT_MD[mars]||{};
-  var mercuryObj=lt_getMercurySign(birthdate);
+  var mercuryObj=lt_getMercurySign(p.ymd);
   var mercury=mercuryObj?mercuryObj.sign:null;
   var wd2=mercury?LT_WD[mercury]:null;
   var st="padding:4px 12px;border-radius:16px;font-size:11px;margin:2px;display:inline-block;cursor:pointer;";
@@ -12249,7 +12249,7 @@ function lt_buildBadges(birthdate){
   if(sunMsg && !sunObj.uncertain) h+='<p style="font-size:13px;line-height:2;margin:6px 0;"><b style="font-size:15px;color:#e8c97a;">'+sunMsg+'</b></p>';
   if(sunObj.uncertain && sunObj.transition){
     var st2=sunObj.transition;
-    var _sd=st2.nextDay?"翌日":"";h+='<p style="font-size:11px;color:#e08070;">お生まれの日は太陽が星座をまたいでいます。<br>'+_sd+st2.hour+"時"+pad(st2.min)+"分ごろまでは「太陽 "+sunObj.sign+"」、それ以降にお生まれの方は「太陽 "+st2.altSign+"」の可能性があります。</p>";
+    var _sd=st2.nextDay?"翌日":"";h+='<p style="font-size:11px;color:#e08070;">お生まれの日は太陽が星座をまたいでいます。<br>【<b style="font-size:14px;color:#ffb454;">'+_sd+st2.hour+"時"+pad(st2.min)+"分</b>】頃までは「太陽 "+sunObj.sign+"」、それ以降にお生まれの方は「太陽 "+st2.altSign+"」</p>";
     var _sunbtnSt='display:inline-block;margin:2px 4px 2px 0;padding:3px 12px;background:rgba(255,215,0,.1);border:1px solid #e8c97a;border-radius:20px;font-size:12px;color:#e8c97a;cursor:pointer;';
     var _sunid1='sun-det-'+sunObj.sign.replace(/[^a-z\u3040-\u9fff]/gi,''),_sunid2='sun-det-'+st2.altSign.replace(/[^a-z\u3040-\u9fff]/gi,'');
     var sunMsg2=LT_SUN[st2.altSign];
@@ -12269,7 +12269,7 @@ function lt_buildBadges(birthdate){
   h+='<div class="core-num-detail-title">月星座について</div>';
   if(moon.uncertain && moon.transition){
     var tr=moon.transition;
-    var _md=tr.nextDay?"翌日":"";h+='<p>お生まれの日は月が星座をまたいでいます。<br>'+_md+tr.hour+"時"+pad(tr.min)+"分ごろまでは「月 "+moon.sign+"」、それ以降にお生まれの方は「月 "+tr.altSign+"」の可能性があります。</p>";
+    var _md=tr.nextDay?"翌日":"";h+='<p>お生まれの日は月が星座をまたいでいます。<br>【<b style="font-size:14px;color:#ffb454;">'+_md+tr.hour+"時"+pad(tr.min)+"分</b>】頃までは「月 "+moon.sign+"」、それ以降にお生まれの方は「月 "+tr.altSign+"」</p>";
     var _mla=LT_MOON_LABELS[moon.sign],_mlb=LT_MOON_LABELS[tr.altSign];
     var _mbtnSt='display:inline-block;margin:2px 4px 2px 0;padding:3px 12px;background:rgba(180,180,220,.1);border:1px solid #b4b4dc;border-radius:20px;font-size:12px;color:#c8c8f0;cursor:pointer;';
     var _mdetSt='display:inline-block;margin:2px 4px 2px 0;padding:3px 10px;background:rgba(240,160,96,.12);border:1px solid rgba(240,160,96,.4);border-radius:20px;font-size:11px;color:#f0a060;';
@@ -12288,7 +12288,7 @@ function lt_buildBadges(birthdate){
   h+='<div class="core-num-detail" id="lt-venus-detail">';
   var vl=LT_VENUS_LABELS[venus];
   if(venusObj.uncertain){
-    var _verd=venusObj.nextDay?"翌日":"";h+='<p style="font-size:11px;color:#e08070;margin-bottom:6px;">お生まれの日は金星が星座をまたいでいます。<br>'+_verd+String(venusObj.transHour).padStart(2,"0")+":"+String(venusObj.transMin).padStart(2,"0")+"ごろまでは<b>"+venus+"</b>、それ以降は<b>"+venusObj.altSign+"</b>の可能性があります。</p>";
+    var _verd=venusObj.nextDay?"翌日":"";h+='<p style="font-size:11px;color:#e08070;margin-bottom:6px;">お生まれの日は金星が星座をまたいでいます。<br>【<b style="font-size:14px;color:#ffb454;">'+_verd+pad(venusObj.transHour)+":"+pad(venusObj.transMin)+"</b>】頃までは<b>"+venus+"</b>、それ以降は<b>"+venusObj.altSign+"</b></p>";
     var _vbtnSt='display:inline-block;margin:2px 4px 2px 0;padding:3px 12px;background:rgba(168,154,255,.12);border:1px solid #a89aff;border-radius:20px;font-size:12px;color:#c8bcff;cursor:pointer;';
     var _vid1='venus-det-'+venus.replace(/[^a-z\u3040-\u9fff]/gi,''),_vid2='venus-det-'+venusObj.altSign.replace(/[^a-z\u3040-\u9fff]/gi,'');
     var _vl2=LT_VENUS_LABELS[venusObj.altSign],_vd2alt=LT_VD[venusObj.altSign];
@@ -12349,7 +12349,7 @@ function lt_buildBadges(birthdate){
     h+='<div class="core-num-detail" id="lt-mercury-detail">';
     h+='<div class="core-num-detail-title">《水星》 '+(mercuryObj.uncertain?mercury+' or '+mercuryObj.altSign:mercury)+'</div>';
     if(mercuryObj.uncertain){
-      var _merd=mercuryObj.nextDay?"翌日":"";h+='<p style="font-size:11px;color:#e08070;margin-bottom:6px;">お生まれの日は水星が星座をまたいでいます。<br>'+_merd+String(mercuryObj.transHour).padStart(2,"0")+":"+String(mercuryObj.transMin).padStart(2,"0")+"ごろまでは<b>"+mercury+"</b>、それ以降は<b>"+mercuryObj.altSign+"</b>の可能性があります。</p>";
+      var _merd=mercuryObj.nextDay?"翌日":"";h+='<p style="font-size:11px;color:#e08070;margin-bottom:6px;">お生まれの日は水星が星座をまたいでいます。<br>【<b style="font-size:14px;color:#ffb454;">'+_merd+pad(mercuryObj.transHour)+":"+pad(mercuryObj.transMin)+"</b>】頃までは<b>"+mercury+"</b>、それ以降は<b>"+mercuryObj.altSign+"</b></p>";
     }
     if(mercuryObj.uncertain){
       var altWd2=LT_WD[mercuryObj.altSign];
@@ -15733,7 +15733,9 @@ var FRIEND_DATA = [
 {id:'msj81ix45t1s',name:'米津玄師',date:'1991-03-10',time:'21:00',timeUnknown:false,category:'有名人',place:'徳島県徳島市',memo:'21時頃',addedAt:1786123880968,visible:true},
 {id:'msj84y8dt24v',name:'藤井風',date:'1997-06-14',time:'15:00',timeUnknown:false,category:'有名人',place:'岡山県',memo:'15時頃',addedAt:1786124040781,visible:true},
 {id:'msngp20ddwsf',name:'加藤神楽',date:'2005-03-08',time:'',timeUnknown:false,category:'有名人',place:'',memo:'',addedAt:1786380280429,visible:true},
-{id:'msnylc3ygz4r',name:'さくらこ',date:'1986-04-30',time:'13:17',timeUnknown:false,category:'本人',place:'福岡',memo:'',addedAt:1786410339982,visible:true}
+{id:'msnylc3ygz4r',name:'さくらこ',date:'1986-04-30',time:'13:17',timeUnknown:false,category:'本人',place:'福岡',memo:'',addedAt:1786410339982,visible:true},
+{id:'mst2gys6cp82',name:'なつきさん',date:'1983-08-16',time:'16:30',timeUnknown:false,category:'仕事関係',place:'長崎',memo:'',addedAt:1786719185430,visible:true},
+{id:'mst56cmy3oki',name:'飯田祐基',date:'1992-03-11',time:'',timeUnknown:false,category:'有名人',place:'愛知県',memo:'',addedAt:1786723729018,visible:true}
 ];
 
 /* localStorageに保存された友達データがあれば、それで上書きする */
@@ -16929,7 +16931,7 @@ function addSignLabelsToMeishiki() {
       if (!_kCellRect.width || !_sCellRect.width) continue;
       var _kRight = _kCellRect.right - _kMarkRect.right;
       var _sRight = _sCellRect.right - _sMarkRect.right;
-      var _sharedRight = Math.min(_kRight, _sRight); // 余白が少ない方（より右寄り）に揃える
+      var _sharedRight = (_kRight + _sRight) / 2; // 両方の理想位置の中間（平均）を採用し、どちらの中央からのズレも最小にする
       if (_sharedRight < 0) _sharedRight = 0;
       _kEntry.mark.style.left = 'auto';
       _kEntry.mark.style.right = _sharedRight + 'px';
