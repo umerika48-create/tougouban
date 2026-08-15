@@ -544,6 +544,8 @@ body.label-style-d .cycle-label {
 }
 .panel-mini-btn .panel-mini-arrow { font-size: 9px; color: var(--muted); transition: transform .25s; }
 .panel-mini-btn.open .panel-mini-arrow { transform: rotate(180deg); }
+.mini-arrow-toggle { transition: transform .25s; }
+.mini-arrow-toggle.open { transform: rotate(180deg); }
 .panel-mini-body {
   display: none; padding: 8px 10px;
   background: rgba(0,0,0,.2); border: 1px solid rgba(255,255,255,.06);
@@ -6596,6 +6598,232 @@ function buildCycleWaveSVG(cycle, tColor) {
     circles+'</svg>';
 }
 
+/* ======= 年運 四柱推命4ステップ読み解き（①天干の通変星 ②年支の蔵干・通変星 ③十二運 ④合冲刑害破） ======= */
+function buildYearFourStepHTML(birthdate, targetYear) {
+  try {
+    var KAN10y = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+    var SHI12y = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+    var bpts = birthdate.split('-');
+    var by = parseInt(bpts[0],10), bm = parseInt(bpts[1],10), bd = parseInt(bpts[2],10);
+    var bdt = new Date(by, bm-1, bd, 12, 0);
+
+    var dayP = calcNicchu(bdt);
+    var nenP = calcNenchu(bdt);
+    var getsP = calcGetschu(bdt, nenP.kan);
+    var dayKan = KAN10y[dayP.kan];
+
+    var ryuDT = new Date(targetYear, 4, 1, 12, 0);
+    var ryuNen = calcNenchu(ryuDT);
+    var ryuKanStr = KAN10y[ryuNen.kan];
+    var ryuShiStr = SHI12y[ryuNen.shi];
+
+    // ① 天干の通変星
+    var hensei1 = calcHensei(dayP.kan, ryuNen.kan);
+    var hd1 = (typeof HENSEI_DESC !== 'undefined') ? HENSEI_DESC[hensei1] : null;
+    var HENSEI_MAIN_THEME = {
+      '比肩':'自分らしさを軸に動く年。人に合わせるより、自分の意思や存在感をはっきり出したくなる',
+      '劫財':'人との駆け引き・競争が絡む年。仲間や同志ができる一方、張り合う場面も出やすい',
+      '食神':'自然に才能や魅力を発揮していく年。楽しむこと・表現すること自体がテーマになる',
+      '傷官':'感性や技術を磨いていく年。こだわりが強く出て、既存のやり方に疑問を持ちやすい',
+      '偏財':'チャンスや人脈を掴みに行く年。動きが活発になり、お金や出会いの流動性が高まる',
+      '正財':'地道に積み上げていく年。堅実な努力が、着実に形のある成果につながりやすい',
+      '偏官':'プレッシャーや試練の中で鍛えられる年。緊張感のある挑戦・変化が起きやすい',
+      '正官':'責任や信頼を積み上げていく年。立場が上がったり、社会的な評価が定まりやすい',
+      '偏印':'直感やひらめきを頼りにする年。独自の視点や、人と違う発想が力になる',
+      '印綬':'学び・支えを受けて力を蓄える年。知識や周囲のサポートが土台を作ってくれる'
+    };
+
+    // ② 年支の蔵干・通変星（正気をメインに、中気・余気があれば添える）
+    var HENSEI_BACKGROUND = {
+      '比肩':'表向きのテーマの裏で、「誰にも頼らず自分でやる」という意地や独立心が働いている',
+      '劫財':'表向きのテーマの裏で、周囲との比較や競争心、分け合う・張り合うような力学が動いている',
+      '食神':'表向きのテーマの裏で、余裕や遊び心、楽しみながらやりたいという気持ちが下地にある',
+      '傷官':'表向きのテーマの裏で、既存のやり方への違和感や、もっと良くしたいというこだわりが働いている',
+      '偏財':'表向きのテーマの裏で、フットワークの軽さや、機を逃さず動こうとする実利的な計算がある',
+      '正財':'表向きのテーマの裏で、コツコツ積み上げて形にしたいという堅実な実質面が支えている',
+      '偏官':'表向きのテーマの裏で、緊張感やプレッシャー、鍛えられる状況が具体的に働いている',
+      '正官':'表向きのテーマの裏で、責任感や周囲からの見られ方への意識が具体的に働いている',
+      '偏印':'表向きのテーマの裏で、直感やひとり時間で内省する感覚が具体的な支えになっている',
+      '印綬':'表向きのテーマの裏で、誰かに教わる・守られるという安心感が具体的な土台になっている'
+    };
+    var zgIdx = SHI12y.indexOf(ryuShiStr);
+    var zg = (typeof ZOUGAN !== 'undefined' && zgIdx>=0) ? ZOUGAN[zgIdx] : null;
+    var zougan2HTML = '';
+    if (zg) {
+      var labels = ['余気','中気','正気'];
+      for (var zi=0; zi<3; zi++) {
+        if (zg[zi]===null || zg[zi]===undefined) continue;
+        var zKan = KAN10y[zg[zi]];
+        var zHensei = calcHensei(dayP.kan, zg[zi]);
+        var isMain = (zi===2);
+        var zBg = HENSEI_BACKGROUND[zHensei] || '';
+        zougan2HTML += '<div style="margin-bottom:4px;">'
+          + '<span onclick="event.stopPropagation();openHenseiPanel(\''+zHensei+'\',\''+targetYear+'年の年支・'+labels[zi]+'\')" style="display:inline-block;margin:2px 4px 2px 0;padding:2px 9px;border-radius:12px;font-size:'+(isMain?'11px':'10px')+';font-weight:'+(isMain?'700':'400')+';background:rgba(255,255,255,'+(isMain?'0.08':'0.04')+');border:1px solid rgba(255,255,255,'+(isMain?'0.18':'0.1')+');color:'+(isMain?'var(--gold-light)':'var(--muted)')+';cursor:pointer;">'+zKan+' '+zHensei+(isMain?'（正気）':'（'+labels[zi]+'）')+'</span>'
+          + (zBg ? ' <span class="mini-arrow-toggle" style="display:inline-block;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 6px;" onclick="event.stopPropagation();toggleSogoBox(this);">▼</span>'
+                 + '<div class="panel-mini-body" style="font-size:11px;color:var(--text);margin-top:3px;line-height:1.6;">'+zBg+'</div>' : '')
+          + '</div>';
+      }
+    }
+
+    // ③ 十二運
+    var jyu3 = calcJyu12(dayP.kan, ryuNen.shi);
+    var jd3 = (typeof JUNIUN_DESC !== 'undefined') ? JUNIUN_DESC[jyu3] : null;
+    var JYU12_ENERGY = {
+      '長生':'生まれたての赤ちゃんのような、まっさらで伸びやかなエネルギー。新しく始めることに向いていて、可能性を素直に伸ばしていける',
+      '沐浴':'まだ形が定まらず、揺れながら試している状態。迷いや揺らぎはあるものの、その分感受性が豊かで、試行錯誤しながら自分に合う形を探っていける',
+      '冠帯':'一人前になる手前の、意気込みと伸びしろが同居したエネルギー。多少無鉄砲でも、勢いをつけて力をつけていける時期',
+      '建禄':'自分の力で堂々と立っていられる、実力が伴った安定したエネルギー。地に足がついた状態で、着実に前へ進んでいける',
+      '帝旺':'一生のうちで最も力が満ちている、最強のエネルギー。自信を持って最大限に力を発揮できる半面、強すぎて周囲とぶつかることもある',
+      '衰':'ピークを越えて、少し落ち着き始めた円熟のエネルギー。勢いよりも、これまでの経験を活かして丁寧に対応する方が合っている',
+      '病':'少し弱っていて、無理がきかない状態。その分、人に頼ったり、内面と向き合ったりすることで得られるものが多い時期',
+      '死':'エネルギーが最も静まった、内省の状態。攻めるより、静かに力を練りながら仕上げていくことに向いている',
+      '墓':'これまでのことをじっくりしまい込み、整理する時期。派手な動きより、蓄積してきたものを見直し、次に活かす準備ができる',
+      '絶':'一度エネルギーがゼロに近づく、切り替わりの状態。何かが終わる不安定さもあるが、次の始まりに向けてまっさらに戻れる時期でもある',
+      '胎':'母体の中で新しい命が育ち始めるような、まだ見えないところで力が芽吹いている状態。焦らず、種をそっと育てていく時期',
+      '養':'大切に守られながら育っていく、じんわりと力を蓄えるエネルギー。土台づくりの時期で、この先の成長のための準備期間になる'
+    };
+
+    // ④ 合冲刑害破（命式の年支・月支・日支 それぞれと今年の年支を比較）
+    var REL_SHORT = {
+      '三合':'3つの地支が集まると強いエネルギーを生む吉の関係。仲間・チームワークで動くと大きな力を発揮しやすい時期。',
+      '六合':'自然に引き合う吉の関係。流れに乗りやすく、人との縁が活発になりやすい時期。',
+      '冲':'正反対のエネルギーがぶつかる関係。変化・動き・刺激が起きやすい。良くも悪くも転機になりやすい時期。',
+      '刑':'価値観のズレや摩擦が生じやすい関係。人間関係に注意が必要な時期。ただし自己鍛錬・成長のきっかけにもなる。',
+      '害':'じわじわ消耗しやすい関係。無理をしすぎると体や心が疲れやすい時期。ペースを落として丁寧に動くのが吉。',
+      '破':'信頼・ペース・計画が崩れやすい関係。想定外のことが起きやすい時期。柔軟に対応することが大切。'
+    };
+    var REL_MOVEMENT = {
+      '三合':'テーマが仲間や複数の要素と結びつき、大きな流れになって動き出す。一人の力ではなく、周囲を巻き込みながら物事が進んでいく',
+      '六合':'テーマが誰か一人としっかり結びつき、まとまっていく。縁がつながる、契約や約束ごとがまとまりやすい',
+      '冲':'テーマが真正面からぶつかり、大きく動く・入れ替わる。これまでの前提や環境が揺さぶられ、変化や気づきが起きやすい',
+      '刑':'テーマに摩擦や葛藤が生じ、思うようにいかない場面が出てくる。無理を通そうとすると余計にこじれるので、調整が必要',
+      '害':'テーマに水を差すような、地味だけど厄介な障害が起きやすい。表立った対立ではなく、じわじわとしたすれ違いに注意',
+      '破':'テーマの形が崩れたり、計画が崩れたりしやすい。ただ、壊れることで逆に身軽になる・区切りがつくという面もある'
+    };
+    var natalShis = [
+      {label:'年柱', shi: SHI12y[nenP.shi]},
+      {label:'月柱', shi: SHI12y[getsP.shi]},
+      {label:'日柱', shi: SHI12y[dayP.shi]}
+    ];
+    var relHTML = '';
+    for (var ni=0; ni<natalShis.length; ni++) {
+      var ns = natalShis[ni];
+      // 同じ支同士でも「辰辰」「午午」「酉酉」「亥亥」は自刑（じけい）に該当するためスキップしない
+      var rels = (typeof checkShichuuShi === 'function') ? checkShichuuShi(ryuShiStr, ns.shi) : [];
+      for (var ri=0; ri<rels.length; ri++) {
+        var r = rels[ri];
+        var rShort = REL_SHORT[r.type] || '';
+        var rMove = REL_MOVEMENT[r.type] || '';
+        relHTML += '<div style="margin-bottom:6px;">'
+          + '<span onclick="event.stopPropagation();showShiRelDetail(\''+ryuShiStr+'\',\''+ns.shi+'\',\''+r.type+'\')" style="display:inline-block;margin:2px 4px 2px 0;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:700;background:rgba(255,255,255,0.05);border:1px solid '+r.color+'55;color:'+r.color+';cursor:pointer;">'+ns.label+'の'+ns.shi+'と'+r.type+'</span>'
+          + (rShort ? '<div style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.6;">'+rShort+'</div>' : '')
+          + (rMove ? ' <span class="mini-arrow-toggle" style="display:inline-block;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 6px;" onclick="event.stopPropagation();toggleSogoBox(this);">▼</span>'
+                    + '<div class="panel-mini-body" style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.6;">'+rMove+'</div>' : '')
+          + '</div>';
+      }
+    }
+    if (!relHTML) relHTML = '<span style="font-size:11px;color:var(--muted);">命式の年支・月支・日支との間に、特に目立った合冲刑害破はありません。</span>';
+
+    // ⑤ 総合（①③④をまとめた一文）
+    var JYU12_TONE = {
+      '長生':'新しく何かを始めるのに向いている', '沐浴':'試行錯誤しながら形にしていく',
+      '冠帯':'積極的に力をつけていく', '建禄':'いちばん勢いに乗って動ける',
+      '帝旺':'最も力が満ちて発揮できる', '衰':'少しペースを落として整える',
+      '病':'無理をせず休みながら進める', '死':'静かに力を練りながら仕上げていく',
+      '墓':'これまでのことをじっくりしまい込む', '絶':'いったんゼロに戻って見つめ直す',
+      '胎':'新しい種をそっと育て始める', '養':'力を蓄えながら準備を整える'
+    };
+    var HENSEI_ACTION = {
+      '比肩':'自分らしさを軸に動いていく', '劫財':'人との駆け引きの中で動いていく',
+      '食神':'自然に表現していく', '傷官':'感性や技術を磨いていく',
+      '偏財':'チャンスをつかみに行く', '正財':'地道に積み上げていく',
+      '偏官':'プレッシャーの中で鍛えられる', '正官':'責任や信頼を積み上げる',
+      '偏印':'直感やひらめきを頼りにする', '印綬':'学びや支えを受けて力を蓄える'
+    };
+    var toneStr = JYU12_TONE[jyu3] || '流れに沿って進んでいく';
+    var actionStr = HENSEI_ACTION[hensei1] || 'テーマに向き合っていく';
+
+    var movementParts = [];
+    // 大運との関係（性別入力があれば計算）
+    try {
+      var isFemaleEl = document.getElementById('genderFemale');
+      var isFemale = isFemaleEl ? isFemaleEl.checked : true;
+      var dauResult = calcDaun(bdt, nenP.kan, nenP.shi, getsP.kan, getsP.shi, isFemale);
+      if (dauResult && dauResult.list) {
+        var birthYearNum = by;
+        var targetAge = targetYear - birthYearNum;
+        var curDaun = null;
+        for (var di=0; di<dauResult.list.length; di++) {
+          var dd = dauResult.list[di];
+          if (targetAge >= dd.age && targetAge < dd.age + 10) { curDaun = dd; break; }
+        }
+        if (curDaun) {
+          var daunShiStr = SHI12y[curDaun.shi];
+          if (daunShiStr !== ryuShiStr) {
+            var daunRels = checkShichuuShi(ryuShiStr, daunShiStr);
+            for (var dri=0; dri<daunRels.length; dri++) {
+              var drType = daunRels[dri].type;
+              if (drType==='冲') movementParts.push('大運との冲があるので、これまでの10年の流れに変化や気づきが起きやすい');
+              else if (drType==='六合'||drType==='三合') movementParts.push('大運と合う年なので、これまでの流れがまとまりやすい');
+              else if (drType==='刑') movementParts.push('大運と刑の関係があるので、少し葛藤や調整が必要な場面がありそう');
+              else if (drType==='害'||drType==='破') movementParts.push('大運と'+drType+'の関係があるので、思わぬところで軌道修正が入りやすい');
+            }
+          }
+        }
+      }
+    } catch (eDaun) {}
+    // 命式（年月日支）との関係もあれば添える
+    if (relHTML && relHTML.indexOf('特に目立った') === -1) {
+      movementParts.push('命式ともいくつか動きがあるので、身近な人間関係や暮らしの中で変化を感じやすい');
+    }
+    if (movementParts.length === 0) {
+      movementParts.push('大きな節目は少なく、落ち着いて過ごせそう');
+    }
+    var sogoText = targetYear + '年は「' + toneStr + '、' + actionStr + '年。' + movementParts.join('。') + '」';
+
+    var h = '<div style="font-size:9px;letter-spacing:.15em;color:var(--gold);margin-bottom:8px;">'+targetYear+'年（'+ryuKanStr+ryuShiStr+'年）を四柱推命で読み解く</div>';
+
+    h += '<div style="margin-bottom:10px;">'
+      + '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">① 天干の通変星 — メインテーマ</div>'
+      + '<span onclick="event.stopPropagation();openHenseiPanel(\''+hensei1+'\',\''+targetYear+'年の年運\')" style="display:inline-block;padding:3px 12px;border-radius:14px;font-size:13px;font-weight:700;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.3);color:#ffd700;cursor:pointer;">'+ryuKanStr+' '+hensei1+'</span>'
+      + (hd1 ? '<div style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+hd1.keyword+'</div>' : '')
+      + (HENSEI_MAIN_THEME[hensei1] ? ' <span class="mini-arrow-toggle" style="display:inline-block;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 6px;" onclick="event.stopPropagation();toggleSogoBox(this);">▼</span>'
+             + '<div class="panel-mini-body" style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+HENSEI_MAIN_THEME[hensei1]+'</div>' : '')
+      + '</div>';
+
+    h += '<div style="margin-bottom:10px;">'
+      + '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">② 年支の蔵干・通変星 — テーマの背景・具体性</div>'
+      + zougan2HTML
+      + '</div>';
+
+    h += '<div style="margin-bottom:10px;">'
+      + '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">③ 十二運 — このテーマへの自分のエネルギー</div>'
+      + '<span onclick="event.stopPropagation();openJyu12Panel(\''+jyu3+'\',\''+targetYear+'年の年運\')" style="display:inline-block;padding:3px 12px;border-radius:14px;font-size:13px;font-weight:700;background:rgba(184,168,255,.08);border:1px solid rgba(184,168,255,.3);color:#b8a8ff;cursor:pointer;">'+jyu3+'</span>'
+      + (jd3 ? '<div style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+jd3.energy+'</div>' : '')
+      + (JYU12_ENERGY[jyu3] ? ' <span class="mini-arrow-toggle" style="display:inline-block;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 6px;" onclick="event.stopPropagation();toggleSogoBox(this);">▼</span>'
+             + '<div class="panel-mini-body" style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+JYU12_ENERGY[jyu3]+'</div>' : '')
+      + '</div>';
+
+    h += '<div>'
+      + '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">④ 合冲刑害破 — テーマがどう動くか</div>'
+      + relHTML
+      + '</div>';
+
+    h += '<div style="margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);">'
+      + '<button type="button" class="panel-mini-btn" onclick="event.stopPropagation();toggleSogoBox(this);">'
+      + '総合'
+      + '<span class="panel-mini-arrow">▼</span>'
+      + '</button>'
+      + '<div class="panel-mini-body" style="font-size:12px;line-height:1.8;color:var(--text);">'+sogoText+'</div>'
+      + '</div>';
+
+    return h;
+  } catch (e) {
+    return '<div style="font-size:11px;color:var(--muted);">この年の四柱推命データを計算できませんでした。</div>';
+  }
+}
+
+
 function buildNineYearHTML(honmei, targetYear, birthdate) {
   var cycle = buildNineYearCycle(honmei, targetYear, birthdate);
   var tColor = getLuckColor(PALACE_LUCK[getYearPalace(honmei,targetYear)].level);
@@ -6738,32 +6966,7 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
       '<div id="'+panelId+'" style="display:none;grid-column:1/-1;'+
            'border-radius:12px;padding:14px 16px;margin-top:-2px;'+
            'background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.1);">'+
-        /* 吉凶まとめ */
-        '<div style="display:flex;gap:10px;margin-bottom:12px;">'+
-          '<div style="flex:1;padding:8px 10px;border-radius:8px;background:rgba(74,158,138,.1);border:1px solid rgba(74,158,138,.3);">'+
-            '<div style="font-size:9px;letter-spacing:.15em;color:#6fcfb8;margin-bottom:4px;">✦ 吉方位</div>'+
-            '<div style="font-size:11px;color:var(--text);font-family:\'Shippori Mincho\',serif;font-weight:700;">'+goodDirs+'</div>'+
-          '</div>'+
-          '<div style="flex:1;padding:8px 10px;border-radius:8px;background:rgba(192,57,43,.1);border:1px solid rgba(192,57,43,.3);">'+
-            '<div style="font-size:9px;letter-spacing:.15em;color:#e08070;margin-bottom:4px;">▲ 凶方位</div>'+
-            '<div style="font-size:11px;color:var(--text);font-family:\'Shippori Mincho\',serif;font-weight:700;">'+badDirs+'</div>'+
-          '</div>'+
-        '</div>'+
-        /* テーマ別 */
-        '<div style="font-size:9px;letter-spacing:.2em;color:var(--gold);margin-bottom:6px;">テーマ別おすすめ方位</div>'+
-        themeRows+
-        /* 今年のアドバイス（タップ式） */
-        '<button class="panel-mini-btn" id="nyadvbtn-'+idx+'" onclick="togglePanelMini(\'nyadvbtn-'+idx+'\',\'nyadvbody-'+idx+'\')">'+
-          '今年のアドバイス'+
-          '<span class="panel-mini-arrow">▼</span>'+
-        '</button>'+
-        '<div class="panel-mini-body" id="nyadvbody-'+idx+'">'+palDat.yearAdvice+'</div>'+
-        /* 流れのポイント（タップ式） */
-        '<button class="panel-mini-btn" id="nyptbtn-'+idx+'" onclick="togglePanelMini(\'nyptbtn-'+idx+'\',\'nyptbody-'+idx+'\')">'+
-          '流れのポイント'+
-          '<span class="panel-mini-arrow">▼</span>'+
-        '</button>'+
-        '<div class="panel-mini-body" id="nyptbody-'+idx+'">'+palDat.yearDesc+'</div>'+
+        (birthdate ? buildYearFourStepHTML(birthdate, c.yr) : '<div style="font-size:11px;color:var(--muted);">生年月日が未入力のため、四柱推命での読み解きは表示できません。</div>')+
         /* 閉じる */
         '<button onclick="toggleNycPanel('+idx+')" '+
           'style="display:block;width:100%;margin-top:10px;padding:6px;'+
@@ -6771,30 +6974,6 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
           'color:var(--muted);font-size:11px;cursor:pointer;font-family:\'Shippori Mincho\',serif;">'+
           '▲ 閉じる'+
         '</button>'+
-        /* 十二運の詳細 */
-        (ryunenHTML && typeof getJuniunName === 'function' && birthdate ? (function(){
-          var bpts2 = birthdate.split('-');
-          var bdt2 = new Date(parseInt(bpts2[0]),parseInt(bpts2[1])-1,parseInt(bpts2[2]),12,0);
-          var dayP2 = (typeof calcNicchu === 'function') ? calcNicchu(bdt2) : null;
-          var KAN10n = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
-          var SHI12n = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
-          if(!dayP2) return '';
-          var ryuDT2 = new Date(c.yr,4,1,12,0);
-          var ryuNen2 = (typeof calcNenchu === 'function') ? calcNenchu(ryuDT2) : null;
-          if(!ryuNen2) return '';
-          var dayKanN = KAN10n[dayP2.kan];
-          var ryuShiN = SHI12n[ryuNen2.shi];
-          var junNm2 = getJuniunName(dayKanN, ryuShiN);
-          var jd2 = (junNm2 && typeof JUNIUN_DESC !== 'undefined') ? JUNIUN_DESC[junNm2] : null;
-          if(!jd2) return '';
-          var jCol2 = {'長生':'#80ff80','沐浴':'#a8c8ff','冠帯':'#b8a8ff','建禄':'#ffd700','帝旺':'#ffd700','衰':'#ffb347','病':'#ff9999','死':'#ff6b6b','墓':'#ff9999','絶':'#ff6b6b','胎':'#98e698','養':'#98e698'}[junNm2]||'#b8a8ff';
-          return '<div style="margin-top:12px;padding:10px 12px;border-radius:8px;background:rgba(255,255,255,0.04);border-left:2px solid '+jCol2+';">'
-            + '<div style="font-size:9px;color:var(--muted);margin-bottom:4px;">十二運（'+dayKanN+'の日干から見たこの年）</div>'
-            + '<div style="font-size:15px;font-weight:700;color:'+jCol2+';margin-bottom:6px;">'+junNm2+'<span style="font-size:10px;font-weight:400;color:var(--muted);margin-left:4px;">（'+jd2.yomi+'）</span></div>'
-            + '<div style="font-size:11px;color:var(--muted);margin-bottom:3px;">🌱 '+jd2.life+'</div>'
-            + '<div style="font-size:12px;color:var(--text);">'+jd2.energy+'</div>'
-            + '</div>';
-        })() : '')+
       '</div>';
   });
 
@@ -7917,6 +8096,17 @@ function togglePanelMini(btnId, bodyId) {
   if(!btn || !body) return;
   var isOpen = body.classList.contains('open');
   btn.classList.toggle('open', !isOpen);
+  body.classList.toggle('open', !isOpen);
+}
+
+/* 「総合」ボタン等、showModalでコピーされて複数存在しうる箇所向けのトグル。
+   idではなく相対DOM参照（thisの次の要素）で開閉するので、ID重複の影響を受けない */
+function toggleSogoBox(btnEl) {
+  if (!btnEl) return;
+  var body = btnEl.nextElementSibling;
+  if (!body) return;
+  var isOpen = body.classList.contains('open');
+  btnEl.classList.toggle('open', !isOpen);
   body.classList.toggle('open', !isOpen);
 }
 
@@ -12249,7 +12439,7 @@ function lt_buildBadges(birthdate){
   if(sunMsg && !sunObj.uncertain) h+='<p style="font-size:13px;line-height:2;margin:6px 0;"><b style="font-size:15px;color:#e8c97a;">'+sunMsg+'</b></p>';
   if(sunObj.uncertain && sunObj.transition){
     var st2=sunObj.transition;
-    var _sd=st2.nextDay?"翌日":"";h+='<p style="font-size:11px;color:#e08070;">お生まれの日は太陽が星座をまたいでいます。<br>【<b style="font-size:14px;color:#ffb454;">'+_sd+st2.hour+"時"+pad(st2.min)+"分</b>】頃までは「太陽 "+sunObj.sign+"」、それ以降にお生まれの方は「太陽 "+st2.altSign+"」</p>";
+    var _sd=st2.nextDay?"翌日":"";h+='<p style="font-size:11px;color:#e08070;">【<b style="font-size:14px;color:#ffb454;">'+_sd+st2.hour+"時"+pad(st2.min)+"分</b>】頃までは「太陽 "+sunObj.sign+"」、<br>　それ以降は「太陽 "+st2.altSign+"」</p>";
     var _sunbtnSt='display:inline-block;margin:2px 4px 2px 0;padding:3px 12px;background:rgba(255,215,0,.1);border:1px solid #e8c97a;border-radius:20px;font-size:12px;color:#e8c97a;cursor:pointer;';
     var _sunid1='sun-det-'+sunObj.sign.replace(/[^a-z\u3040-\u9fff]/gi,''),_sunid2='sun-det-'+st2.altSign.replace(/[^a-z\u3040-\u9fff]/gi,'');
     var sunMsg2=LT_SUN[st2.altSign];
@@ -12269,7 +12459,7 @@ function lt_buildBadges(birthdate){
   h+='<div class="core-num-detail-title">月星座について</div>';
   if(moon.uncertain && moon.transition){
     var tr=moon.transition;
-    var _md=tr.nextDay?"翌日":"";h+='<p>お生まれの日は月が星座をまたいでいます。<br>【<b style="font-size:14px;color:#ffb454;">'+_md+tr.hour+"時"+pad(tr.min)+"分</b>】頃までは「月 "+moon.sign+"」、それ以降にお生まれの方は「月 "+tr.altSign+"」</p>";
+    var _md=tr.nextDay?"翌日":"";h+='<p>【<b style="font-size:14px;color:#ffb454;">'+_md+tr.hour+"時"+pad(tr.min)+"分</b>】頃までは「月 "+moon.sign+"」、<br>　それ以降は「月 "+tr.altSign+"」</p>";
     var _mla=LT_MOON_LABELS[moon.sign],_mlb=LT_MOON_LABELS[tr.altSign];
     var _mbtnSt='display:inline-block;margin:2px 4px 2px 0;padding:3px 12px;background:rgba(180,180,220,.1);border:1px solid #b4b4dc;border-radius:20px;font-size:12px;color:#c8c8f0;cursor:pointer;';
     var _mdetSt='display:inline-block;margin:2px 4px 2px 0;padding:3px 10px;background:rgba(240,160,96,.12);border:1px solid rgba(240,160,96,.4);border-radius:20px;font-size:11px;color:#f0a060;';
@@ -12288,7 +12478,7 @@ function lt_buildBadges(birthdate){
   h+='<div class="core-num-detail" id="lt-venus-detail">';
   var vl=LT_VENUS_LABELS[venus];
   if(venusObj.uncertain){
-    var _verd=venusObj.nextDay?"翌日":"";h+='<p style="font-size:11px;color:#e08070;margin-bottom:6px;">お生まれの日は金星が星座をまたいでいます。<br>【<b style="font-size:14px;color:#ffb454;">'+_verd+pad(venusObj.transHour)+":"+pad(venusObj.transMin)+"</b>】頃までは<b>"+venus+"</b>、それ以降は<b>"+venusObj.altSign+"</b></p>";
+    var _verd=venusObj.nextDay?"翌日":"";h+='<p style="font-size:11px;color:#e08070;margin-bottom:6px;">【<b style="font-size:14px;color:#ffb454;">'+_verd+pad(venusObj.transHour)+":"+pad(venusObj.transMin)+"</b>】頃までは<b>"+venus+"</b>、<br>　それ以降は<b>"+venusObj.altSign+"</b></p>";
     var _vbtnSt='display:inline-block;margin:2px 4px 2px 0;padding:3px 12px;background:rgba(168,154,255,.12);border:1px solid #a89aff;border-radius:20px;font-size:12px;color:#c8bcff;cursor:pointer;';
     var _vid1='venus-det-'+venus.replace(/[^a-z\u3040-\u9fff]/gi,''),_vid2='venus-det-'+venusObj.altSign.replace(/[^a-z\u3040-\u9fff]/gi,'');
     var _vl2=LT_VENUS_LABELS[venusObj.altSign],_vd2alt=LT_VD[venusObj.altSign];
@@ -12349,7 +12539,7 @@ function lt_buildBadges(birthdate){
     h+='<div class="core-num-detail" id="lt-mercury-detail">';
     h+='<div class="core-num-detail-title">《水星》 '+(mercuryObj.uncertain?mercury+' or '+mercuryObj.altSign:mercury)+'</div>';
     if(mercuryObj.uncertain){
-      var _merd=mercuryObj.nextDay?"翌日":"";h+='<p style="font-size:11px;color:#e08070;margin-bottom:6px;">お生まれの日は水星が星座をまたいでいます。<br>【<b style="font-size:14px;color:#ffb454;">'+_merd+pad(mercuryObj.transHour)+":"+pad(mercuryObj.transMin)+"</b>】頃までは<b>"+mercury+"</b>、それ以降は<b>"+mercuryObj.altSign+"</b></p>";
+      var _merd=mercuryObj.nextDay?"翌日":"";h+='<p style="font-size:11px;color:#e08070;margin-bottom:6px;">【<b style="font-size:14px;color:#ffb454;">'+_merd+pad(mercuryObj.transHour)+":"+pad(mercuryObj.transMin)+"</b>】頃までは<b>"+mercury+"</b>、<br>　それ以降は<b>"+mercuryObj.altSign+"</b></p>";
     }
     if(mercuryObj.uncertain){
       var altWd2=LT_WD[mercuryObj.altSign];
