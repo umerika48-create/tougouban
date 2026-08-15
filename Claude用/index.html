@@ -1810,7 +1810,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     <div class="row">
       <div>
         <label>Year</label>
-        <input type="number" id="targetYear" min="1900" max="2050">
+        <input type="number" id="targetYear" min="1870" max="2050">
       </div>
       <div>
         <label>Month</label>
@@ -5291,7 +5291,7 @@ function showFriendSearchPopup(target) {
   document.getElementById('hjBadge').textContent = '';
 
   // カテゴリー一覧
-  var cats = ['すべて','本人','親しい友人','友達','友達（♂）','身内','先生','仕事関係','有名人','友達の子供','その他'];
+  var cats = ['すべて','本人','親しい友人','友達','友達（♂）','身内','先祖','先生','仕事関係','有名人','友達の子供','その他'];
   var currentCat = 'すべて';
 
   function buildList(filterCat) {
@@ -5299,7 +5299,7 @@ function showFriendSearchPopup(target) {
       return !f.hidden && f.date && (filterCat === 'すべて' || f.category === filterCat);
     });
     sorted.sort(function(a, b){
-      var order = ['本人','親しい友人','友達','友達（♂）','身内','先生','仕事関係','有名人','友達の子供','その他'];
+      var order = ['本人','親しい友人','友達','友達（♂）','身内','先祖','先生','仕事関係','有名人','友達の子供','その他'];
       var ai = order.indexOf(a.category); var bi = order.indexOf(b.category);
       if(ai===-1) ai=99; if(bi===-1) bi=99;
       return ai - bi;
@@ -7927,7 +7927,7 @@ function syncBirthdate() {
   }
   else { err.textContent='形式が正しくありません（例：1990/1/1 または 19900101 または 198604301317福岡）'; hidden.value=''; return; }
 
-  if(y<1900||y>2030){ err.textContent='西暦を正しく入力してください（1900〜2030）'; hidden.value=''; return; }
+  if(y<1870||y>2030){ err.textContent='西暦を正しく入力してください（1870〜2030）'; hidden.value=''; return; }
   if(m<1||m>12){ err.textContent='月は1〜12で入力してください'; hidden.value=''; return; }
   var maxDay=new Date(y,m,0).getDate();
   if(d<1||d>maxDay){ err.textContent=m+'月'+d+'日は存在しません'; hidden.value=''; return; }
@@ -8528,7 +8528,7 @@ function syncCompatBirthdate() {
     }
   }
   else { hidden.value=''; if (raw.length>4) err.textContent='形式が正しくありません（例：19950820 または 1995/8/20 または 198604301317福岡）'; return; }
-  if (y<1900||y>2030) { err.textContent='西暦を正しく入力してください（1900〜2030）'; hidden.value=''; return; }
+  if (y<1870||y>2030) { err.textContent='西暦を正しく入力してください（1870〜2030）'; hidden.value=''; return; }
   if (mo<1||mo>12) { err.textContent='月は1〜12で入力してください'; hidden.value=''; return; }
   var maxDay=new Date(y,mo,0).getDate();
   if (d<1||d>maxDay) { err.textContent=mo+'月'+d+'日は存在しません'; hidden.value=''; return; }
@@ -10767,8 +10767,8 @@ function calculate() {
       err.textContent='生年月日を入力してください（例：1990/1/1）'; return;
     }
     if(!birthdate) return;
-    if(isNaN(targetYear)||targetYear<1900||targetYear>2050){
-      err.textContent='年を正しく入力してください（1900〜2050）'; return;
+    if(isNaN(targetYear)||targetYear<1870||targetYear>2050){
+      err.textContent='年を正しく入力してください（1870〜2050）'; return;
     }
     if(isNaN(targetMonth)||targetMonth<1||targetMonth>12){
       err.textContent='月は1〜12で入力してください'; return;
@@ -15928,7 +15928,14 @@ var FRIEND_DATA = [
 {id:'msngp20ddwsf',name:'加藤神楽',date:'2005-03-08',time:'',timeUnknown:false,category:'有名人',place:'',memo:'',addedAt:1786380280429,visible:true},
 {id:'msnylc3ygz4r',name:'さくらこ',date:'1986-04-30',time:'13:17',timeUnknown:false,category:'本人',place:'福岡',memo:'',addedAt:1786410339982,visible:true},
 {id:'mst2gys6cp82',name:'なつきさん',date:'1983-08-16',time:'16:30',timeUnknown:false,category:'仕事関係',place:'長崎',memo:'',addedAt:1786719185430,visible:true},
-{id:'mst56cmy3oki',name:'飯田祐基',date:'1992-03-11',time:'',timeUnknown:false,category:'有名人',place:'愛知県',memo:'',addedAt:1786723729018,visible:true}
+{id:'mst56cmy3oki',name:'飯田祐基',date:'1992-03-11',time:'',timeUnknown:false,category:'有名人',place:'愛知県',memo:'',addedAt:1786723729018,visible:true},
+{id:'msu7j1ko9jlc',name:'井上恭子',date:'1929-09-08',time:'',timeUnknown:false,category:'身内',place:'',memo:'昭和9年？井上晋作さんという弟にあたる方が生まれていたらしい\n洋おじちゃんかまりこおばちゃんの下か間にツヨシさんという方も生まれていたらしい。',addedAt:1786788146616,visible:true},
+{id:'msu7mj6s1jyp',name:'井上大',date:'1923-10-28',time:'',timeUnknown:false,category:'身内',place:'',memo:'',addedAt:1786788309412,visible:true},
+{id:'msu7n51aizqp',name:'井上敬作',date:'1914-01-08',time:'',timeUnknown:false,category:'先祖',place:'',memo:'',addedAt:1786788337726,visible:true},
+{id:'msu7nrck2vh9',name:'井上茂子',date:'1903-09-17',time:'',timeUnknown:false,category:'先祖',place:'',memo:'旧姓たきぐち？\n福間出身',addedAt:1786788366644,visible:true},
+{id:'msu7ot7izcyu',name:'井上長谷雄',date:'1902-02-09',time:'',timeUnknown:false,category:'先祖',place:'',memo:'',addedAt:1786788415710,visible:true},
+{id:'msu7rchjs4jh',name:'井上長作',date:'1880-10-14',time:'',timeUnknown:false,category:'先祖',place:'',memo:'井上儀兵衛さんと井上コノさんの下に\n長作さんとラクさんが養子で井上家にきたらしい。',addedAt:1786788534007,visible:true},
+{id:'msu7sj735ggy',name:'井上ラク',date:'1882-01-02',time:'',timeUnknown:false,category:'先祖',place:'',memo:'旧姓安武（新宮）',addedAt:1786788589359,visible:true}
 ];
 
 /* localStorageに保存された友達データがあれば、それで上書きする */
@@ -17427,11 +17434,13 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
     return ZOUGAN[p.shi];
   });
 
-  // 蔵干通変星
+  // 蔵干通変星（正気を一番目・強調表示にする）
   var zgHensei = zg.map(function (z, i) {
     if (!z) return null;
-    return z.map(function (k) {
-      return k !== null ? KAN10[k] + '(' + calcZouganHensei(nik, k) + ')' : null;
+    return [z[2], z[1], z[0]].map(function (k, j) {
+      if (k === null) return null;
+      var role = j === 0 ? '正気' : j === 1 ? '中気' : '余気';
+      return { kan: KAN10[k], hensei: calcZouganHensei(nik, k), role: role, isMain: j === 0 };
     }).filter(Boolean);
   });
 
@@ -17475,6 +17484,9 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
       return k !== null;
     }).map(function (k, j) {
       var role = j === 0 ? '正気' : j === 1 ? '中気' : '余気';
+      if (j === 0) {
+        return "<span class=\"zougan-item\" style=\"font-weight:700;color:var(--sk-gold-light);\">".concat(KAN10[k], "<span style=\"color:var(--sk-gold);font-weight:700;\">\uFF08").concat(role, "\uFF09</span></span>");
+      }
       return "<span class=\"zougan-item\">".concat(KAN10[k], "<span>\uFF08").concat(role, "\uFF09</span></span>");
     }).join('');
     return "<td class=\"".concat(cols[i], " zougan-cell\">").concat(items, "</td>");
@@ -17498,7 +17510,10 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u8535\u5E72\u661F')\">\u8535\u5E72\u661F<br><span style=\"font-size:0.65rem;color:var(--sk-silver-dim);\">\uFF08\u305E\u3046\u304B\u3093\u305B\u3044\uFF09</span></td>\n    ".concat(zgHensei.map(function (z, i) {
     if (!z) return "<td class=\"".concat(cols[i], " zougan-cell hour-col\">\u2014</td>");
     return "<td class=\"".concat(cols[i], " zougan-cell\">").concat(z.map(function (s) {
-      return "<span class=\"zougan-item\">".concat(s, "</span>");
+      if (s.isMain) {
+        return "<span class=\"zougan-item\" style=\"font-weight:700;color:var(--sk-gold-light);white-space:nowrap;\">".concat(s.kan, "(").concat(s.hensei, ")<br><span style=\"color:var(--sk-gold);font-weight:700;\">\uFF08").concat(s.role, "\uFF09</span></span>");
+      }
+      return "<span class=\"zougan-item\" style=\"white-space:nowrap;\">".concat(s.kan, "(").concat(s.hensei, ")<br><span>\uFF08").concat(s.role, "\uFF09</span></span>");
     }).join(''), "</td>");
   }).join(''), "\n  </tr>");
 
@@ -19267,6 +19282,7 @@ function toggleSakurakoText(btn) {
         <option value="友達">友達</option>
         <option value="親しい友人">親しい友人</option>
         <option value="身内">身内</option>
+        <option value="先祖">先祖</option>
         <option value="先生">先生</option>
         <option value="お客様">お客様</option>
         <option value="仕事関係">仕事関係</option>
