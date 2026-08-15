@@ -17274,28 +17274,28 @@ function buildUnseiHTML(dauResult, birthYear, nik){
 var ROW_LABEL_DESC = {
   '天干': {
     yomi: 'てんかん',
-    desc: '各柱の上の文字。「天のエネルギー」を表します。表に出る性格・意識・行動パターンのこと。日柱の天干（甲・乙・丙…）が命式全体の主役「日干（にっかん）」になります。',
-    point: '天干は「外に見える自分」。人から見てわかりやすい部分です。'
+    desc: '天干（日干＝日主）は、性格の土台。甲は大樹、乙は草花、というあの気質そのものです。通変星が「どう動くか」だとしたら、こちらは「そもそもどんな性質を持っているか」という土台部分になります。',
+    point: '性格に出やすい順でいうと、通変星とほぼ同率トップ。性格の土台となる部分です。'
   },
   '地支': {
     yomi: 'ちし',
-    desc: '各柱の下の文字。「地のエネルギー」を表します。内面・本能・環境など、表には出にくい深い部分のこと。12種類（子・丑・寅…）あります。',
-    point: '地支は「内に秘めた自分」。本人も気づきにくい根っこの部分です。'
+    desc: '地支・蔵干そのものは、性格というより背景・環境。育った環境や無意識の土台にあたります。通変星・天干・蔵干星・十二運を生み出す「材料」のようなポジションで、性格として直接読むというよりは、他の項目を読み解くための下地として使うことが多いです。',
+    point: '性格に出やすい順でいうと一番控えめ。他の項目を読み解くための下地です。'
   },
   '蔵干': {
     yomi: 'ぞうかん',
-    desc: '地支の中に隠れている天干のこと。例えば「辰」の中には乙・癸・戊が隠れています。表には出ていませんが、深いところで影響を与えます。',
-    point: '蔵干は「地支の中身」。命式を詳しく読むときに重要です。'
+    desc: '地支・蔵干そのものは、性格というより背景・環境。育った環境や無意識の土台にあたります。通変星・天干・蔵干星・十二運を生み出す「材料」のようなポジションで、性格として直接読むというよりは、他の項目を読み解くための下地として使うことが多いです。',
+    point: '性格に出やすい順でいうと一番控えめ。他の項目を読み解くための下地です。'
   },
   '通変星': {
     yomi: 'つうへんせい',
-    desc: '日干（自分）から見て、他の天干がどんな関係にあるかを10種類の星で表したもの。比肩・劫財・食神・傷官・偏財・正財・偏官・正官・偏印・印綬の10種類があります。',
-    point: '通変星は「日干とのエネルギーの関係性」を示す星。性格や才能を読む手がかりになります。'
+    desc: '通変星は、性格に一番強く出る部分。特に月柱の通変星は、社会に出た時の自分・対人関係での振る舞い方に直結すると言われていて、性格診断の核になります。日柱の通変星（＝日主そのもの）が「本質的な自分」を示すのに対し、月柱の通変星は「表に出やすい自分」を示します。',
+    point: '性格に一番強く出る部分。特に月柱の通変星は対人関係での振る舞いに直結します。'
   },
   '蔵干星': {
     yomi: 'ぞうかんせい',
-    desc: '蔵干（地支の中に隠れた天干）と日干との通変星関係のこと。表面には出ていませんが、深いところで働く隠れた才能や環境を表します。',
-    point: '蔵干星は「隠れた才能・環境」。運が動くタイミングで表面に出てきます。'
+    desc: '蔵干星は、隠れた性格。本人も気づいていない、あるいは表には出しにくい内面の性格です。通変星・天干が「表の顔」だとすると、こちらは「裏の顔・本音の部分」。特に正気の蔵干星は、隠れているわりに影響力が強めです。',
+    point: '隠れた性格・裏の顔。特に正気の蔵干星は影響力が強めです。'
   },
   '大運': {
     yomi: 'だいうん',
@@ -17309,8 +17309,8 @@ var ROW_LABEL_DESC = {
   },
   '十二運': {
     yomi: 'じゅうにうん',
-    desc: '日干のエネルギーが地支によってどの状態にあるかを、人の一生（誕生〜死〜再生）にたとえて12段階で表したもの。長生・沐浴・冠帯・建禄・帝旺・衰・病・死・墓・絶・胎・養の12種類。',
-    point: '十二運は「そのエネルギーの強さ・状態」を表します。建禄・帝旺が最も強い状態です。'
+    desc: '十二運は、性格というより「エネルギーの強さ」。どちらかというと「どんな性格か」より「その性格をどれくらいのパワーで出せるか」を示すものです。建禄・帝旺なら強く前面に出やすく、死・墓・絶あたりは内向きに・控えめに出やすい、という感じで、通変星・天干・蔵干星に対する"音量調整"のような役割です。',
+    point: '性格そのものというより「エネルギーの強さ」。他の項目の音量調整のような役割です。'
   },
 };
 
@@ -17454,14 +17454,14 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   // 1行目: ラベル（タップで解説パネル）
   // PILLAR_INFO はグローバルで定義
 
-  tableRows += "<tr>\n    <th class=\"col-label\"></th>\n    ".concat(labels.map(function (l, i) {
+  tableRows += "<tr>\n    <th class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openMeishikiPriorityPanel()\">\n      <span style=\"display:block;letter-spacing:0.1em;color:var(--sk-gold-light);\">\u8A73\u7D30</span>\n    </th>\n    ".concat(labels.map(function (l, i) {
     var info = PILLAR_INFO[i];
     var colCls = cols[i] === 'day-pillar-col' ? 'day-pillar-col' : cols[i];
     return "<th class=\"".concat(colCls, "\" style=\"cursor:pointer;\" onclick=\"openPillarPanel(").concat(i, ")\">\n        <span style=\"display:block;letter-spacing:0.1em;\">").concat(info.label, "</span>\n        <span style=\"display:block;font-size:0.62rem;color:var(--sk-silver-dim);letter-spacing:0.04em;\">\uFF08").concat(info.yomi, "\uFF09</span>\n      </th>");
   }).join(''), "\n  </tr>");
 
   // 2行目: 天干（タップで中央ポップアップ）
-  tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u5929\u5E72')\">\u5929\u5E72<br><span style=\"font-size:0.65rem;color:var(--sk-silver-dim);\">\uFF08\u3066\u3093\u304B\u3093\uFF09</span></td>\n    ".concat(pillars.map(function (p, i) {
+  tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u5929\u5E72')\">\u2461\u5929\u5E72</td>\n    ".concat(pillars.map(function (p, i) {
     if (!p) return "<td class=\"".concat(cols[i], " hour-col\" style=\"color:var(--sk-silver-dim);font-size:0.8rem;\">\u4E0D\u660E</td>");
     var kc = kanClass(p.kan);
     var dayEx = i === 2 ? ' day' : '';
@@ -17470,7 +17470,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   }).join(''), "\n  </tr>");
 
   // 3行目: 地支（タップで中央ポップアップ）
-  tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u5730\u652F')\">\u5730\u652F<br><span style=\"font-size:0.65rem;color:var(--sk-silver-dim);\">\uFF08\u3061\u3057\uFF09</span></td>\n    ".concat(pillars.map(function (p, i) {
+  tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u5730\u652F')\">\u2464\u5730\u652F</td>\n    ".concat(pillars.map(function (p, i) {
     if (!p) return "<td class=\"".concat(cols[i], " hour-col shi\" style=\"color:var(--sk-silver-dim);\">\u2014</td>");
     var shiName = SHI12[p.shi];
     var sc = shiClass(shiName);
@@ -17478,7 +17478,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   }).join(''), "\n  </tr>");
 
   // 4行目: 蔵干
-  tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u8535\u5E72')\">\u8535\u5E72<br><span style=\"font-size:0.65rem;color:var(--sk-silver-dim);\">\uFF08\u305E\u3046\u304B\u3093\uFF09</span></td>\n    ".concat(zg.map(function (z, i) {
+  tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u8535\u5E72')\">\u2464\u8535\u5E72</td>\n    ".concat(zg.map(function (z, i) {
     if (!z) return "<td class=\"".concat(cols[i], " zougan-cell hour-col\">\u2014</td>");
     var items = [z[2], z[1], z[0]].filter(function (k) {
       return k !== null;
@@ -17494,7 +17494,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
 
   // 5行目: 通変星（天干）
   var pillarLabels = ['年柱', '月柱', '日柱', '時柱'];
-  tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u901A\u5909\u661F')\">\u901A\u5909\u661F<br><span style=\"font-size:0.65rem;color:var(--sk-silver-dim);\">\uFF08\u3064\u3046\u3078\u3093\u305B\u3044\uFF09</span></td>\n    ".concat(hensei.map(function (h, i) {
+  tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u901A\u5909\u661F')\">\u2460\u901A\u5909\u661F</td>\n    ".concat(hensei.map(function (h, i) {
     if (!pillars[i]) return "<td class=\"".concat(cols[i], " hensei-cell hour-col\">\u2014</td>");
     var dayStyle = i === 2 ? 'color:var(--sk-gold-light);font-weight:500;' : '';
     var ctx = pillarLabels[i] + 'の通変星';
@@ -17507,7 +17507,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   }).join(''), "\n  </tr>");
 
   // 6行目: 蔵干通変星
-  tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u8535\u5E72\u661F')\">\u8535\u5E72\u661F<br><span style=\"font-size:0.65rem;color:var(--sk-silver-dim);\">\uFF08\u305E\u3046\u304B\u3093\u305B\u3044\uFF09</span></td>\n    ".concat(zgHensei.map(function (z, i) {
+  tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u8535\u5E72\u661F')\">\u2462\u8535\u5E72\u661F</td>\n    ".concat(zgHensei.map(function (z, i) {
     if (!z) return "<td class=\"".concat(cols[i], " zougan-cell hour-col\">\u2014</td>");
     return "<td class=\"".concat(cols[i], " zougan-cell\">").concat(z.map(function (s) {
       if (s.isMain) {
@@ -17518,7 +17518,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   }).join(''), "\n  </tr>");
 
   // 7行目: 十二運
-  tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u5341\u4E8C\u904B')\">\u5341\u4E8C\u904B<br><span style=\"font-size:0.65rem;color:var(--sk-silver-dim);\">\uFF08\u3058\u3085\u3046\u306B\u3046\u3093\uFF09</span></td>\n    ".concat(jyu12.map(function (j, i) {
+  tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u5341\u4E8C\u904B')\">\u2463\u5341\u4E8C\u904B</td>\n    ".concat(jyu12.map(function (j, i) {
     if (!pillars[i]) return "<td class=\"".concat(cols[i], " jyunsei-cell hour-col\">\u2014</td>");
     var jc = jyu12Class(j);
     var ctx = pillarLabels[i] + 'の十二運';
@@ -18738,6 +18738,40 @@ function openRowLabelPanel(name){
   document.getElementById('hjYomi').textContent = '';
   document.getElementById('hjBadge').textContent = d.point;
   document.getElementById('hjDesc').textContent = d.desc;
+  document.getElementById('hjContext').textContent = '';
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
+
+// 命式表左上「詳細」タップ → 天干〜十二運、性格に強く出やすい順番のまとめ
+function openMeishikiPriorityPanel(){
+  document.getElementById('hjTitle').textContent = '命式の読み方の優先順位';
+  document.getElementById('hjYomi').textContent = '';
+  document.getElementById('hjBadge').textContent = '通変星（特に月柱）＞天干（日主）＞蔵干星＞十二運＞地支・蔵干';
+  document.getElementById('hjDesc').innerHTML =
+    '<div style="margin-bottom:12px;">'
+      + '<div style="font-size:12px;font-weight:700;color:var(--sk-gold-light);margin-bottom:3px;">① 通変星（つうへんせい）— 一番強く出る</div>'
+      + '<div style="font-size:12px;line-height:1.8;">特に月柱（げっちゅう）の通変星は、社会に出た時の自分・対人関係での振る舞い方に直結すると言われていて、性格診断の核になる部分です。日柱の通変星（＝日主そのもの）が「本質的な自分」を示すのに対し、月柱の通変星は「表に出やすい自分」を示します。</div>'
+    + '</div>'
+    + '<div style="margin-bottom:12px;">'
+      + '<div style="font-size:12px;font-weight:700;color:var(--sk-gold-light);margin-bottom:3px;">② 天干（日干＝日主）— 性格の土台</div>'
+      + '<div style="font-size:12px;line-height:1.8;">甲は大樹、乙は草花、というあの気質そのもの。①が「どう動くか」だとしたら、こちらは「そもそもどんな性質を持っているか」という土台部分です。</div>'
+    + '</div>'
+    + '<div style="margin-bottom:12px;">'
+      + '<div style="font-size:12px;font-weight:700;color:var(--sk-gold-light);margin-bottom:3px;">③ 蔵干星（ぞうかんせい）— 隠れた性格</div>'
+      + '<div style="font-size:12px;line-height:1.8;">本人も気づいていない、あるいは表には出しにくい内面の性格。①②が「表の顔」だとすると、こちらは「裏の顔・本音の部分」です。特に正気（せいき）の蔵干星は、隠れているわりに影響力が強めです。</div>'
+    + '</div>'
+    + '<div style="margin-bottom:12px;">'
+      + '<div style="font-size:12px;font-weight:700;color:var(--sk-gold-light);margin-bottom:3px;">④ 十二運（じゅうにうん）— 性格というより「エネルギーの強さ」</div>'
+      + '<div style="font-size:12px;line-height:1.8;">どちらかというと「どんな性格か」より「その性格をどれくらいのパワーで出せるか」を示すもの。建禄・帝旺なら強く前面に出やすく、死・墓・絶あたりは内向きに・控えめに出やすい、という感じで、①②③に対する"音量調整"のような役割です。</div>'
+    + '</div>'
+    + '<div style="margin-bottom:12px;">'
+      + '<div style="font-size:12px;font-weight:700;color:var(--sk-gold-light);margin-bottom:3px;">⑤ 地支・蔵干そのもの — 性格というより背景・環境</div>'
+      + '<div style="font-size:12px;line-height:1.8;">直接「性格」というより、育った環境や無意識の土台。①②③④を生み出す"材料"のようなポジションで、性格として直接読むというよりは、他の項目を読み解くための下地として使うことが多いです。</div>'
+    + '</div>'
+    + '<div style="padding:10px 12px;background:rgba(184,150,46,0.06);border-radius:8px;border:1px solid rgba(184,150,46,0.15);font-size:12px;line-height:1.8;color:var(--text);">'
+      + 'まとめると、<b style="color:var(--sk-gold-light);">通変星（特に月柱）＞天干（日主）＞蔵干星＞十二運＞地支・蔵干</b>という優先順位が一般的です。ただし流派によっては天干（日主）を最優先に置く考え方も根強いので、「①②はほぼ同率トップ」くらいに捉えてもらうのがバランスが良いです。'
+    + '</div>';
   document.getElementById('hjContext').textContent = '';
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
