@@ -8541,6 +8541,9 @@ function calculateCompat() {
   window._nyCurrentYear = null;
   window._nyCurrentCycleYear = null;
   window._nyCurrentCycleMonth = null;
+  /* 前回の個人鑑定（本命星）のenhanced-wrapが残らないようクリアする */
+  var ewClearCompat = document.getElementById('enhanced-wrap');
+  if (ewClearCompat) ewClearCompat.innerHTML = '';
   syncBirthdate();
   syncCompatBirthdate();
   var err  = document.getElementById('compat-bd-error');
@@ -16198,6 +16201,10 @@ function showFriendMeishiki(name, isYakodoki) {
   if(unknown) {
     // 時刻不明の場合：0時モード=正午計算、23時モード=FORCE_UNKNOWNで夜子の刻判定
     timeStr = isYakodoki ? 'FORCE_UNKNOWN' : '12:00';
+    // buildShichuuCardHTML内の翌日切り替え判定はwindow._yakodokiを見るため、
+    // ここで明示的に今回のボタン選択に合わせておく（他画面の古い値が残っていると
+    // 「23時」を押しても翌日に切り替わらず、0時と同じ命式になってしまうバグの修正）
+    window._yakodoki = isYakodoki;
   }
 
   // 専用モーダルに表示
