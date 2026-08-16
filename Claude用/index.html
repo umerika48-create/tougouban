@@ -5189,13 +5189,60 @@ function runShichuu() {
       + '</div>';
   }
 
+  function getFriendsByKanShi(kanIdx, shiIdx, colIdx) {
+    var meishikis = getFriendMeishiki();
+    var result = [];
+    meishikis.forEach(function(m){
+      var fd = FRIEND_DATA.find(function(d){ return d.name === m.name; });
+      if(fd && fd.hidden) return;
+      var p = [m.year_p, m.month_p, m.day_p, m.hour_p][colIdx];
+      if(p && p.kan === kanIdx && p.shi === shiIdx) result.push(m.name);
+    });
+    return result;
+  }
+
+  function makeKanShiTagData(colIdx) {
+    // 60干支（甲子〜癸亥）の順で組み合わせデータだけ用意する（描画はしない）
+    var combos = [];
+    for (var i = 0; i < 60; i++) { combos.push({kan: i % 10, shi: i % 12}); }
+    combos.forEach(function(c){
+      var label = KAN10[c.kan] + SHI12[c.shi];
+      var friends = getFriendsByKanShi(c.kan, c.shi, colIdx);
+      var key = 'tag_' + colIdx + '_kanshi_' + c.kan + '_' + c.shi;
+      window._shichuuTagData[key] = { label: label, friends: friends, colIdx: colIdx };
+    });
+  }
+
+  function makeKanShiTagSection(title, colIdx) {
+    makeKanShiTagData(colIdx);
+    var tags = [];
+    for (var i = 0; i < 60; i++) {
+      var c = { kan: i % 10, shi: i % 12 };
+      var key = 'tag_' + colIdx + '_kanshi_' + c.kan + '_' + c.shi;
+      var d = window._shichuuTagData[key];
+      var count = d.friends.length;
+      tags.push('<div style="display:inline-block;margin:3px;position:relative;">'
+        + '<button onclick="showShichuuFriendPopup(\'' + key + '\')" style="padding:6px 10px;border-radius:12px;font-size:15px;font-weight:400;border:1px solid rgba(184,150,46,0.4);background:rgba(184,150,46,0.08);color:var(--sk-gold-light);cursor:pointer;min-width:40px;position:relative;">'
+        + d.label
+        + (count > 0 ? '<span style="position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;border-radius:50%;width:16px;height:16px;font-size:9px;line-height:16px;text-align:center;font-weight:700;">' + count + '</span>' : '')
+        + '</button>'
+        + '</div>');
+    }
+    return '<div style="margin-bottom:20px;">'
+      + '<div style="font-size:13px;color:var(--sk-gold-light);font-weight:700;margin-bottom:10px;padding-left:8px;border-left:3px solid var(--sk-gold-light);">' + title + '</div>'
+      + '<div style="display:flex;flex-wrap:wrap;">' + tags.join('') + '</div>'
+      + '</div>';
+  }
+
   var html = '<div style="padding:16px;">'
     + '<div style="font-size:11px;color:var(--muted);margin-bottom:16px;">タップすると友達名が表示されます</div>'
     + (function(){ FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {}; return ''; })()  // ここでキャッシュクリア
+    + (function(){ makeKanShiTagData(2); makeKanShiTagData(1); return ''; })()  // 日柱・月柱の組み合わせデータを裏で用意（干タップ時のタブ用）
     + makeTagSection('月干', KAN10, 1, true)
     + makeTagSection('日干', KAN10, 2, true)
     + makeTagSection('月支', SHI12, 1, false)
     + makeTagSection('日支', SHI12, 2, false)
+    + makeKanShiTagSection('日柱（干支の組み合わせ）', 2)
     + '</div>';
 
   var rd = document.getElementById('result');
@@ -5799,8 +5846,53 @@ function showShichuuFriendPopup(key) {
 
   var isDayKanPopup = (data.colIdx === 1 || data.colIdx === 2);
   var isDayCol = (data.colIdx === 2);
+  var KAN10top = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  var SHI12top = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
 
   var html = '';
+
+  // 干（甲・乙…）のタグから開いた場合、組み合わさる6つの地支タブを上に表示
+  var isKanOnlyTag = (data.label.length === 1 && KAN10top.indexOf(data.label) >= 0);
+  if (isKanOnlyTag) {
+    var kanIdx0 = KAN10top.indexOf(data.label);
+    var branchTabs = '';
+    for (var ci0 = kanIdx0; ci0 < 60; ci0 += 10) {
+      var si0 = ci0 % 12;
+      var kkey = 'tag_' + data.colIdx + '_kanshi_' + kanIdx0 + '_' + si0;
+      var kdata = window._shichuuTagData && window._shichuuTagData[kkey];
+      var kcount = kdata ? kdata.friends.length : 0;
+      branchTabs += '<button onclick="event.stopPropagation();showShichuuFriendPopup(\'' + kkey + '\')" style="display:inline-block;margin:2px;padding:3px 9px;border-radius:10px;font-size:12px;border:1px solid rgba(184,150,46,0.3);background:rgba(184,150,46,0.05);color:var(--sk-gold-light);cursor:pointer;position:relative;">'
+        + data.label + SHI12top[si0]
+        + (kcount > 0 ? '<span style="position:absolute;top:-4px;right:-4px;background:#e74c3c;color:#fff;border-radius:50%;width:14px;height:14px;font-size:8px;line-height:14px;text-align:center;font-weight:700;">' + kcount + '</span>' : '')
+        + '</button>';
+    }
+    html += '<div style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.08);">'
+      + '<div style="font-size:9px;color:var(--muted);margin-bottom:4px;">地支の組み合わせで絞り込む</div>'
+      + branchTabs
+      + '</div>';
+  }
+
+  // 支（子・丑…）のタグから開いた場合、組み合わさる5つの天干タブを上に表示
+  var isShiOnlyTag = (data.label.length === 1 && SHI12top.indexOf(data.label) >= 0);
+  if (isShiOnlyTag) {
+    var shiIdx0 = SHI12top.indexOf(data.label);
+    var stemTabs = '';
+    for (var ci1 = shiIdx0; ci1 < 60; ci1 += 12) {
+      var ki1 = ci1 % 10;
+      var kkey2 = 'tag_' + data.colIdx + '_kanshi_' + ki1 + '_' + shiIdx0;
+      var kdata2 = window._shichuuTagData && window._shichuuTagData[kkey2];
+      var kcount2 = kdata2 ? kdata2.friends.length : 0;
+      stemTabs += '<button onclick="event.stopPropagation();showShichuuFriendPopup(\'' + kkey2 + '\')" style="display:inline-block;margin:2px;padding:3px 9px;border-radius:10px;font-size:12px;border:1px solid rgba(184,150,46,0.3);background:rgba(184,150,46,0.05);color:var(--sk-gold-light);cursor:pointer;position:relative;">'
+        + KAN10top[ki1] + data.label
+        + (kcount2 > 0 ? '<span style="position:absolute;top:-4px;right:-4px;background:#e74c3c;color:#fff;border-radius:50%;width:14px;height:14px;font-size:8px;line-height:14px;text-align:center;font-weight:700;">' + kcount2 + '</span>' : '')
+        + '</button>';
+    }
+    html += '<div style="margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid rgba(255,255,255,.08);">'
+      + '<div style="font-size:9px;color:var(--muted);margin-bottom:4px;">天干の組み合わせで絞り込む</div>'
+      + stemTabs
+      + '</div>';
+  }
+
   data.friends.forEach(function(n){
     var fd = FRIEND_DATA.find(function(d){ return d.name === n; });
     if(fd && fd.hidden) return;
