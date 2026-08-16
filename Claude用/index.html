@@ -1768,7 +1768,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     <input type="text" id="bd-text"
       placeholder="例）19860430 または 19860430 1317 福岡"
       value="198604301317福岡"
-      inputmode="text" oninput="syncBirthdate()" style="margin-bottom:4px;">
+      inputmode="text" oninput="window._searchedFriendNameMe='';syncBirthdate()" style="margin-bottom:4px;">
     <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:0;">
       <button type="button" onclick="resetAllBirthdates()" style="padding:3px 14px;border-radius:12px;border:1px solid #f87171;background:rgba(248,113,113,.12);color:#f87171;font-size:10px;font-weight:700;letter-spacing:.1em;cursor:pointer;">ALL</button>
       <button type="button" onclick="showFriendSearchPopup('me')" style="padding:3px 14px;border-radius:12px;border:1px solid rgba(168,154,255,0.6);background:rgba(168,154,255,0.12);color:#b8a8ff;font-size:10px;font-weight:700;letter-spacing:.05em;cursor:pointer;">🔍 検索</button>
@@ -1794,7 +1794,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
       <input type="text" id="compat-bd-text" placeholder="例: 19950820 または 1995/8/20 または 199508201430福岡"
         inputmode="text"
         style="width:100%;padding:10px 12px;border-radius:10px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.05);color:var(--text);font-size:15px;margin-bottom:4px;"
-        oninput="syncCompatBirthdate()">
+        oninput="window._searchedFriendNamePartner='';syncCompatBirthdate()">
       <!-- 相手用RESET（相手の入力欄のすぐ下） -->
       <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:0;">
         <button type="button" onclick="showFriendSearchPopup('partner')" style="padding:3px 14px;border-radius:12px;border:1px solid rgba(168,154,255,0.6);background:rgba(168,154,255,0.12);color:#b8a8ff;font-size:10px;font-weight:700;letter-spacing:.05em;cursor:pointer;">🔍 検索</button>
@@ -5373,7 +5373,7 @@ function showFriendSearchPopup(target) {
       var bgStyle = sc ? 'background:' + sc.bg + ';border:1px solid ' + sc.border + ';' : 'background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);';
       var colorStyle = sc ? 'color:' + sc.color + ';' : 'color:var(--text);';
       var displayDate = f.date + (f.time ? ' ' + f.time : '（時刻不明）') + (f.place ? '　' + f.place : '');
-      html += '<div class="fsp-friend-item" data-target="' + target + '" data-date="' + f.date + '" data-time="' + (f.time||'') + '" data-place="' + (f.place||'').replace(/"/g,'&quot;') + '" style="padding:8px 12px;margin-bottom:5px;border-radius:10px;' + bgStyle + 'cursor:pointer;">' +
+      html += '<div class="fsp-friend-item" data-target="' + target + '" data-date="' + f.date + '" data-time="' + (f.time||'') + '" data-place="' + (f.place||'').replace(/"/g,'&quot;') + '" data-name="' + f.name.replace(/"/g,'&quot;') + '" style="padding:8px 12px;margin-bottom:5px;border-radius:10px;' + bgStyle + 'cursor:pointer;">' +
         '<div style="font-size:13px;font-weight:700;' + colorStyle + '">' + f.name + '</div>' +
         '<div style="font-size:10px;color:var(--muted);margin-top:2px;">' + displayDate + '</div>' +
         '</div>';
@@ -5410,7 +5410,8 @@ function showFriendSearchPopup(target) {
           this.getAttribute('data-target'),
           this.getAttribute('data-date'),
           this.getAttribute('data-time'),
-          this.getAttribute('data-place')
+          this.getAttribute('data-place'),
+          this.getAttribute('data-name')
         );
       });
     });
@@ -5423,7 +5424,7 @@ function showFriendSearchPopup(target) {
 }
 
 
-function selectFriendForInput(target, date, time, place) {
+function selectFriendForInput(target, date, time, place, name) {
   // 入力値を作成
   var dateStr = date.replace(/-/g, '');
   var timeStr = time ? time.replace(':', '') : '';
@@ -5433,12 +5434,14 @@ function selectFriendForInput(target, date, time, place) {
     var bdText = document.getElementById('bd-text');
     if(bdText) {
       bdText.value = inputVal;
+      window._searchedFriendNameMe = name || '';
       if(typeof syncBirthdate === 'function') syncBirthdate();
     }
   } else {
     var compatText = document.getElementById('compat-bd-text');
     if(compatText) {
       compatText.value = inputVal;
+      window._searchedFriendNamePartner = name || '';
       if(typeof syncCompatBirthdate === 'function') syncCompatBirthdate();
     }
   }
@@ -6674,9 +6677,12 @@ function calcShichuuYearScore(birthdate, targetYear) {
     });
     var jyu12Base = SHICHUU_JYU12_SCORE[jyu3] !== undefined ? SHICHUU_JYU12_SCORE[jyu3] : 50;
     var henseiMod = SHICHUU_HENSEI_MOD[hensei1] !== undefined ? SHICHUU_HENSEI_MOD[hensei1] : 0;
-    var rawScore = jyu12Base + henseiMod + relSum;
+    /* 実占の重み付けに合わせて再計算：①通変星を主役、③十二運は補助的な扱いに縮小、④合冲刑害破はそのまま */
+    var jyu12Contribution = Math.round((jyu12Base - 55) * 0.3);
+    var henseiContribution = henseiMod * 3;
+    var rawScore = 50 + jyu12Contribution + henseiContribution + relSum;
     var score = Math.min(100, Math.max(0, Math.round(rawScore)));
-    return { score: score, hensei: hensei1, jyu12: jyu3, rels: relList, jyu12Base: jyu12Base, henseiMod: henseiMod, relSum: relSum };
+    return { score: score, hensei: hensei1, jyu12: jyu3, rels: relList, jyu12Base: jyu12Base, henseiMod: henseiMod, relSum: relSum, jyu12Contribution: jyu12Contribution, henseiContribution: henseiContribution };
   } catch(e) {
     return null;
   }
@@ -6708,9 +6714,13 @@ function calcShichuuMonthScore(birthdate, kYear, mo) {
     });
     var jyu12Base = SHICHUU_JYU12_SCORE[jyu3] !== undefined ? SHICHUU_JYU12_SCORE[jyu3] : 50;
     var henseiMod = SHICHUU_HENSEI_MOD[hensei1] !== undefined ? SHICHUU_HENSEI_MOD[hensei1] : 0;
-    var rawScore = jyu12Base + henseiMod + relSum;
+    /* 実占の重み付けに合わせて再計算：①通変星を主役、③十二運は補助的な扱いに縮小、④合冲刑害破はそのまま */
+    var jyu12Contribution = Math.round((jyu12Base - 55) * 0.3);
+    var henseiContribution = henseiMod * 3;
+    var rawScore = 50 + jyu12Contribution + henseiContribution + relSum;
     var score = Math.min(100, Math.max(0, Math.round(rawScore)));
     return { score: score, hensei: hensei1, jyu12: jyu3, rels: relList, jyu12Base: jyu12Base, henseiMod: henseiMod, relSum: relSum,
+             jyu12Contribution: jyu12Contribution, henseiContribution: henseiContribution,
              kanChar: KAN10sm[rgMon.kan], shiChar: ryuShiStr, natalShis: natalShis };
   } catch(e) {
     return null;
@@ -6793,9 +6803,10 @@ function showSystemDetail(yr, key) {
     html = '<div style="font-size:12px;font-weight:700;color:#b8a8ff;margin-bottom:6px;">四柱推命の内訳（'+yr+'年）</div>';
     if (scResult) {
       html += '<div style="background:rgba(184,168,255,0.08);border:1px solid rgba(184,168,255,0.2);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--text);line-height:2;">'
-        + '<div style="display:flex;justify-content:space-between;"><span>① 十二運（'+scResult.jyu12+'）</span><span>'+scResult.jyu12Base+'点</span></div>'
-        + '<div style="display:flex;justify-content:space-between;"><span>② 通変星（'+scResult.hensei+'）</span><span>'+(scResult.henseiMod>=0?'+':'')+scResult.henseiMod+'点</span></div>'
-        + '<div style="display:flex;justify-content:space-between;"><span>③ 合冲刑害破（'+(scResult.rels.length?scResult.rels.join('・'):'なし')+'）</span><span>'+(scResult.relSum>=0?'+':'')+scResult.relSum+'点</span></div>'
+        + '<div style="display:flex;justify-content:space-between;"><span>基準点</span><span>50点</span></div>'
+        + '<div style="display:flex;justify-content:space-between;"><span>① 通変星（'+scResult.hensei+'）の影響</span><span>'+(scResult.henseiContribution>=0?'+':'')+scResult.henseiContribution+'点</span></div>'
+        + '<div style="display:flex;justify-content:space-between;"><span>③ 十二運（'+scResult.jyu12+'）の影響</span><span>'+(scResult.jyu12Contribution>=0?'+':'')+scResult.jyu12Contribution+'点</span></div>'
+        + '<div style="display:flex;justify-content:space-between;"><span>④ 合冲刑害破（'+(scResult.rels.length?scResult.rels.join('・'):'なし')+'）</span><span>'+(scResult.relSum>=0?'+':'')+scResult.relSum+'点</span></div>'
         + '<div style="border-top:1px solid rgba(255,255,255,.1);margin:4px 0;"></div>'
         + '<div style="display:flex;justify-content:space-between;font-weight:700;"><span>合計</span><span>'+scResult.score+'点</span></div>'
         + '</div>';
@@ -6865,9 +6876,10 @@ function showSystemDetailMonth(kYear, mo, key) {
     html = '<div style="font-size:12px;font-weight:700;color:#b8a8ff;margin-bottom:6px;">四柱推命の内訳（'+kYear+'年'+mo+'月）</div>';
     if (scResult) {
       html += '<div style="background:rgba(184,168,255,0.08);border:1px solid rgba(184,168,255,0.2);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--text);line-height:2;">'
-        + '<div style="display:flex;justify-content:space-between;"><span>① 十二運（'+scResult.jyu12+'）</span><span>'+scResult.jyu12Base+'点</span></div>'
-        + '<div style="display:flex;justify-content:space-between;"><span>② 通変星（'+scResult.hensei+'）</span><span>'+(scResult.henseiMod>=0?'+':'')+scResult.henseiMod+'点</span></div>'
-        + '<div style="display:flex;justify-content:space-between;"><span>③ 合冲刑害破（'+(scResult.rels.length?scResult.rels.join('・'):'なし')+'）</span><span>'+(scResult.relSum>=0?'+':'')+scResult.relSum+'点</span></div>'
+        + '<div style="display:flex;justify-content:space-between;"><span>基準点</span><span>50点</span></div>'
+        + '<div style="display:flex;justify-content:space-between;"><span>① 通変星（'+scResult.hensei+'）の影響</span><span>'+(scResult.henseiContribution>=0?'+':'')+scResult.henseiContribution+'点</span></div>'
+        + '<div style="display:flex;justify-content:space-between;"><span>③ 十二運（'+scResult.jyu12+'）の影響</span><span>'+(scResult.jyu12Contribution>=0?'+':'')+scResult.jyu12Contribution+'点</span></div>'
+        + '<div style="display:flex;justify-content:space-between;"><span>④ 合冲刑害破（'+(scResult.rels.length?scResult.rels.join('・'):'なし')+'）</span><span>'+(scResult.relSum>=0?'+':'')+scResult.relSum+'点</span></div>'
         + '<div style="border-top:1px solid rgba(255,255,255,.1);margin:4px 0;"></div>'
         + '<div style="display:flex;justify-content:space-between;font-weight:700;"><span>合計</span><span>'+scResult.score+'点</span></div>'
         + '</div>';
@@ -7130,7 +7142,7 @@ function buildMonthFourStepHTML(birthdate, kYear, mo) {
       + '</div>';
 
     h += '<div style="margin-bottom:10px;">'
-      + '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">② 月支の蔵干・通変星 — テーマの背景・具体性</div>'
+      + '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">② 月支の蔵干・通変星 — テーマの裏側・本音・動機</div>'
       + zougan2HTML
       + '</div>';
 
@@ -7367,7 +7379,7 @@ function buildYearFourStepHTML(birthdate, targetYear) {
       + '</div>';
 
     h += '<div style="margin-bottom:10px;">'
-      + '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">② 年支の蔵干・通変星 — テーマの背景・具体性</div>'
+      + '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">② 年支の蔵干・通変星 — テーマの裏側・本音・動機</div>'
       + zougan2HTML
       + '</div>';
 
@@ -8769,7 +8781,7 @@ function toggleAccordion(id) {
             var _cd = window._normalCityData;
             var _ts = (_t||'').replace(':','').replace(/[^0-9]/g,'');
             if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(_ts, !_ts);
-            cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, false);
+            cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, false, undefined, window._searchedFriendNameMe);
               setTimeout(function(){ addSignLabelsToMeishiki(); }, 100);
           }
         }
@@ -8782,7 +8794,7 @@ function toggleAccordion(id) {
 /* アコーディオンHTMLを生成するヘルパー */
 
 /* 四柱推命命式カード（通常鑑定用） */
-function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTabs) {
+function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTabs, personName) {
   if(!birthdate) return '';
   try {
     var parts=birthdate.split('-');
@@ -8900,7 +8912,7 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
         window._pendingMoonTrans = (_moon && _moon.transition) ? _moon.transition : null;
       } catch(e) {}
     }
-    var _resultHTML = renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime,hideTabs);
+    var _resultHTML = renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime,hideTabs,personName);
     // 基本性格カードを折りたたみ式にして五行バランスカードより後に移動
     _resultHTML = reorderResultCards(_resultHTML);
     // 星座ラベルを追加（DOM操作）
@@ -9747,7 +9759,7 @@ function switchShichuuCard(view) {
   var _timeStr4 = (_t || '').replace(':','').replace(/[^0-9]/g,'');
   var _unknownTime = !_timeStr4 || _timeStr4.length < 4;
   if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(_timeStr4, _unknownTime);
-  container.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner);
+  container.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner, undefined, isPartner ? window._searchedFriendNamePartner : window._searchedFriendNameMe);
   // 星座ラベルを注入
   if(!isPartner && typeof lt_getSunSign === 'function') {
     try {
@@ -16991,6 +17003,9 @@ function deleteFriend(name) {
 function editFriend(name) {
   var f = FRIEND_DATA.find(function(d){ return d.name === name; });
   if(!f) return;
+  // 友達データ管理など、別のグローバルモーダル(z-index:9999)から開いた場合、
+  // 閉じ忘れるとこの編集フォーム(z-index:500)が裏に隠れて見えなくなるため、先に閉じておく
+  if (typeof closeModal === 'function') { closeModal(); }
   document.getElementById('edit-friend-name').value = f.name || '';
   document.getElementById('edit-friend-date').value = f.date || '';
   document.getElementById('edit-friend-time').value = f.time || '';
@@ -18119,7 +18134,7 @@ function buildPillarCell(pillar, colClass, nichikan_idx, label){
 
 
 function _toConsumableArray(r) { return Array.isArray(r) ? r.slice() : []; }
-function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hideTabs) {
+function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hideTabs, personName) {
   var nik = day_p.kan; // 日干インデックス
   var pillars = [year_p, month_p, day_p, hour_p];
   var labels = ['年柱', '月柱', '日柱', '時柱'];
@@ -18500,7 +18515,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   if (_bsTime) _birthDisplay += ' ' + _bsTime;
   if (_bsPlace) _birthDisplay += '（' + _bsPlace + '）';
   if (_bsAge) _birthDisplay += '（' + _bsAge + '）';
-  var html = (hideTabs ? '' : _toggleHTML) + "\n  <div class=\"result-title fade-in\">\n    <h2>\u547D \u5F0F \u8868</h2>\n    <div class=\"person-name\">".concat(_birthDisplay, "\u751F</div>\n  </div>\n\n  <div class=\"meishiki-wrapper fade-in\">\n    <table class=\"meishiki-table ").concat(noHourClass, "\">\n      ").concat(tableRows, "\n    </table>\n  </div>\n\n  <div class=\"kuubo-card fade-in\">\n    <div class=\"kuubo-title\">\u7A7A \u4EA1\uFF08\u5929 \u4E2D \u6BBA\uFF09</div>\n    <div class=\"kuubo-content\">\n      <div class=\"kuubo-shi\">\n        ").concat(kuuboNames.map(function (s) {
+  var html = (hideTabs ? '' : _toggleHTML) + "\n  <div class=\"result-title fade-in\">\n    <h2>\u547D \u5F0F \u8868</h2>\n    <div class=\"person-name\">".concat(_birthDisplay, "\u751F</div>\n    ").concat(personName ? '<div style="font-size:0.65rem;color:var(--sk-silver-dim);opacity:0.7;margin-top:2px;">' + personName + '</div>' : '', "\n  </div>\n\n  <div class=\"meishiki-wrapper fade-in\">\n    <table class=\"meishiki-table ").concat(noHourClass, "\">\n      ").concat(tableRows, "\n    </table>\n  </div>\n\n  <div class=\"kuubo-card fade-in\">\n    <div class=\"kuubo-title\">\u7A7A \u4EA1\uFF08\u5929 \u4E2D \u6BBA\uFF09</div>\n    <div class=\"kuubo-content\">\n      <div class=\"kuubo-shi\">\n        ").concat(kuuboNames.map(function (s) {
     return "<span class=\"kuubo-badge\">".concat(s, "</span>");
   }).join('<span class="kuubo-sep">・</span>'), "\n      </div>\n      <div class=\"kuubo-note\">\n        \u65E5\u67F1\u300C").concat(KAN10[day_p.kan]).concat(SHI12[day_p.shi], "\u300D\u304C\u5C5E\u3059\u308B\u65EC\u306E\u7A7A\u4EA1\u5730\u652F\u3067\u3059\u3002\n        ").concat(kuuboInPillars.length > 0 ? "\u547D\u5F0F\u4E2D\u306B\u7A7A\u4EA1\u5730\u652F\uFF08".concat(kuuboInPillars.map(function (p) {
     return SHI12[p.shi];
@@ -19691,7 +19706,7 @@ function setYakodoki(enabled) {
   var isAccOpen = accBody && accBody.classList.contains('open');
   if(cardBody && bd && typeof buildShichuuCardHTML === 'function') {
     // 開閉状態に関わらず常に再描画（次回開いたとき正しく表示されるよう）
-    cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner, false);
+    cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner, false, isPartner ? window._searchedFriendNamePartner : window._searchedFriendNameMe);
               setTimeout(function(){ addSignLabelsToMeishiki(); }, 100);
   } else if(bd && typeof buildShichuuCardHTML === 'function') {
     if(typeof switchShichuuCard === 'function') {
