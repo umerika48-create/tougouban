@@ -6797,8 +6797,12 @@ function buildNineYearCycle(honmei, targetYear, birthdate) {
       cLevel = combined>=60?"ex":combined>=42?"good":combined>=28?"mid":"low";
       cRank  = combined>=60?"◎":combined>=42?"○":combined>=28?"△":"✕";
     }
+    /* セル表示用：九星気学単体のランク（仮実装：セルの★評価は気学単体を表示） */
+    var kyuseiRank = kyuseiScore>=60?"◎":kyuseiScore>=42?"○":kyuseiScore>=28?"△":"✕";
+    var kyuseiLevel = kyuseiScore>=60?"ex":kyuseiScore>=42?"good":kyuseiScore>=28?"mid":"low";
     return { yr:yr, palace:palace, rank:cRank, level:cLevel, score:combined, label:d.label,
              kyuseiScore:kyuseiScore, rokkuScore:rokkuScore, shichuuScore:shichuuScore,
+             kyuseiRank:kyuseiRank, kyuseiLevel:kyuseiLevel,
              isTarget:(yr===targetYear), isNow:(yr===nowYear), gokyoAdj:d.gokyoAdj, breakdown:d.gokyoAdj&&d.gokyoAdj.breakdown?d.gokyoAdj.breakdown:null };
   });
   /* 結婚・転職におすすめの年（組み合わせスコア上位2年）にマークを付ける */
@@ -6989,7 +6993,15 @@ function buildMonthFourStepHTML(birthdate, kYear, mo) {
     }
     var sogoText = monthLabel + 'は「' + toneStr + '、' + actionStr + '月。' + movementParts.join('。') + '」';
 
-    var h = '<div style="font-size:9px;letter-spacing:.15em;color:var(--gold);margin-bottom:8px;">'+monthLabel+'（'+ryuKanStr+ryuShiStr+'月）を四柱推命で読み解く</div>';
+    /* 四柱推命自体のスコア・★評価（仮実装：気学とは別に、四柱推命ラベルの近くに表示） */
+    var scForStarsM = (typeof calcShichuuMonthScore === 'function') ? calcShichuuMonthScore(birthdate, kYear, mo) : null;
+    var scForStarsScoreM = scForStarsM ? scForStarsM.score : 50;
+    var scStarsM = (typeof scoreToStars === 'function') ? scoreToStars(scForStarsScoreM) : '';
+    var scRankM = (typeof scoreToRank === 'function') ? scoreToRank(scForStarsScoreM) : '';
+
+    var h = '<div style="font-size:9px;letter-spacing:.15em;color:var(--gold);margin-bottom:8px;">'+monthLabel+'（'+ryuKanStr+ryuShiStr+'月）を四柱推命で読み解く'
+      + ' <span style="color:#b8a8ff;font-size:11px;letter-spacing:0;">'+scRankM+' '+scForStarsScoreM+'点 <span style="letter-spacing:1px;">'+scStarsM+'</span></span>'
+      + '</div>';
 
     h += '<div style="margin-bottom:10px;">'
       + '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">① 月柱天干の通変星 — メインテーマ</div>'
@@ -7215,7 +7227,15 @@ function buildYearFourStepHTML(birthdate, targetYear) {
     }
     var sogoText = targetYear + '年は「' + toneStr + '、' + actionStr + '年。' + movementParts.join('。') + '」';
 
-    var h = '<div style="font-size:9px;letter-spacing:.15em;color:var(--gold);margin-bottom:8px;">'+targetYear+'年（'+ryuKanStr+ryuShiStr+'年）を四柱推命で読み解く</div>';
+    /* 四柱推命自体のスコア・★評価（仮実装：気学とは別に、四柱推命ラベルの近くに表示） */
+    var scForStars = (typeof calcShichuuYearScore === 'function') ? calcShichuuYearScore(birthdate, targetYear) : null;
+    var scForStarsScore = scForStars ? scForStars.score : 50;
+    var scStars = (typeof scoreToStars === 'function') ? scoreToStars(scForStarsScore) : '';
+    var scRank = (typeof scoreToRank === 'function') ? scoreToRank(scForStarsScore) : '';
+
+    var h = '<div style="font-size:9px;letter-spacing:.15em;color:var(--gold);margin-bottom:8px;">'+targetYear+'年（'+ryuKanStr+ryuShiStr+'年）を四柱推命で読み解く'
+      + ' <span style="color:#b8a8ff;font-size:11px;letter-spacing:0;">'+scRank+' '+scForStarsScore+'点 <span style="letter-spacing:1px;">'+scStars+'</span></span>'
+      + '</div>';
 
     h += '<div style="margin-bottom:10px;">'
       + '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">① 天干の通変星 — メインテーマ</div>'
@@ -7341,6 +7361,12 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
             window._yearHenseiData=window._yearHenseiData||{};
             window._yearHenseiData[popKey]={hensei:hns,kan:ryuKs,shi:ryuSs,yr:c.yr};
             ryunenHTML='<span onclick="event.stopPropagation();showYearHenseiDetail(\''+popKey+'\');" style="display:inline-block;margin-left:4px;padding:2px 8px;background:rgba(180,140,220,.12);border:1px solid rgba(180,140,220,.35);border-radius:14px;font-size:10px;color:'+hCol+';cursor:pointer;">'+ryuKs+ryuSs+' 【'+hns+'】</span>';
+            // 四柱推命の★評価（気学の★評価とは別に、四柱推命ラベルのすぐ近くに表示）
+            var scForCellStars = (typeof calcShichuuYearScore === 'function') ? calcShichuuYearScore(birthdate, c.yr) : null;
+            if (scForCellStars) {
+              var scStarsCell = (typeof scoreToStars === 'function') ? scoreToStars(scForCellStars.score) : '';
+              ryunenHTML += '<span style="display:inline-block;margin-left:3px;font-size:8px;letter-spacing:.5px;color:#b8a8ff;">'+scStarsCell+'</span>';
+            }
             // 十二運（日干×流年支）
             if(typeof getJuniunName==='function' && typeof JUNIUN_DESC!=='undefined'){
               var junNm=getJuniunName(KAN10ry[dayP.kan],ryuSs);
@@ -7362,15 +7388,16 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
     var birthYearNum = birthdate ? +(birthdate.split('-')[0]) : null;
     var ageAtYear = birthYearNum !== null ? (c.yr - birthYearNum) : null;
     html +=
-      '<div class="cycle-cell '+c.level+(c.isTarget?' is-target':'')+'" '+
+      '<div class="cycle-cell '+c.kyuseiLevel+(c.isTarget?' is-target':'')+'" '+
            'style="cursor:pointer;" onclick="toggleNycPanel('+idx+')">'+
         (ageAtYear !== null ? '<div style="position:absolute;top:4px;left:6px;font-size:8px;color:var(--muted);letter-spacing:.02em;">'+ageAtYear+'歳</div>' : '')+
         (c.isTarget ? '<div class="cycle-now-badge">占いたい年</div>' : '')+
         (c.isRecommended ? '<div style="position:absolute;top:4px;right:6px;font-size:6px;color:var(--gold);background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);border-radius:6px;padding:1px 4px;">★おすすめ</div>' : '')+
         '<div class="cycle-year" style="color:'+(c.isTarget?'var(--gold-light)':'var(--muted)')+'">'+c.yr+'</div>'+
-        '<div class="cycle-rank '+c.level+'" style="display:flex;align-items:baseline;gap:4px;justify-content:center;cursor:pointer;" onclick="toggleScoreBreakdown(\'nyscore-'+idx+'\',event);">'+c.rank+'<span style="font-size:10px;font-weight:400;opacity:.7;">'+c.score+'</span></div>'+
-        '<div style="font-size:9px;text-align:center;letter-spacing:1px;margin-bottom:2px;color:'+(c.level==='ex'?'#ffd700':c.level==='good'?'#b8a8ff':c.level==='mid'?'#80b8ff':'#ff9999')+';">'+
-        (c.level==='ex'?'★★★★★':c.level==='good'?'★★★★☆':c.level==='mid'?'★★★☆☆':(c.score>=14?'★★☆☆☆':'★☆☆☆☆'))+
+        '<div class="cycle-rank '+c.kyuseiLevel+'" style="display:flex;align-items:baseline;gap:3px;justify-content:center;cursor:pointer;" onclick="toggleScoreBreakdown(\'nyscore-'+idx+'\',event);">'+c.kyuseiRank+'<span style="font-size:6px;font-weight:400;opacity:.55;">(気学)</span><span style="font-size:10px;font-weight:400;opacity:.7;">'+c.score+'<span style="font-size:6px;">(総合)</span></span></div>'+
+        '<div style="font-size:9px;text-align:center;letter-spacing:1px;margin-bottom:2px;color:'+(c.kyuseiLevel==='ex'?'#ffd700':c.kyuseiLevel==='good'?'#b8a8ff':c.kyuseiLevel==='mid'?'#80b8ff':'#ff9999')+';">'+
+        (c.kyuseiLevel==='ex'?'★★★★★':c.kyuseiLevel==='good'?'★★★★☆':c.kyuseiLevel==='mid'?'★★★☆☆':(c.kyuseiScore>=14?'★★☆☆☆':'★☆☆☆☆'))+
+        '<span style="font-size:7px;color:var(--muted);letter-spacing:0;margin-left:3px;">（気学）</span>'+
         '</div>'+
         '<div class="core-num-detail" id="nyscore-'+idx+'">'+renderTripleBreakdown(c)+'</div>'+
         '<div class="cycle-label" onclick="toggleCycleLabel(\'nylabel-'+idx+'\',event)">'+c.label+
@@ -7938,6 +7965,7 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
         var dayP = calcNicchu(bdt);
         var nenP2 = calcNenchu(bdt);
         var getsP2 = calcGetschu(bdt, nenP2.kan);
+        var ryugetsuKanClean = '', ryugetsuShiClean = '';
         if(rgMon && dayP) {
           var rgKan = KAN10rg[rgMon.kan];
           var rgShi = SHI12rg[rgMon.shi];
@@ -7945,6 +7973,13 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
           if(hns) {
             ryugetsuHensei = hns;
             ryugetsuKanStr = rgKan + rgShi;
+            ryugetsuKanClean = rgKan; ryugetsuShiClean = rgShi;
+            // 四柱推命の★評価（気学の★評価とは別に、四柱推命ラベルのすぐ近くに表示）
+            var scForCellStarsM = (typeof calcShichuuMonthScore === 'function') ? calcShichuuMonthScore(birthdate, kYear, mo) : null;
+            if (scForCellStarsM) {
+              var scStarsCellM = (typeof scoreToStars === 'function') ? scoreToStars(scForCellStarsM.score) : '';
+              ryugetsuKanStr += ' <span style="display:inline-block;font-size:7px;letter-spacing:.5px;color:#b8a8ff;">'+scStarsCellM+'</span>';
+            }
             // 十二運（日干×流月支）
             if(typeof getJuniunName==='function'){
               var mgJunNm=getJuniunName(KAN10rg[dayP.kan],rgShi);
@@ -7991,7 +8026,10 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
       cLevelM = combinedM>=60?"ex":combinedM>=42?"good":combinedM>=28?"mid":"low";
       cRankM  = combinedM>=60?"◎":combinedM>=42?"○":combinedM>=28?"△":"✕";
     }
-    months.push({ mo:mo, palace:palace, d:d, judgment:judgment, rokkuNm:rokkuNm, pmNum:pmNum, ryugetsuHensei:ryugetsuHensei, ryugetsuKanStr:ryugetsuKanStr, ryugetsuShiRels:mgShiRels||[], ryugetsuShiA:mgShiA||'', ryugetsuShiB:mgShiB||'', shichuuScore:shichuuScore, kyuseiScore:kyuseiScoreM, rokkuScore:rokkuScoreM, combined:combinedM, cLevel:cLevelM, cRank:cRankM, isCurrent:(mo===kMonth) });
+    /* セル表示用：九星気学単体のランク（記号は気学基準、点数の数字は3占術合計） */
+    var kyuseiRankM = kyuseiScoreM>=60?"◎":kyuseiScoreM>=42?"○":kyuseiScoreM>=28?"△":"✕";
+    var kyuseiLevelM = kyuseiScoreM>=60?"ex":kyuseiScoreM>=42?"good":kyuseiScoreM>=28?"mid":"low";
+    months.push({ mo:mo, palace:palace, d:d, judgment:judgment, rokkuNm:rokkuNm, pmNum:pmNum, ryugetsuHensei:ryugetsuHensei, ryugetsuKanStr:ryugetsuKanStr, ryugetsuKanClean:ryugetsuKanClean||'', ryugetsuShiClean:ryugetsuShiClean||'', ryugetsuShiRels:mgShiRels||[], ryugetsuShiA:mgShiA||'', ryugetsuShiB:mgShiB||'', shichuuScore:shichuuScore, kyuseiScore:kyuseiScoreM, rokkuScore:rokkuScoreM, combined:combinedM, cLevel:cLevelM, cRank:cRankM, kyuseiRank:kyuseiRankM, kyuseiLevel:kyuseiLevelM, isCurrent:(mo===kMonth) });
   });
 
   /* 各占術の内訳タップ用に、年月→monthsエントリのキャッシュを保持しておく */
@@ -8065,14 +8103,15 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
     var janLabel  = isJan ? (kYear+1)+'年1月<br><span style="font-size:7px;color:var(--gold);letter-spacing:.03em;">気学：'+kYear+'年</span>' : m.mo+'月';
 
     gridHTML +=
-      '<div class="cycle-cell '+m.cLevel+(m.isCurrent?' is-target':'')+'" '+
+      '<div class="cycle-cell '+m.kyuseiLevel+(m.isCurrent?' is-target':'')+'" '+
            'style="cursor:pointer;'+janBorder+'" onclick="toggleMcycPanel('+m.mo+')" '+
            '-webkit-tap-highlight-color:transparent;">'+
         (m.isCurrent?'<div class="cycle-now-badge">今月</div>':'')+
         '<div class="cycle-year" style="color:'+(m.isCurrent?'var(--gold-light)':isJan?'var(--gold)':'var(--muted)')+'">'+janLabel+'</div>'+
-        '<div class="cycle-rank '+m.cLevel+'" style="display:flex;align-items:baseline;gap:4px;justify-content:center;cursor:pointer;" onclick="event.stopPropagation();toggleScoreBreakdownMonth(\'mscore-'+m.mo+'\',event);">'+m.cRank+'<span style="font-size:10px;font-weight:400;opacity:.7;">'+m.combined+'</span></div>'+
-        '<div style="font-size:9px;text-align:center;letter-spacing:1px;margin-bottom:2px;color:'+(m.cLevel==='ex'?'#ffd700':m.cLevel==='good'?'#b8a8ff':m.cLevel==='mid'?'#80b8ff':'#ff9999')+';">'+
-        (m.cLevel==='ex'?'★★★★★':m.cLevel==='good'?'★★★★☆':m.cLevel==='mid'?'★★★☆☆':(m.combined>=14?'★★☆☆☆':'★☆☆☆☆'))+
+        '<div class="cycle-rank '+m.kyuseiLevel+'" style="display:flex;align-items:baseline;gap:3px;justify-content:center;cursor:pointer;" onclick="event.stopPropagation();toggleScoreBreakdownMonth(\'mscore-'+m.mo+'\',event);">'+m.kyuseiRank+'<span style="font-size:6px;font-weight:400;opacity:.55;">(気学)</span><span style="font-size:10px;font-weight:400;opacity:.7;">'+m.combined+'<span style="font-size:6px;">(総合)</span></span></div>'+
+        '<div style="font-size:9px;text-align:center;letter-spacing:1px;margin-bottom:2px;color:'+(m.kyuseiLevel==='ex'?'#ffd700':m.kyuseiLevel==='good'?'#b8a8ff':m.kyuseiLevel==='mid'?'#80b8ff':'#ff9999')+';">'+
+        (m.kyuseiLevel==='ex'?'★★★★★':m.kyuseiLevel==='good'?'★★★★☆':m.kyuseiLevel==='mid'?'★★★☆☆':(m.kyuseiScore>=14?'★★☆☆☆':'★☆☆☆☆'))+
+        '<span style="font-size:6px;color:var(--muted);letter-spacing:0;margin-left:3px;">（気学）</span>'+
         '</div>'+
         '<div class="core-num-detail" id="mscore-'+m.mo+'">'+renderTripleBreakdownMonth(m,kYear)+'</div>'+
         '<div class="cycle-label" onclick="toggleCycleLabel(\'mlabel-'+m.mo+'\',event)">'+m.d.label+
@@ -8088,7 +8127,7 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
             var hCol = hCols[m.ryugetsuHensei]||'#b8a8ff';
             var popKey = 'ryM_'+m.mo+'_'+kYear;
             window._yearHenseiData = window._yearHenseiData||{};
-            window._yearHenseiData[popKey] = {hensei:m.ryugetsuHensei, kan:m.ryugetsuKanStr.slice(0,1), shi:m.ryugetsuKanStr.slice(1), yr:kYear+'年'+m.mo+'月'};
+            window._yearHenseiData[popKey] = {hensei:m.ryugetsuHensei, kan:(m.ryugetsuKanClean||m.ryugetsuKanStr.slice(0,1)), shi:(m.ryugetsuShiClean||m.ryugetsuKanStr.slice(1)), yr:kYear+'年'+m.mo+'月'};
             return '<span onclick="event.stopPropagation();showYearHenseiDetail(\''+popKey+'\')" style="display:inline-block;margin-left:4px;padding:1px 6px;border-radius:10px;font-size:8px;font-weight:700;background:rgba(180,140,220,.15);border:1px solid rgba(180,140,220,.3);color:'+hCol+';cursor:pointer;">'+m.ryugetsuKanStr+'【'+m.ryugetsuHensei+'】</span>'+
               (m.ryugetsuShiRels && m.ryugetsuShiRels.length > 0 ? m.ryugetsuShiRels.map(function(r){
                 return '<span onclick="event.stopPropagation();showShiRelDetail(\''+m.ryugetsuShiA+'\',\''+r.shi+'\',\''+r.type+'\')" style="display:inline-block;margin-left:3px;padding:1px 5px;border-radius:8px;font-size:8px;font-weight:700;background:rgba(255,255,255,0.06);color:'+r.color+';border:1px solid '+r.color+'40;cursor:pointer;">'+r.type+'</span>';
