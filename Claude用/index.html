@@ -8759,12 +8759,16 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
     // 太陽星座・月星座を計算してグローバル変数に保持
     window._pendingSunSign = '';
     window._pendingMoonSign = '';
+    window._pendingSunTrans = null;
+    window._pendingMoonTrans = null;
     if(typeof lt_getSunSign === 'function' && typeof lt_getMoonSign === 'function') {
       try {
         var _sun = lt_getSunSign(yr, mo, da);
         var _moon = lt_getMoonSign(yr, mo, da);
         window._pendingSunSign = _sun ? (_sun.uncertain && _sun.alt ? _sun.sign+'or'+_sun.alt : _sun.sign) : '';
         window._pendingMoonSign = _moon ? (_moon.uncertain && _moon.alt ? _moon.sign+'or'+_moon.alt : _moon.sign) : '';
+        window._pendingSunTrans = (_sun && _sun.transition) ? _sun.transition : null;
+        window._pendingMoonTrans = (_moon && _moon.transition) ? _moon.transition : null;
       } catch(e) {}
     }
     var _resultHTML = renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime,hideTabs);
@@ -8772,7 +8776,7 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
     _resultHTML = reorderResultCards(_resultHTML);
     // 星座ラベルを追加（DOM操作）
     if(window._pendingSunSign || window._pendingMoonSign) {
-      window._pendingAddSigns = {sun: window._pendingSunSign, moon: window._pendingMoonSign};
+      window._pendingAddSigns = {sun: window._pendingSunSign, moon: window._pendingMoonSign, sunTrans: window._pendingSunTrans, moonTrans: window._pendingMoonTrans};
     }
     return _resultHTML + buildUnseiHTML(dauResult,yr,day_p?day_p.kan:0);
   } catch(e){ 
@@ -9624,7 +9628,7 @@ function switchShichuuCard(view) {
       var _bdMoon = lt_getMoonSign(_bdY, _bdM, _bdD);
       var _sunLbl = _bdSun ? (_bdSun.uncertain && _bdSun.alt ? _bdSun.sign+'or'+_bdSun.alt : _bdSun.sign) : '';
       var _moonLbl = _bdMoon ? (_bdMoon.uncertain && _bdMoon.alt ? _bdMoon.sign+'or'+_bdMoon.alt : _bdMoon.sign) : '';
-      window._pendingAddSigns = {sun: _sunLbl, moon: _moonLbl};
+      window._pendingAddSigns = {sun: _sunLbl, moon: _moonLbl, sunTrans: (_bdSun&&_bdSun.transition)||null, moonTrans: (_bdMoon&&_bdMoon.transition)||null};
     } catch(e) {}
   }
   setTimeout(function(){ addSignLabelsToMeishiki(); }, 100);
@@ -16762,7 +16766,7 @@ function showFriendMeishiki(name, isYakodoki) {
       var _fMoon = lt_getMoonSign(_fY, _fM, _fD);
       var _fSunLbl = _fSun ? (_fSun.uncertain && _fSun.alt ? _fSun.sign + 'or' + _fSun.alt : _fSun.sign) : '';
       var _fMoonLbl = _fMoon ? (_fMoon.uncertain && _fMoon.alt ? _fMoon.sign + 'or' + _fMoon.alt : _fMoon.sign) : '';
-      window._pendingAddSigns = {sun: _fSunLbl, moon: _fMoonLbl};
+      window._pendingAddSigns = {sun: _fSunLbl, moon: _fMoonLbl, sunTrans: (_fSun&&_fSun.transition)||null, moonTrans: (_fMoon&&_fMoon.transition)||null};
       setTimeout(function(){ addSignLabelsToMeishiki(); }, 100);
     } catch (e) {}
   }
@@ -17024,21 +17028,40 @@ function runTogoTaisei() {
   if (resultEl) resultEl.innerHTML = h;
 }
 
-function showTogoKanDetail(label) {
+function buildSignTransitionHTML(transKey) {
+  var t = window._signTransCache && window._signTransCache[transKey];
+  if (!t) return '';
+  var mm = t.min < 10 ? '0'+t.min : String(t.min);
+  var dayPrefix = t.nextDay ? '翌日' : '';
+  return '<div style="margin-bottom:10px;padding:8px 12px;background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.2);border-radius:10px;font-size:12px;line-height:1.8;color:var(--text);">'
+    + '<div style="font-size:10px;color:var(--sk-gold-light);margin-bottom:4px;">🕐 '+t.unit+'星座の切り替わる時刻</div>'
+    + '【<b style="font-size:14px;color:#ffb454;">'+dayPrefix+t.hour+'時'+mm+'分</b>】頃までは「'+t.sign1+'」、それ以降は「'+t.sign2+'」の可能性があります。'
+    + '</div>';
+}
+
+function showTogoKanDetail(label, transKey) {
   if (!window._togoGroups) { window._togoGroups = getTogoLabelData(); }
   var g = window._togoGroups && window._togoGroups.kan ? window._togoGroups.kan[label] : null;
-  if (!g) { showModal('<div style="font-size:13px;color:var(--muted);">該当する友達データが見つかりませんでした。</div>'); return; }
-  var html = '<div style="font-size:14px;font-weight:700;color:var(--gold-light);margin-bottom:10px;">' + label + '</div>'
-    + (typeof buildFriendBadgeHTML === 'function' ? buildFriendBadgeHTML(g.names, true, null) : g.names.join('、'));
+  var transHTML = transKey ? buildSignTransitionHTML(transKey) : '';
+  var html = '<div style="font-size:14px;font-weight:700;color:var(--gold-light);margin-bottom:10px;">' + label + '</div>' + transHTML;
+  if (!g) {
+    html += '<div style="font-size:13px;color:var(--muted);">該当する友達データが見つかりませんでした。</div>';
+  } else {
+    html += (typeof buildFriendBadgeHTML === 'function' ? buildFriendBadgeHTML(g.names, true, null) : g.names.join('、'));
+  }
   showModal(html);
 }
 
-function showTogoShiDetail(label) {
+function showTogoShiDetail(label, transKey) {
   if (!window._togoGroups) { window._togoGroups = getTogoLabelData(); }
   var g = window._togoGroups && window._togoGroups.shi ? window._togoGroups.shi[label] : null;
-  if (!g) { showModal('<div style="font-size:13px;color:var(--muted);">該当する友達データが見つかりませんでした。</div>'); return; }
-  var html = '<div style="font-size:14px;font-weight:700;color:var(--gold-light);margin-bottom:10px;">' + label + '</div>'
-    + (typeof buildFriendBadgeHTML === 'function' ? buildFriendBadgeHTML(g.names, true, null) : g.names.join('、'));
+  var transHTML = transKey ? buildSignTransitionHTML(transKey) : '';
+  var html = '<div style="font-size:14px;font-weight:700;color:var(--gold-light);margin-bottom:10px;">' + label + '</div>' + transHTML;
+  if (!g) {
+    html += '<div style="font-size:13px;color:var(--muted);">該当する友達データが見つかりませんでした。</div>';
+  } else {
+    html += (typeof buildFriendBadgeHTML === 'function' ? buildFriendBadgeHTML(g.names, true, null) : g.names.join('、'));
+  }
   showModal(html);
 }
 /* ======= 東西統合 END ======= */
@@ -17550,6 +17573,8 @@ function addSignLabelsToMeishiki() {
   if(!window._pendingAddSigns) return;
   var sun = window._pendingAddSigns.sun;
   var moon = window._pendingAddSigns.moon;
+  var sunTrans = window._pendingAddSigns.sunTrans || null;
+  var moonTrans = window._pendingAddSigns.moonTrans || null;
   window._pendingAddSigns = null;
 
   var STYLE_SINGLE = 'position:absolute;top:50%;transform:translateY(-50%);font-size:12px;color:var(--sk-gold-light);line-height:1;text-align:center;white-space:nowrap;cursor:pointer;';
@@ -17587,9 +17612,16 @@ function addSignLabelsToMeishiki() {
         var _kPill = _kc.querySelector('.kan-pill');
         var _kanChar = _kPill ? _kPill.textContent : '';
         if (_kanChar) {
-          (function(_label){
-            _kdiv.onclick = function(ev){ if(ev) ev.stopPropagation(); showTogoKanDetail(_label); };
-          })(_kanChar + sun);
+          (function(_label, _trans){
+            var _transKey = null;
+            if (_trans) {
+              _transKey = 'st' + Math.floor(Math.random()*1000000);
+              window._signTransCache = window._signTransCache || {};
+              var _parts = sun.split('or');
+              window._signTransCache[_transKey] = {hour:_trans.hour, min:_trans.min, nextDay:!!_trans.nextDay, sign1:_parts[0], sign2:_parts[1]||_trans.altSign, unit:'太陽'};
+            }
+            _kdiv.onclick = function(ev){ if(ev) ev.stopPropagation(); showTogoKanDetail(_label, _transKey); };
+          })(_kanChar + sun, sunTrans);
         }
         _kc.appendChild(_kdiv);
         if (_isSingleSun) centerMarkInGap(_kc, _kdiv, _kPill);
@@ -17610,9 +17642,16 @@ function addSignLabelsToMeishiki() {
         var _sPill = _sc2.querySelector('.shi-pill');
         var _shiChar = _sPill ? _sPill.textContent : '';
         if (_shiChar) {
-          (function(_label){
-            _sdiv.onclick = function(ev){ if(ev) ev.stopPropagation(); showTogoShiDetail(_label); };
-          })(_shiChar + moon);
+          (function(_label, _trans){
+            var _transKey = null;
+            if (_trans) {
+              _transKey = 'st' + Math.floor(Math.random()*1000000);
+              window._signTransCache = window._signTransCache || {};
+              var _parts = moon.split('or');
+              window._signTransCache[_transKey] = {hour:_trans.hour, min:_trans.min, nextDay:!!_trans.nextDay, sign1:_parts[0], sign2:_parts[1]||_trans.altSign, unit:'月'};
+            }
+            _sdiv.onclick = function(ev){ if(ev) ev.stopPropagation(); showTogoShiDetail(_label, _transKey); };
+          })(_shiChar + moon, moonTrans);
         }
         _sc2.appendChild(_sdiv);
         if (_isSingleMoon) centerMarkInGap(_sc2, _sdiv, _sPill);
