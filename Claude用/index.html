@@ -7394,7 +7394,7 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
         (c.isTarget ? '<div class="cycle-now-badge">占いたい年</div>' : '')+
         (c.isRecommended ? '<div style="position:absolute;top:4px;right:6px;font-size:6px;color:var(--gold);background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);border-radius:6px;padding:1px 4px;">★おすすめ</div>' : '')+
         '<div class="cycle-year" style="color:'+(c.isTarget?'var(--gold-light)':'var(--muted)')+'">'+c.yr+'</div>'+
-        '<div class="cycle-rank '+c.kyuseiLevel+'" style="display:flex;align-items:baseline;gap:3px;justify-content:center;cursor:pointer;" onclick="toggleScoreBreakdown(\'nyscore-'+idx+'\',event);">'+c.kyuseiRank+'<span style="font-size:6px;font-weight:400;opacity:.55;">(気学)</span><span style="font-size:10px;font-weight:400;opacity:.7;">'+c.score+'<span style="font-size:6px;">(総合)</span></span></div>'+
+        '<div class="cycle-rank '+c.kyuseiLevel+'" style="display:flex;align-items:baseline;gap:3px;justify-content:center;cursor:pointer;" onclick="toggleScoreBreakdown(\'nyscore-'+idx+'\',event);">'+c.kyuseiRank+'<span style="font-size:6px;font-weight:400;opacity:.55;">(気学)</span><span style="font-size:11px;font-weight:700;opacity:1;color:'+(c.level==='ex'?'#ffd700':c.level==='good'?'#e8e8e8':c.level==='mid'?'#ffb347':'#ff5555')+';">'+c.score+'<span style="font-size:6px;font-weight:400;opacity:.7;">(総合)</span></span></div>'+
         '<div style="font-size:9px;text-align:center;letter-spacing:1px;margin-bottom:2px;color:'+(c.kyuseiLevel==='ex'?'#ffd700':c.kyuseiLevel==='good'?'#b8a8ff':c.kyuseiLevel==='mid'?'#80b8ff':'#ff9999')+';">'+
         (c.kyuseiLevel==='ex'?'★★★★★':c.kyuseiLevel==='good'?'★★★★☆':c.kyuseiLevel==='mid'?'★★★☆☆':(c.kyuseiScore>=14?'★★☆☆☆':'★☆☆☆☆'))+
         '<span style="font-size:7px;color:var(--muted);letter-spacing:0;margin-left:3px;">（気学）</span>'+
@@ -8108,7 +8108,7 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
            '-webkit-tap-highlight-color:transparent;">'+
         (m.isCurrent?'<div class="cycle-now-badge">今月</div>':'')+
         '<div class="cycle-year" style="color:'+(m.isCurrent?'var(--gold-light)':isJan?'var(--gold)':'var(--muted)')+'">'+janLabel+'</div>'+
-        '<div class="cycle-rank '+m.kyuseiLevel+'" style="display:flex;align-items:baseline;gap:3px;justify-content:center;cursor:pointer;" onclick="event.stopPropagation();toggleScoreBreakdownMonth(\'mscore-'+m.mo+'\',event);">'+m.kyuseiRank+'<span style="font-size:6px;font-weight:400;opacity:.55;">(気学)</span><span style="font-size:10px;font-weight:400;opacity:.7;">'+m.combined+'<span style="font-size:6px;">(総合)</span></span></div>'+
+        '<div class="cycle-rank '+m.kyuseiLevel+'" style="display:flex;align-items:baseline;gap:3px;justify-content:center;cursor:pointer;" onclick="event.stopPropagation();toggleScoreBreakdownMonth(\'mscore-'+m.mo+'\',event);">'+m.kyuseiRank+'<span style="font-size:6px;font-weight:400;opacity:.55;">(気学)</span><span style="font-size:11px;font-weight:700;opacity:1;color:'+(m.cLevel==='ex'?'#ffd700':m.cLevel==='good'?'#e8e8e8':m.cLevel==='mid'?'#ffb347':'#ff5555')+';">'+m.combined+'<span style="font-size:6px;font-weight:400;opacity:.7;">(総合)</span></span></div>'+
         '<div style="font-size:9px;text-align:center;letter-spacing:1px;margin-bottom:2px;color:'+(m.kyuseiLevel==='ex'?'#ffd700':m.kyuseiLevel==='good'?'#b8a8ff':m.kyuseiLevel==='mid'?'#80b8ff':'#ff9999')+';">'+
         (m.kyuseiLevel==='ex'?'★★★★★':m.kyuseiLevel==='good'?'★★★★☆':m.kyuseiLevel==='mid'?'★★★☆☆':(m.kyuseiScore>=14?'★★☆☆☆':'★☆☆☆☆'))+
         '<span style="font-size:6px;color:var(--muted);letter-spacing:0;margin-left:3px;">（気学）</span>'+
@@ -16429,7 +16429,9 @@ var FRIEND_DATA = [
 {id:'msu7ot7izcyu',name:'井上長谷雄',date:'1902-02-09',time:'',timeUnknown:false,category:'先祖',place:'',memo:'',addedAt:1786788415710,visible:true},
 {id:'msu7rchjs4jh',name:'井上長作',date:'1880-10-14',time:'',timeUnknown:false,category:'先祖',place:'',memo:'井上儀兵衛さんと井上コノさんの下に\n長作さんとラクさんが養子で井上家にきたらしい。',addedAt:1786788534007,visible:true},
 {id:'msu7sj735ggy',name:'井上ラク',date:'1882-01-02',time:'',timeUnknown:false,category:'先祖',place:'',memo:'旧姓安武（新宮）',addedAt:1786788589359,visible:true},
-{id:'msujujlrggub',name:'みっちゃん',date:'1982-04-01',time:'00:15',timeUnknown:false,category:'友達（♂）',place:'',memo:'そらちゃんの元彼',addedAt:1786808838591,visible:true}
+{id:'msujujlrggub',name:'みっちゃん',date:'1982-04-01',time:'00:15',timeUnknown:false,category:'友達（♂）',place:'',memo:'そらちゃんの元彼',addedAt:1786808838591,visible:true},
+{id:'msv4x4aanle0',name:'名人',date:'1994-09-23',time:'',timeUnknown:false,category:'有名人',place:'',memo:'',addedAt:1786844230642,visible:true},
+{id:'msv4xrbg66hw',name:'ロケマサ',date:'1997-10-31',time:'',timeUnknown:false,category:'有名人',place:'',memo:'',addedAt:1786844260492,visible:true}
 ];
 
 /* localStorageに保存された友達データがあれば、それで上書きする */
