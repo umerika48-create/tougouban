@@ -5338,7 +5338,7 @@ function showFriendSearchPopup(target) {
   document.getElementById('hjBadge').textContent = '';
 
   // カテゴリー一覧
-  var cats = ['すべて','本人','親しい友人','友達','友達（♂）','身内','先祖','先生','仕事関係','有名人','友達の子供','その他'];
+  var cats = ['すべて','本人','親しい友人','友達','友達（♂）','身内','先祖','先生','仕事関係','有名人','友達の子供','海外','その他'];
   var currentCat = 'すべて';
 
   function buildList(filterCat) {
@@ -5346,7 +5346,7 @@ function showFriendSearchPopup(target) {
       return !f.hidden && f.date && (filterCat === 'すべて' || f.category === filterCat);
     });
     sorted.sort(function(a, b){
-      var order = ['本人','親しい友人','友達','友達（♂）','身内','先祖','先生','仕事関係','有名人','友達の子供','その他'];
+      var order = ['本人','親しい友人','友達','友達（♂）','身内','先祖','先生','仕事関係','有名人','友達の子供','海外','その他'];
       var ai = order.indexOf(a.category); var bi = order.indexOf(b.category);
       if(ai===-1) ai=99; if(bi===-1) bi=99;
       return ai - bi;
@@ -5633,7 +5633,17 @@ function showJuniunDetail(name) {
   document.getElementById('hjBadge').textContent = keyword;
   document.getElementById('hjContext').innerHTML = '';
 
-  var html = '<div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid '+jCol+'40;margin-bottom:10px;">'
+  var html = '';
+  // 十二運全体のエネルギーの強さ（★5段階）
+  if (typeof SHICHUU_JYU12_SCORE !== 'undefined' && SHICHUU_JYU12_SCORE[name] !== undefined && typeof scoreToStars === 'function') {
+    var energyScoreJd = SHICHUU_JYU12_SCORE[name];
+    var energyStarsJd = scoreToStars(energyScoreJd);
+    html += '<div style="margin-bottom:10px;padding:8px 12px;background:rgba(184,168,255,0.08);border-radius:8px;border:1px solid rgba(184,168,255,0.2);display:flex;justify-content:space-between;align-items:center;">'
+      + '<span style="font-size:11px;color:var(--muted);">⚡ エネルギーの強さ</span>'
+      + '<span style="font-size:14px;color:#b8a8ff;letter-spacing:1px;">'+energyStarsJd+'</span>'
+      + '</div>';
+  }
+  html += '<div style="padding:10px 12px;border-radius:10px;background:rgba(255,255,255,0.04);border:1px solid '+jCol+'40;margin-bottom:10px;">'
     + '<div style="font-size:22px;font-weight:700;color:'+jCol+';margin-bottom:8px;">'+name+'</div>';
   // desc（JYU12_DESC）またはlife/energy（JUNIUN_DESC）
   if(d && d.desc) {
@@ -6639,7 +6649,7 @@ function getPalaceData(honmei, palace, targetYear) {
 
 /* ======= 四柱推命の年運スコア化（十二運＋通変星＋合冲刑害破） ======= */
 var SHICHUU_JYU12_SCORE = {'長生':60,'沐浴':40,'冠帯':70,'建禄':90,'帝旺':100,'衰':50,'病':30,'死':20,'墓':15,'絶':10,'胎':35,'養':45};
-var SHICHUU_HENSEI_MOD  = {'比肩':5,'劫財':-5,'食神':10,'傷官':0,'偏財':5,'正財':10,'偏官':-5,'正官':5,'偏印':0,'印綬':10};
+var SHICHUU_HENSEI_MOD  = {'比肩':5,'劫財':-3,'食神':10,'傷官':0,'偏財':6,'正財':10,'偏官':-6,'正官':7,'偏印':2,'印綬':9};
 var SHICHUU_REL_MOD     = {'三合':15,'六合':15,'冲':-15,'刑':-10,'害':-8,'破':-8};
 
 function calcShichuuYearScore(birthdate, targetYear) {
@@ -6714,6 +6724,20 @@ function scoreToRank(score) {
 /* スコア(0-100) → ★5段階 */
 function scoreToStars(score) {
   return score>=60?'★★★★★':score>=42?'★★★★☆':score>=28?'★★★☆☆':score>=14?'★★☆☆☆':'★☆☆☆☆';
+}
+
+/* 通変星 → ★5段階（4ステップ読み解きの①②ラベル横に使う） */
+function henseiToStars(hensei) {
+  var mod = (typeof SHICHUU_HENSEI_MOD !== 'undefined' && SHICHUU_HENSEI_MOD[hensei] !== undefined) ? SHICHUU_HENSEI_MOD[hensei] : 0;
+  var score = Math.min(100, Math.max(0, 50 + mod * 5));
+  // 通変星専用の境目（★5≥90/★4≥70/★3≥45/★2≥25/★1それ未満）
+  return score>=90?'★★★★★':score>=70?'★★★★☆':score>=45?'★★★☆☆':score>=25?'★★☆☆☆':'★☆☆☆☆';
+}
+/* 合冲刑害破の関係タイプ → ★5段階（④ラベル横に使う） */
+function relTypeToStars(relType) {
+  var mod = (typeof SHICHUU_REL_MOD !== 'undefined' && SHICHUU_REL_MOD[relType] !== undefined) ? SHICHUU_REL_MOD[relType] : 0;
+  var score = Math.min(100, Math.max(0, 50 + mod * 3));
+  return scoreToStars(score);
 }
 
 /* 3占術の内訳をタップ表示用のHTMLとして組み立てる */
@@ -6969,17 +6993,16 @@ function buildMonthFourStepHTML(birthdate, kYear, mo) {
     };
 
     // ② 月支の蔵干・通変星（正気をメインに、中気・余気があれば添える）
-    var HENSEI_BACKGROUND_M = {
-      '比肩':'表向きのテーマの裏で、「誰にも頼らず自分でやる」という意地や独立心が働いている',
-      '劫財':'表向きのテーマの裏で、周囲との比較や競争心、分け合う・張り合うような力学が動いている',
-      '食神':'表向きのテーマの裏で、余裕や遊び心、楽しみながらやりたいという気持ちが下地にある',
-      '傷官':'表向きのテーマの裏で、既存のやり方への違和感や、もっと良くしたいというこだわりが働いている',
-      '偏財':'表向きのテーマの裏で、フットワークの軽さや、機を逃さず動こうとする実利的な計算がある',
-      '正財':'表向きのテーマの裏で、コツコツ積み上げて形にしたいという堅実な実質面が支えている',
-      '偏官':'表向きのテーマの裏で、緊張感やプレッシャー、鍛えられる状況が具体的に働いている',
-      '正官':'表向きのテーマの裏で、責任感や周囲からの見られ方への意識が具体的に働いている',
-      '偏印':'表向きのテーマの裏で、直感やひとり時間で内省する感覚が具体的な支えになっている',
-      '印綬':'表向きのテーマの裏で、誰かに教わる・守られるという安心感が具体的な土台になっている'
+    var HENSEI_DESIRE_M = {
+      '比肩':'自分らしくやりたい', '劫財':'人と競い合いながら動きたい', '食神':'楽しみながら表現したい',
+      '傷官':'感性を磨きたい・こだわりたい', '偏財':'チャンスをつかみたい', '正財':'コツコツ積み上げて、ちゃんと形にしたい',
+      '偏官':'プレッシャーの中で鍛えられたい', '正官':'責任を持って信頼を積み上げたい',
+      '偏印':'直感やひらめきを大事にしたい', '印綬':'学びながら力を蓄えたい'
+    };
+    var HENSEI_TONE_WORD_M = {
+      '比肩':'自分本位な', '劫財':'負けず嫌いな', '食神':'伸びやかな', '傷官':'繊細な',
+      '偏財':'身軽な', '正財':'堅実な', '偏官':'ストイックな', '正官':'誠実な',
+      '偏印':'直感的な', '印綬':'素直な'
     };
     var zgIdx = SHI12y.indexOf(ryuShiStr);
     var zg = (typeof ZOUGAN !== 'undefined' && zgIdx>=0) ? ZOUGAN[zgIdx] : null;
@@ -6991,9 +7014,10 @@ function buildMonthFourStepHTML(birthdate, kYear, mo) {
         var zKan = KAN10y[zg[zi]];
         var zHensei = calcHensei(dayP.kan, zg[zi]);
         var isMain = (zi===2);
-        var zBg = HENSEI_BACKGROUND_M[zHensei] || '';
+        var zBg = (HENSEI_DESIRE_M[hensei1] && HENSEI_DESIRE_M[zHensei]) ? ('「'+HENSEI_DESIRE_M[hensei1]+'」というテーマの裏側には、実は「'+HENSEI_DESIRE_M[zHensei]+'」という'+(HENSEI_TONE_WORD_M[zHensei]||'')+'本音・動機が働いている、ということになります。') : '';
         zougan2HTML += '<div style="margin-bottom:4px;">'
           + '<span onclick="event.stopPropagation();openHenseiPanel(\''+zHensei+'\',\''+monthLabel+'の月支・'+labels[zi]+'\')" style="display:inline-block;margin:2px 4px 2px 0;padding:2px 9px;border-radius:12px;font-size:'+(isMain?'11px':'10px')+';font-weight:'+(isMain?'700':'400')+';background:rgba(255,255,255,'+(isMain?'0.08':'0.04')+');border:1px solid rgba(255,255,255,'+(isMain?'0.18':'0.1')+');color:'+(isMain?'var(--gold-light)':'var(--muted)')+';cursor:pointer;">'+zKan+' '+zHensei+(isMain?'（正気）':'（'+labels[zi]+'）')+'</span>'
+          + ' <span style="font-size:'+(isMain?'11px':'10px')+';color:'+(isMain?'var(--gold-light)':'var(--muted)')+';letter-spacing:1px;">'+henseiToStars(zHensei)+'</span>'
           + (zBg ? ' <span class="mini-arrow-toggle" style="display:inline-block;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 6px;" onclick="event.stopPropagation();toggleSogoBox(this);">▼</span>'
                  + '<div class="panel-mini-body" style="font-size:11px;color:var(--text);margin-top:3px;line-height:1.6;">'+zBg+'</div>' : '')
           + '</div>';
@@ -7004,18 +7028,18 @@ function buildMonthFourStepHTML(birthdate, kYear, mo) {
     var jyu3 = calcJyu12(dayP.kan, rgMon.shi);
     var jd3 = (typeof JUNIUN_DESC !== 'undefined') ? JUNIUN_DESC[jyu3] : null;
     var JYU12_ENERGY_M = {
-      '長生':'生まれたての赤ちゃんのような、まっさらで伸びやかなエネルギー。新しく始めることに向いていて、可能性を素直に伸ばしていける',
-      '沐浴':'まだ形が定まらず、揺れながら試している状態。迷いや揺らぎはあるものの、その分感受性が豊かで、試行錯誤しながら自分に合う形を探っていける',
-      '冠帯':'一人前になる手前の、意気込みと伸びしろが同居したエネルギー。多少無鉄砲でも、勢いをつけて力をつけていける時期',
-      '建禄':'自分の力で堂々と立っていられる、実力が伴った安定したエネルギー。地に足がついた状態で、着実に前へ進んでいける',
-      '帝旺':'一生のうちで最も力が満ちている、最強のエネルギー。自信を持って最大限に力を発揮できる半面、強すぎて周囲とぶつかることもある',
-      '衰':'ピークを越えて、少し落ち着き始めた円熟のエネルギー。勢いよりも、これまでの経験を活かして丁寧に対応する方が合っている',
-      '病':'少し弱っていて、無理がきかない状態。その分、人に頼ったり、内面と向き合ったりすることで得られるものが多い時期',
-      '死':'エネルギーが最も静まった、内省の状態。攻めるより、静かに力を練りながら仕上げていくことに向いている',
-      '墓':'これまでのことをじっくりしまい込み、整理する時期。派手な動きより、蓄積してきたものを見直し、次に活かす準備ができる',
-      '絶':'一度エネルギーがゼロに近づく、切り替わりの状態。何かが終わる不安定さもあるが、次の始まりに向けてまっさらに戻れる時期でもある',
-      '胎':'母体の中で新しい命が育ち始めるような、まだ見えないところで力が芽吹いている状態。焦らず、種をそっと育てていく時期',
-      '養':'大切に守られながら育っていく、じんわりと力を蓄えるエネルギー。土台づくりの時期で、この先の成長のための準備期間になる'
+      '長生':'伸びていく、可能性を秘めた元気さ（誕生した直後）',
+      '沐浴':'不安定、揺らぎやすい（産湯を使う赤ちゃん）',
+      '冠帯':'勢いがついてくる（成人式・青年期）',
+      '建禄':'実力がしっかりしてきた状態（社会人として自立）',
+      '帝旺':'一番エネルギーが強い、ピーク（人生の最盛期）',
+      '衰':'ピークを過ぎて落ち着き始める（中年〜引退準備）',
+      '病':'弱っている状態（病気がち）',
+      '死':'エネルギーが尽きた状態（死を迎える）',
+      '墓':'静かに閉じこもった状態（お墓に入る）',
+      '絶':'エネルギーが一番弱い状態（完全に途絶える）',
+      '胎':'これから生まれる準備段階（お腹の中に宿る）',
+      '養':'ゆっくり育っている段階（お腹の中で育つ）',
     };
 
     // ④ 合冲刑害破（命式の年支・月支・日支 それぞれと今月の月支を比較）
@@ -7050,6 +7074,7 @@ function buildMonthFourStepHTML(birthdate, kYear, mo) {
         var rMove = REL_MOVEMENT_M[r.type] || '';
         relHTML += '<div style="margin-bottom:6px;">'
           + '<span onclick="event.stopPropagation();showShiRelDetail(\''+ryuShiStr+'\',\''+ns.shi+'\',\''+r.type+'\')" style="display:inline-block;margin:2px 4px 2px 0;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:700;background:rgba(255,255,255,0.05);border:1px solid '+r.color+'55;color:'+r.color+';cursor:pointer;">'+ns.label+'の'+ns.shi+'と'+r.type+'</span>'
+          + ' <span style="font-size:11px;color:'+r.color+';letter-spacing:1px;">'+relTypeToStars(r.type)+'</span>'
           + (rShort ? '<div style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.6;">'+rShort+'</div>' : '')
           + (rMove ? ' <span class="mini-arrow-toggle" style="display:inline-block;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 6px;" onclick="event.stopPropagation();toggleSogoBox(this);">▼</span>'
                     + '<div class="panel-mini-body" style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.6;">'+rMove+'</div>' : '')
@@ -7098,6 +7123,7 @@ function buildMonthFourStepHTML(birthdate, kYear, mo) {
     h += '<div style="margin-bottom:10px;">'
       + '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">① 月柱天干の通変星 — メインテーマ</div>'
       + '<span onclick="event.stopPropagation();openHenseiPanel(\''+hensei1+'\',\''+monthLabel+'の月運\')" style="display:inline-block;padding:3px 12px;border-radius:14px;font-size:13px;font-weight:700;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.3);color:#ffd700;cursor:pointer;">'+ryuKanStr+' '+hensei1+'</span>'
+      + ' <span style="font-size:11px;color:#ffd700;letter-spacing:1px;">'+henseiToStars(hensei1)+'</span>'
       + (hd1 ? '<div style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+hd1.keyword+'</div>' : '')
       + (HENSEI_MAIN_THEME_M[hensei1] ? ' <span class="mini-arrow-toggle" style="display:inline-block;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 6px;" onclick="event.stopPropagation();toggleSogoBox(this);">▼</span>'
              + '<div class="panel-mini-body" style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+HENSEI_MAIN_THEME_M[hensei1]+'</div>' : '')
@@ -7111,9 +7137,10 @@ function buildMonthFourStepHTML(birthdate, kYear, mo) {
     h += '<div style="margin-bottom:10px;">'
       + '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">③ 十二運 — このテーマへの自分のエネルギー</div>'
       + '<span onclick="event.stopPropagation();openJyu12Panel(\''+jyu3+'\',\''+monthLabel+'の月運\')" style="display:inline-block;padding:3px 12px;border-radius:14px;font-size:13px;font-weight:700;background:rgba(184,168,255,.08);border:1px solid rgba(184,168,255,.3);color:#b8a8ff;cursor:pointer;">'+jyu3+'</span>'
-      + (jd3 ? '<div style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+jd3.energy+'</div>' : '')
-      + (JYU12_ENERGY_M[jyu3] ? ' <span class="mini-arrow-toggle" style="display:inline-block;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 6px;" onclick="event.stopPropagation();toggleSogoBox(this);">▼</span>'
-             + '<div class="panel-mini-body" style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+JYU12_ENERGY_M[jyu3]+'</div>' : '')
+      + ' <span style="font-size:11px;color:#b8a8ff;letter-spacing:1px;">'+(typeof SHICHUU_JYU12_SCORE!=='undefined'&&SHICHUU_JYU12_SCORE[jyu3]!==undefined?scoreToStars(SHICHUU_JYU12_SCORE[jyu3]):'')+'</span>'
+      + (jd3 ? '<div style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+jd3.energy+'（'+jd3.life+'）'+'</div>' : '')
+      + (typeof JYU12_DESC !== 'undefined' && JYU12_DESC[jyu3] ? ' <span class="mini-arrow-toggle" style="display:inline-block;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 6px;" onclick="event.stopPropagation();toggleSogoBox(this);">▼</span>'
+             + '<div class="panel-mini-body" style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+JYU12_DESC[jyu3].desc+'</div>' : '')
       + '</div>';
 
     h += '<div>'
@@ -7172,17 +7199,16 @@ function buildYearFourStepHTML(birthdate, targetYear) {
     };
 
     // ② 年支の蔵干・通変星（正気をメインに、中気・余気があれば添える）
-    var HENSEI_BACKGROUND = {
-      '比肩':'表向きのテーマの裏で、「誰にも頼らず自分でやる」という意地や独立心が働いている',
-      '劫財':'表向きのテーマの裏で、周囲との比較や競争心、分け合う・張り合うような力学が動いている',
-      '食神':'表向きのテーマの裏で、余裕や遊び心、楽しみながらやりたいという気持ちが下地にある',
-      '傷官':'表向きのテーマの裏で、既存のやり方への違和感や、もっと良くしたいというこだわりが働いている',
-      '偏財':'表向きのテーマの裏で、フットワークの軽さや、機を逃さず動こうとする実利的な計算がある',
-      '正財':'表向きのテーマの裏で、コツコツ積み上げて形にしたいという堅実な実質面が支えている',
-      '偏官':'表向きのテーマの裏で、緊張感やプレッシャー、鍛えられる状況が具体的に働いている',
-      '正官':'表向きのテーマの裏で、責任感や周囲からの見られ方への意識が具体的に働いている',
-      '偏印':'表向きのテーマの裏で、直感やひとり時間で内省する感覚が具体的な支えになっている',
-      '印綬':'表向きのテーマの裏で、誰かに教わる・守られるという安心感が具体的な土台になっている'
+    var HENSEI_DESIRE = {
+      '比肩':'自分らしくやりたい', '劫財':'人と競い合いながら動きたい', '食神':'楽しみながら表現したい',
+      '傷官':'感性を磨きたい・こだわりたい', '偏財':'チャンスをつかみたい', '正財':'コツコツ積み上げて、ちゃんと形にしたい',
+      '偏官':'プレッシャーの中で鍛えられたい', '正官':'責任を持って信頼を積み上げたい',
+      '偏印':'直感やひらめきを大事にしたい', '印綬':'学びながら力を蓄えたい'
+    };
+    var HENSEI_TONE_WORD = {
+      '比肩':'自分本位な', '劫財':'負けず嫌いな', '食神':'伸びやかな', '傷官':'繊細な',
+      '偏財':'身軽な', '正財':'堅実な', '偏官':'ストイックな', '正官':'誠実な',
+      '偏印':'直感的な', '印綬':'素直な'
     };
     var zgIdx = SHI12y.indexOf(ryuShiStr);
     var zg = (typeof ZOUGAN !== 'undefined' && zgIdx>=0) ? ZOUGAN[zgIdx] : null;
@@ -7194,9 +7220,10 @@ function buildYearFourStepHTML(birthdate, targetYear) {
         var zKan = KAN10y[zg[zi]];
         var zHensei = calcHensei(dayP.kan, zg[zi]);
         var isMain = (zi===2);
-        var zBg = HENSEI_BACKGROUND[zHensei] || '';
+        var zBg = (HENSEI_DESIRE[hensei1] && HENSEI_DESIRE[zHensei]) ? ('「'+HENSEI_DESIRE[hensei1]+'」というテーマの裏側には、実は「'+HENSEI_DESIRE[zHensei]+'」という'+(HENSEI_TONE_WORD[zHensei]||'')+'本音・動機が働いている、ということになります。') : '';
         zougan2HTML += '<div style="margin-bottom:4px;">'
           + '<span onclick="event.stopPropagation();openHenseiPanel(\''+zHensei+'\',\''+targetYear+'年の年支・'+labels[zi]+'\')" style="display:inline-block;margin:2px 4px 2px 0;padding:2px 9px;border-radius:12px;font-size:'+(isMain?'11px':'10px')+';font-weight:'+(isMain?'700':'400')+';background:rgba(255,255,255,'+(isMain?'0.08':'0.04')+');border:1px solid rgba(255,255,255,'+(isMain?'0.18':'0.1')+');color:'+(isMain?'var(--gold-light)':'var(--muted)')+';cursor:pointer;">'+zKan+' '+zHensei+(isMain?'（正気）':'（'+labels[zi]+'）')+'</span>'
+          + ' <span style="font-size:'+(isMain?'11px':'10px')+';color:'+(isMain?'var(--gold-light)':'var(--muted)')+';letter-spacing:1px;">'+henseiToStars(zHensei)+'</span>'
           + (zBg ? ' <span class="mini-arrow-toggle" style="display:inline-block;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 6px;" onclick="event.stopPropagation();toggleSogoBox(this);">▼</span>'
                  + '<div class="panel-mini-body" style="font-size:11px;color:var(--text);margin-top:3px;line-height:1.6;">'+zBg+'</div>' : '')
           + '</div>';
@@ -7207,18 +7234,18 @@ function buildYearFourStepHTML(birthdate, targetYear) {
     var jyu3 = calcJyu12(dayP.kan, ryuNen.shi);
     var jd3 = (typeof JUNIUN_DESC !== 'undefined') ? JUNIUN_DESC[jyu3] : null;
     var JYU12_ENERGY = {
-      '長生':'生まれたての赤ちゃんのような、まっさらで伸びやかなエネルギー。新しく始めることに向いていて、可能性を素直に伸ばしていける',
-      '沐浴':'まだ形が定まらず、揺れながら試している状態。迷いや揺らぎはあるものの、その分感受性が豊かで、試行錯誤しながら自分に合う形を探っていける',
-      '冠帯':'一人前になる手前の、意気込みと伸びしろが同居したエネルギー。多少無鉄砲でも、勢いをつけて力をつけていける時期',
-      '建禄':'自分の力で堂々と立っていられる、実力が伴った安定したエネルギー。地に足がついた状態で、着実に前へ進んでいける',
-      '帝旺':'一生のうちで最も力が満ちている、最強のエネルギー。自信を持って最大限に力を発揮できる半面、強すぎて周囲とぶつかることもある',
-      '衰':'ピークを越えて、少し落ち着き始めた円熟のエネルギー。勢いよりも、これまでの経験を活かして丁寧に対応する方が合っている',
-      '病':'少し弱っていて、無理がきかない状態。その分、人に頼ったり、内面と向き合ったりすることで得られるものが多い時期',
-      '死':'エネルギーが最も静まった、内省の状態。攻めるより、静かに力を練りながら仕上げていくことに向いている',
-      '墓':'これまでのことをじっくりしまい込み、整理する時期。派手な動きより、蓄積してきたものを見直し、次に活かす準備ができる',
-      '絶':'一度エネルギーがゼロに近づく、切り替わりの状態。何かが終わる不安定さもあるが、次の始まりに向けてまっさらに戻れる時期でもある',
-      '胎':'母体の中で新しい命が育ち始めるような、まだ見えないところで力が芽吹いている状態。焦らず、種をそっと育てていく時期',
-      '養':'大切に守られながら育っていく、じんわりと力を蓄えるエネルギー。土台づくりの時期で、この先の成長のための準備期間になる'
+      '長生':'伸びていく、可能性を秘めた元気さ（誕生した直後）',
+      '沐浴':'不安定、揺らぎやすい（産湯を使う赤ちゃん）',
+      '冠帯':'勢いがついてくる（成人式・青年期）',
+      '建禄':'実力がしっかりしてきた状態（社会人として自立）',
+      '帝旺':'一番エネルギーが強い、ピーク（人生の最盛期）',
+      '衰':'ピークを過ぎて落ち着き始める（中年〜引退準備）',
+      '病':'弱っている状態（病気がち）',
+      '死':'エネルギーが尽きた状態（死を迎える）',
+      '墓':'静かに閉じこもった状態（お墓に入る）',
+      '絶':'エネルギーが一番弱い状態（完全に途絶える）',
+      '胎':'これから生まれる準備段階（お腹の中に宿る）',
+      '養':'ゆっくり育っている段階（お腹の中で育つ）',
     };
 
     // ④ 合冲刑害破（命式の年支・月支・日支 それぞれと今年の年支を比較）
@@ -7254,6 +7281,7 @@ function buildYearFourStepHTML(birthdate, targetYear) {
         var rMove = REL_MOVEMENT[r.type] || '';
         relHTML += '<div style="margin-bottom:6px;">'
           + '<span onclick="event.stopPropagation();showShiRelDetail(\''+ryuShiStr+'\',\''+ns.shi+'\',\''+r.type+'\')" style="display:inline-block;margin:2px 4px 2px 0;padding:3px 10px;border-radius:14px;font-size:11px;font-weight:700;background:rgba(255,255,255,0.05);border:1px solid '+r.color+'55;color:'+r.color+';cursor:pointer;">'+ns.label+'の'+ns.shi+'と'+r.type+'</span>'
+          + ' <span style="font-size:11px;color:'+r.color+';letter-spacing:1px;">'+relTypeToStars(r.type)+'</span>'
           + (rShort ? '<div style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.6;">'+rShort+'</div>' : '')
           + (rMove ? ' <span class="mini-arrow-toggle" style="display:inline-block;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 6px;" onclick="event.stopPropagation();toggleSogoBox(this);">▼</span>'
                     + '<div class="panel-mini-body" style="font-size:11px;color:var(--text);margin-top:4px;line-height:1.6;">'+rMove+'</div>' : '')
@@ -7332,6 +7360,7 @@ function buildYearFourStepHTML(birthdate, targetYear) {
     h += '<div style="margin-bottom:10px;">'
       + '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">① 天干の通変星 — メインテーマ</div>'
       + '<span onclick="event.stopPropagation();openHenseiPanel(\''+hensei1+'\',\''+targetYear+'年の年運\')" style="display:inline-block;padding:3px 12px;border-radius:14px;font-size:13px;font-weight:700;background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.3);color:#ffd700;cursor:pointer;">'+ryuKanStr+' '+hensei1+'</span>'
+      + ' <span style="font-size:11px;color:#ffd700;letter-spacing:1px;">'+henseiToStars(hensei1)+'</span>'
       + (hd1 ? '<div style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+hd1.keyword+'</div>' : '')
       + (HENSEI_MAIN_THEME[hensei1] ? ' <span class="mini-arrow-toggle" style="display:inline-block;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 6px;" onclick="event.stopPropagation();toggleSogoBox(this);">▼</span>'
              + '<div class="panel-mini-body" style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+HENSEI_MAIN_THEME[hensei1]+'</div>' : '')
@@ -7345,9 +7374,10 @@ function buildYearFourStepHTML(birthdate, targetYear) {
     h += '<div style="margin-bottom:10px;">'
       + '<div style="font-size:9px;color:var(--muted);margin-bottom:3px;">③ 十二運 — このテーマへの自分のエネルギー</div>'
       + '<span onclick="event.stopPropagation();openJyu12Panel(\''+jyu3+'\',\''+targetYear+'年の年運\')" style="display:inline-block;padding:3px 12px;border-radius:14px;font-size:13px;font-weight:700;background:rgba(184,168,255,.08);border:1px solid rgba(184,168,255,.3);color:#b8a8ff;cursor:pointer;">'+jyu3+'</span>'
-      + (jd3 ? '<div style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+jd3.energy+'</div>' : '')
-      + (JYU12_ENERGY[jyu3] ? ' <span class="mini-arrow-toggle" style="display:inline-block;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 6px;" onclick="event.stopPropagation();toggleSogoBox(this);">▼</span>'
-             + '<div class="panel-mini-body" style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+JYU12_ENERGY[jyu3]+'</div>' : '')
+      + ' <span style="font-size:11px;color:#b8a8ff;letter-spacing:1px;">'+(typeof SHICHUU_JYU12_SCORE!=='undefined'&&SHICHUU_JYU12_SCORE[jyu3]!==undefined?scoreToStars(SHICHUU_JYU12_SCORE[jyu3]):'')+'</span>'
+      + (jd3 ? '<div style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+jd3.energy+'（'+jd3.life+'）'+'</div>' : '')
+      + (typeof JYU12_DESC !== 'undefined' && JYU12_DESC[jyu3] ? ' <span class="mini-arrow-toggle" style="display:inline-block;font-size:11px;color:var(--muted);cursor:pointer;padding:4px 6px;" onclick="event.stopPropagation();toggleSogoBox(this);">▼</span>'
+             + '<div class="panel-mini-body" style="font-size:11px;color:var(--text);margin-top:5px;line-height:1.6;">'+JYU12_DESC[jyu3].desc+'</div>' : '')
       + '</div>';
 
     h += '<div>'
@@ -7612,7 +7642,14 @@ function showModal(html) {
   var content = document.getElementById('global-modal-content');
   if (!overlay || !content) return;
   content.innerHTML = html;
+  // iOSのSafariでは、スクロールした状態のoverflow:autoコンテナの中から
+  // position:fixedの要素を開くと、正しい位置（画面中央）に出ずに
+  // ずれて表示されることがあるため、確実にbody直下へ再配置してから表示する
+  if (overlay.parentNode !== document.body) {
+    document.body.appendChild(overlay);
+  }
   overlay.style.display = 'flex';
+  content.scrollTop = 0;
 }
 function closeModal() {
   var overlay = document.getElementById('global-modal-overlay');
@@ -15225,62 +15262,62 @@ var HENSEI_DESC = {
 // ========================================================
 var JYU12_DESC = {
   '長生': { yomi:'ちょうせい', power:'強', image:'🌱', keyword:'誕生・純粋・可能性',
-    desc:'生まれたての赤ちゃんのようなエネルギー。純粋で可能性に満ち、物事の始まりと縁が深い。新しいことへの適応力が高く、長く愛される力があります。',
+    desc:'生まれたての赤ちゃんのようなエネルギー（誕生した直後）。純粋で可能性に満ち、物事の始まりと縁が深い。新しいことへの適応力が高く、長く愛される力があります。',
     love_stars:'★★★★☆', love:'新しい出会いに恵まれやすい時期。純粋な気持ちで向き合うと縁が広がる。初々しい展開や新鮮な関係が生まれやすい。',
     work_stars:'★★★★☆', work:'新しいことを始めるのに最適な時期。スタートダッシュが利きやすく、初めての挑戦が吉。長期的な視点で種まきをするタイミング。',
     action:'新しいことを始める・出会いの場に出る・純粋な気持ちで動く' },
   '沐浴': { yomi:'もくよく', power:'中', image:'💧', keyword:'感受性・魅力・不安定',
-    desc:'産湯につかる幼児のエネルギー。感受性が豊かで魅力的ですが、気まぐれな面も。恋愛や芸術の才能に恵まれ、異性を引き付ける力があります。',
+    desc:'産湯につかる幼児のエネルギー（産湯を使う赤ちゃん）。感受性が豊かで魅力的ですが、気まぐれな面も。恋愛や芸術の才能に恵まれ、異性を引き付ける力があります。',
     love_stars:'★★★★★', love:'異性を引き付ける魅力が最も高まる時期。色気・感受性が増し、恋愛のドラマが生まれやすい。ただし流されやすくなるので注意。',
     work_stars:'★★☆☆☆', work:'集中力が散りやすい時期。一つのことに絞って丁寧に取り組むこと。芸術・感性系の仕事では才能が光る。',
     action:'感性を磨く・人の話をよく聞く・流されすぎないよう軸を持つ' },
   '冠帯': { yomi:'かんたい', power:'強', image:'🎓', keyword:'成長・自信・積極性',
-    desc:'元服（成人式）を迎えたエネルギー。自信と積極性が高まり、社会に出て力を発揮し始める段階。向上心が強く、自己表現が豊かです。',
+    desc:'元服（成人式）を迎えたエネルギー（成人式・青年期）。自信と積極性が高まり、社会に出て力を発揮し始める段階。向上心が強く、自己表現が豊かです。',
     love_stars:'★★★★☆', love:'積極的に動けば恋愛が発展する時期。自信を持って行動することで相手に魅力が伝わりやすい。アプローチするなら今。',
     work_stars:'★★★★☆', work:'実力を発揮するチャンス。自信を持って動くと評価が上がる。新しいスキル習得・資格取得にも向いている。',
     action:'積極的に行動する・自信を持って発言する・スキルアップに投資する' },
   '建禄': { yomi:'けんろく', power:'最強', image:'⭐', keyword:'実力・独立・充実',
-    desc:'働き盛りの壮年期のエネルギー。自分の力が最も充実し、独立心と実力が際立つ星。自分のやり方で道を切り拓く力があります。十二運の中でも特に強い運勢。',
+    desc:'働き盛りの壮年期のエネルギー（社会人として自立）。自分の力が最も充実し、独立心と実力が際立つ星。自分のやり方で道を切り拓く力があります。十二運の中でも特に強い運勢。',
     love_stars:'★★★☆☆', love:'仕事への集中度が高まるため恋愛は後回しになりやすい。ただし自分の魅力が充実するので、気を向ければ良い縁もある。',
     work_stars:'★★★★★', work:'実力が最大限に発揮できる最高の時期。独立・起業・新しいプロジェクトの立ち上げに最適。自分のやり方で動くと最大の結果が出る。',
     action:'実力を全力で発揮する・独立・起業の検討・自分のペースで進める' },
   '帝旺': { yomi:'ていおう', power:'最強', image:'👑', keyword:'頂点・カリスマ・支配力',
-    desc:'人生の絶頂期のエネルギー。強烈なカリスマ性と支配力を持ち、周囲を動かす力があります。建禄と並ぶ最強の運勢。自己主張が強く、リーダー的存在になります。',
+    desc:'人生の絶頂期のエネルギー（人生の最盛期）。強烈なカリスマ性と支配力を持ち、周囲を動かす力があります。建禄と並ぶ最強の運勢。自己主張が強く、リーダー的存在になります。',
     love_stars:'★★★★☆', love:'存在感・カリスマ性が最大に高まる時期。自然と注目を集め、告白されることも。ただし自己主張が強くなりすぎて摩擦が出ることも。',
     work_stars:'★★★★★', work:'リーダーシップを発揮する最高のタイミング。重要な決断・プレゼン・交渉で圧倒的な力が出る。この時期の行動が長期的な評価につながる。',
     action:'リーダーとして行動する・重要な決断をする・大きな目標を掲げる' },
   '衰': { yomi:'すい', power:'中', image:'🍂', keyword:'安定・落ち着き・知恵',
-    desc:'壮年期を過ぎた円熟のエネルギー。勢いは落ちますが、経験と知恵が身につく段階。堅実で安定した行動ができ、派手さはなくても着実に結果を出します。',
+    desc:'壮年期を過ぎた円熟のエネルギー（中年〜引退準備）。勢いは落ちますが、経験と知恵が身につく段階。堅実で安定した行動ができ、派手さはなくても着実に結果を出します。',
     love_stars:'★★★☆☆', love:'激しい恋より安定した関係を求める時期。深い会話や信頼関係を育てることで縁が深まる。焦らず丁寧に向き合うことが大切。',
     work_stars:'★★★☆☆', work:'勢いより安定・継続を重視する時期。コツコツと積み上げる作業が向いている。新しいチャレンジより既存の仕事を深める方が吉。',
     action:'焦らず継続する・経験と知恵を活かす・安定を大切にする' },
   '病': { yomi:'びょう', power:'弱', image:'🌙', keyword:'繊細・感受性・内省',
-    desc:'体が弱まるエネルギー。体力的には落ちますが、精神的・芸術的な感受性が高まります。内省的で繊細な感性を持ち、クリエイティブな才能が開花しやすい面も。',
+    desc:'体が弱まるエネルギー（病気がち）。体力的には落ちますが、精神的・芸術的な感受性が高まります。内省的で繊細な感性を持ち、クリエイティブな才能が開花しやすい面も。',
     love_stars:'★★★☆☆', love:'感受性が豊かになり、相手の気持ちを深く感じ取れる時期。共感力が高まるので、心のつながりを育てる恋愛ができる。体調管理は忘れずに。',
     work_stars:'★★☆☆☆', work:'無理は禁物な時期。体調を最優先にしながら丁寧に動くこと。感性・芸術・内省が必要な仕事では力を発揮できる。',
     action:'体を大切にする・無理をしない・感性を磨く・休息を優先する' },
   '死': { yomi:'し', power:'弱', image:'🕯️', keyword:'集中・完成・一途',
-    desc:'一つの周期の終わりのエネルギー。一点集中の力があり、好きなことへの没頭力は抜群。変化を嫌う面がありますが、深く極める専門家的才能を持ちます。',
+    desc:'一つの周期の終わりのエネルギー（死を迎える）。一点集中の力があり、好きなことへの没頭力は抜群。変化を嫌う面がありますが、深く極める専門家的才能を持ちます。',
     love_stars:'★★☆☆☆', love:'新しい出会いより今ある関係を深める時期。一点集中の愛情は深いが、広げることは難しい。既存の関係を大切にすることが吉。',
     work_stars:'★★★☆☆', work:'一つのことに深く集中すると力が出る時期。広く動くより専門性を磨く・一つのプロジェクトを完成させることに向いている。',
     action:'一つのことに集中する・手放す覚悟を持つ・次のサイクルの準備をする' },
   '墓': { yomi:'ぼ', power:'中', image:'🗺️', keyword:'蓄積・執着・財運',
-    desc:'倉庫に納めるエネルギー。財を蓄える力があり、コレクター的な傾向も。表に出ないところで力を蓄え、じっくりと資産や実力を積み上げます。',
+    desc:'倉庫に納めるエネルギー（お墓に入る）。財を蓄える力があり、コレクター的な傾向も。表に出ないところで力を蓄え、じっくりと資産や実力を積み上げます。',
     love_stars:'★★☆☆☆', love:'内向きなエネルギーが強く、恋愛より自分の世界に集中しやすい時期。ただし一度縁がつながると深く長い関係になりやすい。',
     work_stars:'★★★★☆', work:'財運・蓄積に向いた時期。貯蓄・資産形成・知識のストック・地道な積み上げが吉。表には出なくても着実に力をつけることができる。',
     action:'蓄える・貯める・整理する・執着を手放す・内側を充実させる' },
   '絶': { yomi:'ぜつ', power:'弱', image:'🌌', keyword:'変化・解放・新しい始まり',
-    desc:'ゼロに戻るエネルギー。既存のものが終わり、次の始まりへの移行期。環境の変化や転換点と縁が深く、変化の多い人生になりやすいですが、そこに活路があります。',
+    desc:'ゼロに戻るエネルギー（完全に途絶える）。既存のものが終わり、次の始まりへの移行期。環境の変化や転換点と縁が深く、変化の多い人生になりやすいですが、そこに活路があります。',
     love_stars:'★★★☆☆', love:'関係の転換点が訪れやすい時期。終わる縁と新しく始まる縁が交差する。手放すことで次の出会いへの扉が開く。',
     work_stars:'★★☆☆☆', work:'今のやり方を手放す勇気が必要な時期。変化・転職・方向転換のタイミング。無理に現状維持より流れに乗って変化を受け入れる方が吉。',
     action:'手放す・変化を受け入れる・次のステージへの準備をする' },
   '胎': { yomi:'たい', power:'中', image:'🥚', keyword:'準備・可能性・秘める力',
-    desc:'母の胎内にいる段階のエネルギー。まだ表には出ていませんが、大きな可能性を内に秘めています。準備期間として充実した内面を育てている段階。',
+    desc:'母の胎内にいる段階のエネルギー（お腹の中に宿る）。まだ表には出ていませんが、大きな可能性を内に秘めています。準備期間として充実した内面を育てている段階。',
     love_stars:'★★★☆☆', love:'すぐには花開かないが、じっくり育てる縁が生まれやすい時期。焦らずゆっくり関係を育てることが大切。長い目で見ると良い縁になる。',
     work_stars:'★★★☆☆', work:'今は準備の時期。すぐに結果を求めず、土台を作ることに集中する。インプット・学習・計画立案に最適なタイミング。',
     action:'準備する・学ぶ・内側を充実させる・焦らず育てる' },
   '養': { yomi:'よう', power:'中', image:'🌿', keyword:'育まれる・守られる・素直',
-    desc:'大切に育てられる段階のエネルギー。人から助けてもらえる素直さと、周囲を和ませる温かさがあります。良い人間関係に恵まれ、サポートを受けながら成長します。',
+    desc:'大切に育てられる段階のエネルギー（お腹の中で育つ）。人から助けてもらえる素直さと、周囲を和ませる温かさがあります。良い人間関係に恵まれ、サポートを受けながら成長します。',
     love_stars:'★★★★☆', love:'周囲から助けてもらいやすい時期。素直に甘えることで関係が深まる。温かい人間関係から恋愛に発展することも。',
     work_stars:'★★★☆☆', work:'上司・先輩・メンターのサポートを受けながら成長できる時期。素直に学ぶ姿勢が評価される。無理な独立より、育ててもらえる環境で力をつける。',
     action:'素直にサポートを受ける・人に甘える・感謝を伝える・丁寧に育てる' },
@@ -16506,8 +16543,8 @@ var FRIEND_DATA = [
 {id:'msdes2mu7lzt',name:'あやの',date:'1986-05-09',time:'',timeUnknown:false,category:'友達',place:'福岡',memo:'',addedAt:1785772400214,visible:true},
 {id:'msexmf4wm637',name:'シンガポール(りいC彼氏)',date:'1992-05-27',time:'',timeUnknown:false,category:'海外',place:'シンガポール',memo:'',addedAt:1785864515360,visible:true},
 {id:'msexnug1o5ae',name:'Grant',date:'1996-05-17',time:'05:00',timeUnknown:false,category:'海外',place:'サンディエゴ',memo:'',addedAt:1785864581857,visible:true},
-{id:'msho0c45j6zo',name:'Manita',date:'2014-02-08',time:'',timeUnknown:false,category:'海外',place:'India',memo:'',addedAt:1786029766997,visible:true},
-{id:'msho59c4z3c2',name:'Lakshmi',date:'1980-01-01',time:'',timeUnknown:false,category:'海外',place:'Nepal',memo:'',addedAt:1786029996677,visible:true},
+{id:'msho0c45j6zo',name:'Manita',date:'2014-02-08',time:'',timeUnknown:false,category:'海外',place:'India',memo:'',addedAt:1786029766997,visible:false},
+{id:'msho59c4z3c2',name:'Lakshmi',date:'1980-01-01',time:'',timeUnknown:false,category:'海外',place:'Nepal',memo:'',addedAt:1786029996677,visible:false},
 {id:'mshoiwrpjpcc',name:'駿くん',date:'1986-10-09',time:'',timeUnknown:false,category:'友達（♂）',place:'',memo:'あっちゃん旦那',addedAt:1786030633573,visible:true},
 {id:'msj7ovuaet4h',name:'進撃のノア',date:'1995-01-12',time:'',timeUnknown:false,category:'有名人',place:'',memo:'',addedAt:1786123291186,visible:true},
 {id:'msj7ws0tz35l',name:'宇多田ヒカル',date:'1983-01-19',time:'01:17',timeUnknown:false,category:'有名人',place:'アメリカ(ニューヨーク・マンハッタン）',memo:'',addedAt:1786123659485,visible:true},
@@ -16687,6 +16724,48 @@ function saveFriendDataFromPaste(){
 
 /* 友達の命式を計算してキャッシュ */
 var FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {};
+
+/* 命式の日柱マークから、同じ日柱干支（例：甲辰）の友達一覧を表示 */
+function showDayPillarKanshiFriends(kanIdx, shiIdx) {
+  var KAN10dp = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  var SHI12dp = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  var label = KAN10dp[kanIdx] + SHI12dp[shiIdx];
+  var meishikis = (typeof getFriendMeishiki === 'function') ? getFriendMeishiki() : [];
+  var names = [];
+  meishikis.forEach(function(m){
+    var fd = FRIEND_DATA.find(function(d){ return d.name === m.name; });
+    if (fd && fd.hidden) return;
+    if (m.day_p && m.day_p.kan === kanIdx && m.day_p.shi === shiIdx) names.push(m.name);
+  });
+  var html = '<div style="font-size:14px;font-weight:700;color:var(--gold-light);margin-bottom:10px;">'+label+' の友達（日柱）</div>';
+  if (names.length === 0) {
+    html += '<div style="font-size:13px;color:var(--muted);">該当する友達データが見つかりませんでした。</div>';
+  } else {
+    html += (typeof buildFriendBadgeHTML === 'function' ? buildFriendBadgeHTML(names, true, null) : names.join('、'));
+  }
+  showModal(html);
+}
+
+/* 命式の月柱マークから、同じ月柱干支（例：壬辰）の友達一覧を表示 */
+function showMonthPillarKanshiFriends(kanIdx, shiIdx) {
+  var KAN10mp = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  var SHI12mp = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  var label = KAN10mp[kanIdx] + SHI12mp[shiIdx];
+  var meishikis = (typeof getFriendMeishiki === 'function') ? getFriendMeishiki() : [];
+  var names = [];
+  meishikis.forEach(function(m){
+    var fd = FRIEND_DATA.find(function(d){ return d.name === m.name; });
+    if (fd && fd.hidden) return;
+    if (m.month_p && m.month_p.kan === kanIdx && m.month_p.shi === shiIdx) names.push(m.name);
+  });
+  var html = '<div style="font-size:14px;font-weight:700;color:var(--gold-light);margin-bottom:10px;">'+label+' の友達（月柱）</div>';
+  if (names.length === 0) {
+    html += '<div style="font-size:13px;color:var(--muted);">該当する友達データが見つかりませんでした。</div>';
+  } else {
+    html += (typeof buildFriendBadgeHTML === 'function' ? buildFriendBadgeHTML(names, true, null) : names.join('、'));
+  }
+  showModal(html);
+}
 
 function getFriendMeishiki(forceYakodoki) {
   var isYak = (forceYakodoki !== undefined) ? forceYakodoki : (typeof window._yakodoki !== 'undefined' ? window._yakodoki : false);
@@ -18098,7 +18177,9 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
     var kc = kanClass(p.kan);
     var dayEx = i === 2 ? ' day' : '';
     var kanName = KAN10[p.kan];
-    return "<td class=\"".concat(cols[i], " kan").concat(dayEx, " ").concat(kc, "\">\n        <span class=\"kan-pill\" onclick=\"openKanPanel('").concat(kanName, "',").concat(i, ",'").concat(month_p ? SHI12[month_p.shi] : "", "','").concat([year_p, month_p, day_p, hour_p][i] ? SHI12[[year_p, month_p, day_p, hour_p][i].shi] : "", "')\">").concat(kanName, "</span>\n      </td>");
+    var dayStarMark = (i === 2 && day_p) ? "<span onclick=\"event.stopPropagation();showDayPillarKanshiFriends(".concat(day_p.kan, ",").concat(day_p.shi, ")\" style=\"position:absolute;top:50%;left:4px;transform:translateY(-50%);display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;cursor:pointer;z-index:2;\" title=\"\u65E5\u67F1\u304C\u540C\u3058\u53CB\u9054\u3092\u898B\u308B\">\ud83d\udd2f</span>") : '';
+    var monthStarMark = (i === 1 && month_p) ? "<span onclick=\"event.stopPropagation();showMonthPillarKanshiFriends(".concat(month_p.kan, ",").concat(month_p.shi, ")\" style=\"position:absolute;top:50%;left:4px;transform:translateY(-50%);display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;cursor:pointer;z-index:2;\" title=\"\u6708\u67F1\u304C\u540C\u3058\u53CB\u9054\u3092\u898B\u308B\">\ud83d\udd2f</span>") : '';
+    return "<td class=\"".concat(cols[i], " kan").concat(dayEx, " ").concat(kc, "\" style=\"position:relative;\">\n        ").concat(dayStarMark).concat(monthStarMark, "\n        <span class=\"kan-pill\" onclick=\"openKanPanel('").concat(kanName, "',").concat(i, ",'").concat(month_p ? SHI12[month_p.shi] : "", "','").concat([year_p, month_p, day_p, hour_p][i] ? SHI12[[year_p, month_p, day_p, hour_p][i].shi] : "", "')\">").concat(kanName, "</span>\n      </td>");
   }).join(''), "\n  </tr>");
 
   // 3行目: 地支（タップで中央ポップアップ）
@@ -18441,26 +18522,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
     }).join('<br>'), "</div>\n              </div>\n            </div>\n            <div style=\"font-size:0.65rem;letter-spacing:0.2em;color:var(--sk-silver-dim);margin-bottom:0.4rem;\">\u4E94\u884C\u304B\u3089\u898B\u305F\u95A2\u4FC2\u6027</div>\n            <div class=\"tenkan-gogyo-row\">\n              ").concat(d.gogyo_rel.map(function (r) {
       return "<div class=\"tenkan-gogyo-item\">".concat(r, "</div>");
     }).join(''), "\n            </div>\n          </div>");
-  }).join(''), "\n      </div>\n    </div>\n\n    <div class=\"interp-card\" style=\"grid-column: 1 / -1;\">\n      <div class=\"interp-card-title\">\u5341 \u4E8C \u904B \u306E \u89E3 \u8AAC</div>\n      <div style=\"display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0.8rem;margin-top:0.3rem;\">\n        ").concat(pillars.map(function (p, i) {
-    if (!p) return '';
-    var j = jyu12[i];
-    var jc = jyu12Class(j);
-    var descs = {
-      '長生': '生まれたばかりの旺盛な生命力。新しいことへの適応力が高い。',
-      '沐浴': '入浴のように心身をリセット。変化に富み、行動力があるが移り気な面も。',
-      '冠帯': '成長著しい時期を象徴。向上心と野心が強く、積極的に自己を磨く。',
-      '建禄': '活動の絶頂期。自立心と実行力が強く、仕事への誠実さが光る。',
-      '帝旺': '最大の力と権力を象徴。強い意志と支配力。リーダーとして輝く星。',
-      '衰': '緩やかな衰退期。落ち着きと安定感が増し、経験と知恵で補う。',
-      '病': '心身の疲弊を示す。繊細で感受性が高く、芸術的才能が開花しやすい。',
-      '死': '一つの終わりと変化。深い内省と精神性。静かな強さを秘める。',
-      '墓': '蓄積と保管を象徴。堅実で保守的。財を守り積み上げる力がある。',
-      '絶': '完全な消滅と再生の前段階。霊感や直感が鋭く、神秘的な力を持つ。',
-      '胎': '新たな生命の宿り。可能性に満ちた種子。物事の始まりを示す。',
-      '養': '大切に育てられる段階。温かい人間関係と恵まれた環境に縁がある。'
-    };
-    return "<div style=\"background:rgba(0,0,0,0.2);border:1px solid rgba(184,150,46,0.1);padding:0.8rem;border-radius:2px;\">\n            <div style=\"font-size:0.65rem;letter-spacing:0.2em;color:var(--sk-silver-dim);margin-bottom:0.2rem;\">".concat(labels[i], "</div>\n            <div class=\"jyunsei-cell ").concat(jc, "\" style=\"font-size:1rem;margin-bottom:0.3rem;\">").concat(j, "</div>\n            <div style=\"font-size:0.72rem;color:var(--sk-silver);line-height:1.7;\">").concat(descs[j] || '', "</div>\n          </div>");
-  }).filter(Boolean).join(''), "\n      </div>\n    </div>\n  </div>");
+  }).join(''), "\n      </div>\n    </div>\n  </div>");
 
   // ========================================================
 
@@ -19032,7 +19094,17 @@ function openJyu12Panel(name, context){
   document.getElementById('hjTitle').textContent = name + '　' + d.image;
   document.getElementById('hjYomi').textContent = '（' + d.yomi + '）';
   document.getElementById('hjBadge').textContent = d.keyword;
-  var html = '<p style="font-size:12px;line-height:1.8;color:var(--text);margin-bottom:10px;">'+d.desc+'</p>';
+  var html = '';
+  // 十二運全体のエネルギーの強さ（★5段階）
+  if (typeof SHICHUU_JYU12_SCORE !== 'undefined' && SHICHUU_JYU12_SCORE[name] !== undefined && typeof scoreToStars === 'function') {
+    var energyScore = SHICHUU_JYU12_SCORE[name];
+    var energyStars = scoreToStars(energyScore);
+    html += '<div style="margin-bottom:10px;padding:8px 12px;background:rgba(184,168,255,0.08);border-radius:8px;border:1px solid rgba(184,168,255,0.2);display:flex;justify-content:space-between;align-items:center;">'
+      + '<span style="font-size:11px;color:var(--muted);">⚡ エネルギーの強さ</span>'
+      + '<span style="font-size:14px;color:#b8a8ff;letter-spacing:1px;">'+energyStars+'</span>'
+      + '</div>';
+  }
+  html += '<p style="font-size:12px;line-height:1.8;color:var(--text);margin-bottom:10px;">'+d.desc+'</p>';
   html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">';
   if(d.love_stars) {
     html += '<div style="padding:8px 10px;background:rgba(255,100,150,0.08);border-radius:8px;border:1px solid rgba(255,100,150,0.2);">'
@@ -19934,6 +20006,7 @@ function toggleSakurakoText(btn) {
       <label style="font-size:11px;color:var(--muted);display:block;margin-bottom:4px;">カテゴリー</label>
       <select id="edit-friend-category" style="width:100%;padding:8px;background:rgba(20,30,60,0.9);border:1px solid rgba(255,255,255,0.15);border-radius:8px;color:var(--text);font-size:12px;box-sizing:border-box;">
         <option value="友達">友達</option>
+        <option value="友達（♂）">友達（♂）</option>
         <option value="親しい友人">親しい友人</option>
         <option value="身内">身内</option>
         <option value="先祖">先祖</option>
@@ -19941,6 +20014,9 @@ function toggleSakurakoText(btn) {
         <option value="お客様">お客様</option>
         <option value="仕事関係">仕事関係</option>
         <option value="友人">友人</option>
+        <option value="友達の子供">友達の子供</option>
+        <option value="有名人">有名人</option>
+        <option value="海外">海外</option>
         <option value="その他">その他</option>
       </select>
     </div>
