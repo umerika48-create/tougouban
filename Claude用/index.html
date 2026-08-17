@@ -16738,6 +16738,13 @@ function saveFriendDataFromPaste(){
 var FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {};
 
 /* 命式の日柱マークから、同じ日柱干支（例：甲辰）の友達一覧を表示 */
+/* 60干支（甲子〜癸亥）の組み合わせそのものが持つ意味・特徴のラベル
+   まだ全部は埋まっていません。分かったものから少しずつ追加していきます */
+var KANSHI_KEYWORD = {
+  '甲寅': '去る者追わず'
+};
+
+/* 命式の日柱マークから、同じ日柱干支（例：甲辰）の友達一覧を表示 */
 function showDayPillarKanshiFriends(kanIdx, shiIdx) {
   var KAN10dp = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
   var SHI12dp = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
@@ -16749,7 +16756,13 @@ function showDayPillarKanshiFriends(kanIdx, shiIdx) {
     if (fd && fd.hidden) return;
     if (m.day_p && m.day_p.kan === kanIdx && m.day_p.shi === shiIdx) names.push(m.name);
   });
-  var html = '<div style="font-size:14px;font-weight:700;color:var(--gold-light);margin-bottom:10px;">'+label+' の友達（日柱）</div>';
+  var kw = KANSHI_KEYWORD[label];
+  var html = '<div style="font-size:14px;font-weight:700;color:var(--gold-light);margin-bottom:4px;">'+label+' の友達（日柱）</div>';
+  if (kw) {
+    html += '<div style="font-size:12px;color:#b8a8ff;margin-bottom:10px;">「'+kw+'」</div>';
+  } else {
+    html += '<div style="margin-bottom:10px;"></div>';
+  }
   if (names.length === 0) {
     html += '<div style="font-size:13px;color:var(--muted);">該当する友達データが見つかりませんでした。</div>';
   } else {
@@ -16770,7 +16783,13 @@ function showMonthPillarKanshiFriends(kanIdx, shiIdx) {
     if (fd && fd.hidden) return;
     if (m.month_p && m.month_p.kan === kanIdx && m.month_p.shi === shiIdx) names.push(m.name);
   });
-  var html = '<div style="font-size:14px;font-weight:700;color:var(--gold-light);margin-bottom:10px;">'+label+' の友達（月柱）</div>';
+  var kw2 = KANSHI_KEYWORD[label];
+  var html = '<div style="font-size:14px;font-weight:700;color:var(--gold-light);margin-bottom:4px;">'+label+' の友達（月柱）</div>';
+  if (kw2) {
+    html += '<div style="font-size:12px;color:#b8a8ff;margin-bottom:10px;">「'+kw2+'」</div>';
+  } else {
+    html += '<div style="margin-bottom:10px;"></div>';
+  }
   if (names.length === 0) {
     html += '<div style="font-size:13px;color:var(--muted);">該当する友達データが見つかりませんでした。</div>';
   } else {
@@ -17305,7 +17324,7 @@ function buildFriendBadgeHTML(names, showUnknown, colIdx) {
 /* ======= 柱×干の説明データ（さくらこ専用） ======= */
 var PILLAR_KAN_DESC = {
   '甲': {
-    short: ['生まれつき、芯がある','外で発揮される才能が、まっすぐ','あなた自身が、曲げない人','晩年に向けて、ぶれない軸がある'],
+    short: ['生まれつき、芯がある','外で発揮される才能が、まっすぐ','自分の軸を曲げない','晩年に向けて、ぶれない軸がある'],
     detail: [
       '小さい頃から「これは違う」って感じることが人より多くなかったですか？周りに合わせているように見えても、芯のところは全然動いていない。なんとなく自分でも感じていませんか？それ、生まれ持った気質ですよ。',
       '才能の出し方がまっすぐですね。遠回りより直進したいタイプで、自分のやり方を貫いた方が力が出る。器用に立ち回るより信念を通した方がうまくいく、そういう方ですよ。',
@@ -18515,7 +18534,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   if (_bsTime) _birthDisplay += ' ' + _bsTime;
   if (_bsPlace) _birthDisplay += '（' + _bsPlace + '）';
   if (_bsAge) _birthDisplay += '（' + _bsAge + '）';
-  var html = (hideTabs ? '' : _toggleHTML) + "\n  <div class=\"result-title fade-in\">\n    <h2>\u547D \u5F0F \u8868</h2>\n    <div class=\"person-name\">".concat(_birthDisplay, "\u751F</div>\n    ").concat(personName ? '<div style="font-size:0.65rem;color:var(--sk-silver-dim);opacity:0.7;margin-top:2px;">' + personName + '</div>' : '', "\n  </div>\n\n  <div class=\"meishiki-wrapper fade-in\">\n    <table class=\"meishiki-table ").concat(noHourClass, "\">\n      ").concat(tableRows, "\n    </table>\n  </div>\n\n  <div class=\"kuubo-card fade-in\">\n    <div class=\"kuubo-title\">\u7A7A \u4EA1\uFF08\u5929 \u4E2D \u6BBA\uFF09</div>\n    <div class=\"kuubo-content\">\n      <div class=\"kuubo-shi\">\n        ").concat(kuuboNames.map(function (s) {
+  var html = (hideTabs ? '' : _toggleHTML) + "\n  <div class=\"result-title fade-in\">\n    <h2>\u547D \u5F0F \u8868</h2>\n    <div class=\"person-name\">".concat(_birthDisplay, "\u751F</div>\n    ").concat(personName ? '<div style="font-size:0.75rem;letter-spacing:0.3em;color:var(--sk-silver);margin-top:0.4rem;">' + personName + '</div>' : '', "\n  </div>\n\n  <div class=\"meishiki-wrapper fade-in\">\n    <table class=\"meishiki-table ").concat(noHourClass, "\">\n      ").concat(tableRows, "\n    </table>\n  </div>\n\n  <div class=\"kuubo-card fade-in\">\n    <div class=\"kuubo-title\">\u7A7A \u4EA1\uFF08\u5929 \u4E2D \u6BBA\uFF09</div>\n    <div class=\"kuubo-content\">\n      <div class=\"kuubo-shi\">\n        ").concat(kuuboNames.map(function (s) {
     return "<span class=\"kuubo-badge\">".concat(s, "</span>");
   }).join('<span class="kuubo-sep">・</span>'), "\n      </div>\n      <div class=\"kuubo-note\">\n        \u65E5\u67F1\u300C").concat(KAN10[day_p.kan]).concat(SHI12[day_p.shi], "\u300D\u304C\u5C5E\u3059\u308B\u65EC\u306E\u7A7A\u4EA1\u5730\u652F\u3067\u3059\u3002\n        ").concat(kuuboInPillars.length > 0 ? "\u547D\u5F0F\u4E2D\u306B\u7A7A\u4EA1\u5730\u652F\uFF08".concat(kuuboInPillars.map(function (p) {
     return SHI12[p.shi];
@@ -19309,10 +19328,22 @@ function openKanPanel(kanName, colIdx, monthShi, ownShi){
   if(pd && pd.short && pd.short[colIdx]) {
     kanLabelHTML += '<div style="margin-bottom:6px;padding:4px 0;">'
       + '<span style="display:inline-block;padding:4px 14px;border-radius:20px;font-size:13px;font-weight:600;background:rgba(180,150,46,0.12);color:var(--sk-gold-light);border:1px solid rgba(180,150,46,0.3);">'
-      + pd.short[colIdx] + '</span></div>';
+      + pd.short[colIdx] + '</span>'
+      + ((typeof KAN_LABELS !== 'undefined' && KAN_LABELS[kanName]) ? KAN_LABELS[kanName].map(function(l){
+          return ' <span style="display:inline-block;margin:2px 3px;padding:4px 10px;border-radius:12px;font-size:12px;background:rgba(61,184,86,0.12);color:var(--text);border:1px solid rgba(61,184,86,0.25);">' + l + '</span>';
+        }).join('') : '')
+      + '</div>';
+  } else if(typeof KAN_LABELS !== 'undefined' && KAN_LABELS[kanName]) {
+    kanLabelHTML += '<div style="margin-bottom:6px;padding:4px 0;">' +
+      KAN_LABELS[kanName].map(function(l){
+        return '<span style="display:inline-block;margin:2px 3px;padding:4px 10px;border-radius:12px;font-size:12px;background:rgba(61,184,86,0.12);color:var(--text);border:1px solid rgba(61,184,86,0.25);">' + l + '</span>';
+      }).join('') + '</div>';
   }
   // 全柱：干×月支の組み合わせを表示（春の終わりの壬、など）
-  if(monthShi && typeof MOON_KAN_DESC !== 'undefined') {
+  // ただし日柱（colIdx=2）でCHOKO_SEASON_DESCにも同じ干×支のデータがある場合は、
+  // より詳しい日柱専用ブロック（このすぐ下）だけを表示し、こちらは重複を避けるためスキップする
+  var hasChokoSeasonForThis = (colIdx === 2 && typeof CHOKO_SEASON_DESC !== 'undefined' && CHOKO_SEASON_DESC[kanName] && monthShi && CHOKO_SEASON_DESC[kanName][monthShi]);
+  if(monthShi && typeof MOON_KAN_DESC !== 'undefined' && !hasChokoSeasonForThis) {
     var mkd = MOON_KAN_DESC[kanName] && MOON_KAN_DESC[kanName][monthShi];
     var msc3 = (typeof SHI_SEASON_COLORS !== 'undefined' && SHI_SEASON_COLORS[monthShi]) ? SHI_SEASON_COLORS[monthShi] : null;
     var mkColor = msc3 ? msc3.color : 'var(--sk-gold-light)';
@@ -19362,12 +19393,6 @@ function openKanPanel(kanName, colIdx, monthShi, ownShi){
           '</div>' : '') +
         '</div>';
     }
-  }
-  if(typeof KAN_LABELS !== 'undefined' && KAN_LABELS[kanName]) {
-    kanLabelHTML += '<div style="margin-bottom:10px;">' +
-      KAN_LABELS[kanName].map(function(l){
-        return '<span style="display:inline-block;margin:2px 3px;padding:4px 10px;border-radius:12px;font-size:12px;background:rgba(61,184,86,0.12);color:var(--text);border:1px solid rgba(61,184,86,0.25);">' + l + '</span>';
-      }).join('') + '</div>';
   }
   var kanDetailHTML = mainDesc ? '<details style="margin-top:4px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">▶ 干支の詳細・解説</summary><p style="font-size:12px;line-height:1.8;color:var(--text);margin-top:6px;">' + mainDesc + '</p>' + chokoBaseHTML + '</details>' : chokoBaseHTML;
   document.getElementById('hjDesc').innerHTML = friendTopHTML + kanLabelHTML + kanDetailHTML;
