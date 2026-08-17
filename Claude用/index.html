@@ -18296,16 +18296,36 @@ var TSUHENSEI_GOGYOU_FLAVOR = {
   // 他の9星（比肩・劫財・食神・偏財・正財・偏官・正官・偏印・印綬）は今後追加
 };
 
-/* 命式全体で最も強い五行を判定（月令ボーナス込み） */
+/* 命式全体の五行バランスを判定する
+   - 1つが断然強い → { type: 'single', elements: [その五行] }
+   - 僅差で2〜3個が拮抗し、かつ他より明らかに高い → { type: 'multi', elements: [それらの五行] }
+   - 全体的に均等（満遍なく） → { type: 'neutral', elements: [] } */
 function calcDominantGogyou(pillars) {
   var balance = calcBalance(pillars);
   var seasonEl = SEASON_WANG_ENGINE[SHI12[pillars[1].shi]];
-  var best = '木', bestScore = -1;
-  ['木', '火', '土', '金', '水'].forEach(function (g) {
-    var score = balance[g] + (g === seasonEl ? balance[g] * 0.5 : 0);
-    if (score > bestScore) { bestScore = score; best = g; }
+  var elems = ['木', '火', '土', '金', '水'];
+  var scores = {};
+  elems.forEach(function (g) {
+    scores[g] = balance[g] + (g === seasonEl ? balance[g] * 0.5 : 0);
   });
-  return best;
+  var sorted = elems.slice().sort(function (a, b) { return scores[b] - scores[a]; });
+  var maxScore = scores[sorted[0]];
+  var minScore = scores[sorted[4]];
+  var TIE_EPS = 0.5;      // この差以内なら「並んでいる」とみなす
+  var NEUTRAL_RANGE = 1.0; // 全体の最大差がこれ以下なら「満遍なく」＝中立
+
+  if (maxScore - minScore <= NEUTRAL_RANGE) {
+    return { type: 'neutral', elements: [] };
+  }
+  var group = elems.filter(function (g) { return maxScore - scores[g] <= TIE_EPS; });
+  if (group.length >= 4) {
+    // ほぼ全体が高い＝特定の色というより満遍なく強い状態なので中立扱い
+    return { type: 'neutral', elements: [] };
+  }
+  if (group.length === 1) {
+    return { type: 'single', elements: group };
+  }
+  return { type: 'multi', elements: group };
 }
 
 /* pillars = [年柱, 月柱, 日柱, 時柱]（{kan,shi}のインデックス、時柱はnull可） */
@@ -18545,10 +18565,20 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   var _tsuEngine = calcTsuuhenseiEngine(nik, pillars);
   var _tsuByName = {};
   _tsuEngine.forEach(function (r) { _tsuByName[r.name] = r; });
-  var _dominantEl = calcDominantGogyou(pillars);
+  var _dominantResult = calcDominantGogyou(pillars);
   // 月柱の通変星（フレーバー判定の元）を先に取得しておく（日柱セルで使うため）
   var _monthHenseiForFlavor = hensei[1];
-  var _flavorForDay = TSUHENSEI_GOGYOU_FLAVOR[_monthHenseiForFlavor] ? TSUHENSEI_GOGYOU_FLAVOR[_monthHenseiForFlavor][_dominantEl] : null;
+  var _flavorBadgesForDay = '';
+  if (_dominantResult.type === 'neutral') {
+    _flavorBadgesForDay = '<span onclick="event.stopPropagation();showGogyouFlavorDetail(\'' + _monthHenseiForFlavor + '\',\'neutral\')" style="display:inline-block;padding:1px 8px;border-radius:999px;background:#8A8A82;color:#fff;font-size:9px;font-weight:500;cursor:pointer;">バランス型</span>';
+  } else if (TSUHENSEI_GOGYOU_FLAVOR[_monthHenseiForFlavor]) {
+    _flavorBadgesForDay = _dominantResult.elements.map(function (el) {
+      var fl = TSUHENSEI_GOGYOU_FLAVOR[_monthHenseiForFlavor][el];
+      if (!fl) return '';
+      var clr = GOGYOU_ELEMENT_COLOR[el];
+      return '<span onclick="event.stopPropagation();showGogyouFlavorDetail(\'' + _monthHenseiForFlavor + '\',\'' + el + '\')" style="display:inline-block;margin:1px;padding:1px 7px;border-radius:999px;background:' + clr + ';color:#fff;font-size:8px;font-weight:500;cursor:pointer;">' + fl.keyword + '</span>';
+    }).join('');
+  }
   tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u901A\u5909\u661F')\">\u2461\u901A\u5909\u661F</td>\n    ".concat(hensei.map(function (h, i) {
     if (!pillars[i]) return "<td class=\"".concat(cols[i], " hour-col hensei-cell\">\u2014</td>");
     var dayStyle = i === 2 ? 'color:var(--sk-gold-light);font-weight:500;' : '';
@@ -18556,9 +18586,8 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
     if (i === 2) {
       // 日柱は常に「日主」固定表示だが、五行フレーバーのデータがある場合は
       // そちらのバッジに差し替えてスペースを有効活用する（月柱セルの混雑を避けるため）
-      if (_flavorForDay) {
-        var _dayFlColor = GOGYOU_ELEMENT_COLOR[_dominantEl];
-        return "<td class=\"".concat(cols[i], " hensei-cell\" style=\"").concat(dayStyle, "\"><span onclick=\"event.stopPropagation();showGogyouFlavorDetail('").concat(_monthHenseiForFlavor, "','").concat(_dominantEl, "')\" style=\"display:inline-block;padding:1px 8px;border-radius:999px;background:").concat(_dayFlColor, ";color:#fff;font-size:9px;font-weight:500;cursor:pointer;\">").concat(_flavorForDay.keyword, "</span></td>");
+      if (_flavorBadgesForDay) {
+        return "<td class=\"".concat(cols[i], " hensei-cell\" style=\"").concat(dayStyle, "\">").concat(_flavorBadgesForDay, "</td>");
       }
       return "<td class=\"".concat(cols[i], " hensei-cell\" style=\"").concat(dayStyle, "\"><span style=\"font-size:0.65rem;color:var(--sk-gold-dark);display:block;\">\u65E5 \u4E3B</span></td>");
     }
@@ -20208,6 +20237,15 @@ function getSeasonEffect(nichiGo, moonShi) {
 
 /* 五行フレーバーバッジをタップした時の、口癖セリフ付き詳細パネル */
 function showGogyouFlavorDetail(name, element) {
+  if (element === 'neutral') {
+    var html2 =
+      '<div style="font-size:15px;font-weight:700;color:var(--sk-gold-light);margin-bottom:10px;">月柱「' + name + '」の出方</div>' +
+      '<div style="display:inline-block;padding:4px 12px;border-radius:999px;background:#8A8A82;color:#fff;font-size:13px;font-weight:500;margin-bottom:12px;">バランス型</div>' +
+      '<div style="font-size:13px;color:var(--text);line-height:1.8;background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 12px;">五行バランスが特定の要素に偏っておらず、満遍なく整っています。状況や相手によって、出方が一色に固定されず多面的に表れやすいタイプです。</div>' +
+      '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:12px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">※命式の五行バランスで最も強い五行によって、同じ通変星でも出方の色（表現のされ方）が変わります。</div>';
+    showModal(html2);
+    return;
+  }
   var data = TSUHENSEI_GOGYOU_FLAVOR[name] && TSUHENSEI_GOGYOU_FLAVOR[name][element];
   if (!data) return;
   var color = GOGYOU_ELEMENT_COLOR[element];
