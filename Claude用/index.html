@@ -5190,6 +5190,41 @@ function runShichuu() {
       + '</div>';
   }
 
+  function getFriendsByHensei(henseiName, colIdx) {
+    var meishikis = getFriendMeishiki();
+    var result = [];
+    meishikis.forEach(function(m){
+      var fd = FRIEND_DATA.find(function(d){ return d.name === m.name; });
+      if(fd && fd.hidden) return;
+      if(!m.day_p) return;
+      var p = [m.year_p, m.month_p, m.day_p, m.hour_p][colIdx];
+      if(!p) return;
+      var h = calcHensei(m.day_p.kan, p.kan);
+      if(h === henseiName) result.push(m.name);
+    });
+    return result;
+  }
+
+  function makeHenseiTagSection(title, colIdx) {
+    var list = ['比肩','劫財','食神','傷官','偏財','正財','偏官','正官','偏印','印綬'];
+    var tags = list.map(function(item){
+      var friends = getFriendsByHensei(item, colIdx);
+      var count = friends.length;
+      var key = 'tag_' + colIdx + '_hensei_' + item;
+      window._shichuuTagData[key] = { label: item, friends: friends, colIdx: colIdx };
+      return '<div style="display:inline-block;margin:3px;position:relative;">'
+        + '<button onclick="showShichuuFriendPopup(\'' + key + '\')" style="padding:8px 14px;border-radius:14px;font-size:15px;font-weight:500;border:1px solid rgba(184,150,46,0.4);background:rgba(184,150,46,0.08);color:var(--sk-gold-light);cursor:pointer;min-width:52px;position:relative;">'
+        + item
+        + (count > 0 ? '<span style="position:absolute;top:-5px;right:-5px;background:#e74c3c;color:#fff;border-radius:50%;width:18px;height:18px;font-size:10px;line-height:18px;text-align:center;font-weight:700;">' + count + '</span>' : '')
+        + '</button>'
+        + '</div>';
+    }).join('');
+    return '<div style="margin-bottom:20px;">'
+      + '<div style="font-size:13px;color:var(--sk-gold-light);font-weight:700;margin-bottom:10px;padding-left:8px;border-left:3px solid var(--sk-gold-light);">' + title + '</div>'
+      + '<div style="display:flex;flex-wrap:wrap;">' + tags + '</div>'
+      + '</div>';
+  }
+
   function getFriendsByKanShi(kanIdx, shiIdx, colIdx) {
     var meishikis = getFriendMeishiki();
     var result = [];
@@ -5241,6 +5276,7 @@ function runShichuu() {
     + (function(){ makeKanShiTagData(2); makeKanShiTagData(1); return ''; })()  // 日柱・月柱の組み合わせデータを裏で用意（干タップ時のタブ用）
     + makeTagSection('月干', KAN10, 1, true)
     + makeTagSection('日干', KAN10, 2, true)
+    + makeHenseiTagSection('通変星（月柱）', 1)
     + makeTagSection('月支', SHI12, 1, false)
     + makeTagSection('日支', SHI12, 2, false)
     + makeKanShiTagSection('日柱（干支の組み合わせ）', 2)
