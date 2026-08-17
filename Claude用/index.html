@@ -18454,30 +18454,22 @@ var TSUHENSEI_GOGYOU_FLAVOR = {
   }
 };
 
-/* 命式全体の五行バランスを判定する
+/* 命式全体の五行バランスを判定する（五行バランスカードに表示される「生の数字」だけで判定し、
+   月令ボーナスなどの見えない補正は加えない。さくらこさんが実際にカードを見て確認できる数字と
+   必ず一致させるため）
    - 1つが断然強い → { type: 'single', elements: [その五行] }
    - 僅差で2〜3個が拮抗し、かつ他より明らかに高い → { type: 'multi', elements: [それらの五行] }
-   - 全体的に均等（満遍なく） → { type: 'neutral', elements: [] } */
+   - ほぼ全体が横並び（満遍なく） → { type: 'neutral', elements: [] } */
 function calcDominantGogyou(pillars) {
-  var balance = calcBalance(pillars);
-  var seasonEl = SEASON_WANG_ENGINE[SHI12[pillars[1].shi]];
+  var balance = calcBalance(pillars); // 五行バランスカードと同じ、天干+地支の単純カウント（月令ボーナスなし）
   var elems = ['木', '火', '土', '金', '水'];
-  var scores = {};
-  elems.forEach(function (g) {
-    scores[g] = balance[g] + (g === seasonEl ? balance[g] * 0.5 : 0);
-  });
-  var sorted = elems.slice().sort(function (a, b) { return scores[b] - scores[a]; });
-  var maxScore = scores[sorted[0]];
-  var minScore = scores[sorted[4]];
-  var TIE_EPS = 0.5;      // この差以内なら「並んでいる」とみなす
-  var NEUTRAL_RANGE = 1.0; // 全体の最大差がこれ以下なら「満遍なく」＝中立
+  var sorted = elems.slice().sort(function (a, b) { return balance[b] - balance[a]; });
+  var maxScore = balance[sorted[0]];
+  var TIE_EPS = 0.5; // この差以内なら「並んでいる」とみなす
 
-  if (maxScore - minScore <= NEUTRAL_RANGE) {
-    return { type: 'neutral', elements: [] };
-  }
-  var group = elems.filter(function (g) { return maxScore - scores[g] <= TIE_EPS; });
+  var group = elems.filter(function (g) { return maxScore - balance[g] <= TIE_EPS; });
   if (group.length >= 4) {
-    // ほぼ全体が高い＝特定の色というより満遍なく強い状態なので中立扱い
+    // ほぼ全部が横並び＝満遍なく強い状態なので中立扱い
     return { type: 'neutral', elements: [] };
   }
   if (group.length === 1) {
