@@ -17346,7 +17346,8 @@ function toggleFriendHidden(name) {
 }
 
 function getFriendsWithKan(kanIdx, colIdx) {
-  var meishikis = getFriendMeishiki();
+  var meishikis = getFriendMeishiki(false);
+  var meishikis23 = (colIdx === 2) ? getFriendMeishiki(true) : null;
   var result = [];
   for(var i=0; i<meishikis.length; i++) {
     var m = meishikis[i];
@@ -17355,14 +17356,24 @@ function getFriendsWithKan(kanIdx, colIdx) {
     if(fd && fd.hidden) continue;
     var pillars = [m.year_p, m.month_p, m.day_p, m.hour_p];
     var p = pillars[colIdx];
-    if(p && p.kan === kanIdx) result.push(m.name);
+    var match0 = p && p.kan === kanIdx;
+    var match23 = false;
+    // 日柱（colIdx===2）は時刻不明の場合、0時/23時どちらか一方でも
+    // 当てはまれば漏れなく含める
+    if (colIdx === 2 && fd && (!fd.time || fd.timeUnknown)) {
+      var m23 = meishikis23.find(function(x){ return x.name === m.name; });
+      var p23 = m23 && m23.day_p;
+      match23 = p23 && p23.kan === kanIdx;
+    }
+    if(match0 || match23) result.push(m.name);
   }
   return result;
 }
 
 /* 特定の柱×地支に一致する友達を返す */
 function getFriendsWithShi(shiIdx, colIdx) {
-  var meishikis = getFriendMeishiki();
+  var meishikis = getFriendMeishiki(false);
+  var meishikis23 = (colIdx === 2) ? getFriendMeishiki(true) : null;
   var result = [];
   for(var i=0; i<meishikis.length; i++) {
     var m = meishikis[i];
@@ -17370,24 +17381,47 @@ function getFriendsWithShi(shiIdx, colIdx) {
     if(fd && fd.hidden) continue;
     var pillars = [m.year_p, m.month_p, m.day_p, m.hour_p];
     var p = pillars[colIdx];
-    if(p && p.shi === shiIdx) result.push(m.name);
+    var match0 = p && p.shi === shiIdx;
+    var match23 = false;
+    if (colIdx === 2 && fd && (!fd.time || fd.timeUnknown)) {
+      var m23 = meishikis23.find(function(x){ return x.name === m.name; });
+      var p23 = m23 && m23.day_p;
+      match23 = p23 && p23.shi === shiIdx;
+    }
+    if(match0 || match23) result.push(m.name);
   }
   return result;
 }
 
-/* 特定の柱×通変星に一致する友達を返す */
+/* 特定の柱×通変星に一致する友達を返す
+   ※通変星は日主（日柱の天干）との関係で決まるため、柱の位置に関わらず
+   時刻不明の友達は0時/23時どちらの日主で計算しても対応できるようにする */
 function getFriendsWithHensei(henseiName, colIdx) {
-  var meishikis = getFriendMeishiki();
+  var meishikis0 = getFriendMeishiki(false);
+  var meishikis23 = getFriendMeishiki(true);
   var result = [];
-  for(var i=0; i<meishikis.length; i++) {
-    var m = meishikis[i];
-    var pillars = [m.year_p, m.month_p, m.day_p, m.hour_p];
-    var nik = m.day_p ? m.day_p.kan : 0;
-    var p = pillars[colIdx];
-    if(p) {
-      var h = calcHensei(nik, p.kan);
-      if(h === henseiName) result.push(m.name);
+  for(var i=0; i<meishikis0.length; i++) {
+    var m = meishikis0[i];
+    var fd = FRIEND_DATA.find(function(d){ return d.name === m.name; });
+    if(fd && fd.hidden) continue;
+    var isUnknown = !!(fd && (!fd.time || fd.timeUnknown));
+    var pillars0 = [m.year_p, m.month_p, m.day_p, m.hour_p];
+    var p0 = pillars0[colIdx];
+    var match0 = false, match23 = false;
+    if (p0 && m.day_p) {
+      var h0 = calcHensei(m.day_p.kan, p0.kan);
+      match0 = (h0 === henseiName);
     }
+    if (isUnknown) {
+      var m23 = meishikis23.find(function(x){ return x.name === m.name; });
+      var pillars23 = m23 && [m23.year_p, m23.month_p, m23.day_p, m23.hour_p];
+      var p23 = pillars23 && pillars23[colIdx];
+      if (p23 && m23.day_p) {
+        var h23 = calcHensei(m23.day_p.kan, p23.kan);
+        match23 = (h23 === henseiName);
+      }
+    }
+    if (match0 || match23) result.push(m.name);
   }
   return result;
 }
@@ -19682,7 +19716,9 @@ function openHenseiPanel(name, context){
   }
   var hFriendHTML = '';
   if(colIdxH !== -1){
-    var isDayHensei = (colIdxH === 2 || colIdxH === 3);
+    // 通変星は日主（日柱の天干）との関係で決まるため、どの柱をタップしても
+    // 時刻不明の友達は日主が変わりうる。柱に関わらず常に⚠️表示の対象にする
+    var isDayHensei = true;
     var hFriends = getFriendsWithHensei(name, colIdxH);
     if(hFriends.length > 0){
       var hFriendNames = hFriends.filter(function(n){ var fd=FRIEND_DATA.find(function(d){return d.name===n;}); return fd&&fd.category!=='有名人'; });
