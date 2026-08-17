@@ -18270,6 +18270,140 @@ function calcBalance(pillars){
 }
 
 // ========================================================
+//  通変星・出現度解析エンジン
+//  「五行としての強さ」「配置・構造としての強さ」「相対的な出現度」を
+//  分けて算出し、命式全体を比較した上で★1〜5と判定理由を返す。
+// ========================================================
+var TSUHENSEI_LIST = ['比肩', '劫財', '食神', '傷官', '偏財', '正財', '偏官', '正官', '偏印', '印綬'];
+var TSUHENSEI_GROUP = { '比肩': '比劫', '劫財': '比劫', '食神': '食傷', '傷官': '食傷', '偏財': '財星', '正財': '財星', '偏官': '官殺', '正官': '官殺', '偏印': '印星', '印綬': '印星' };
+// 生む方向： 印星→比劫→食傷→財星→官殺→（印星）
+var TSUHENSEI_GEN_NEXT = { '印星': '比劫', '比劫': '食傷', '食傷': '財星', '財星': '官殺', '官殺': '印星' };
+// 剋す方向： 官殺→比劫、比劫→財星、財星→印星、印星→食傷、食傷→官殺
+var TSUHENSEI_CTRL_NEXT = { '官殺': '比劫', '比劫': '財星', '財星': '印星', '印星': '食傷', '食傷': '官殺' };
+var SEASON_WANG_ENGINE = { '寅': '木', '卯': '木', '辰': '土', '巳': '火', '午': '火', '未': '土', '申': '金', '酉': '金', '戌': '土', '亥': '水', '子': '水', '丑': '土' };
+
+/* pillars = [年柱, 月柱, 日柱, 時柱]（{kan,shi}のインデックス、時柱はnull可） */
+function calcTsuuhenseiEngine(nik, pillars) {
+  // ①五行としての強さ（命式の五行バランス＋月令ボーナス）
+  var balance = calcBalance(pillars);
+  var monthShiName = SHI12[pillars[1].shi];
+  var seasonEl = SEASON_WANG_ENGINE[monthShiName];
+  var elementScore = {};
+  ['木', '火', '土', '金', '水'].forEach(function (g) {
+    elementScore[g] = balance[g] + (g === seasonEl ? balance[g] * 0.5 : 0);
+  });
+
+  // 通変星→天干インデックスの対応（日主が決まれば1対1で決まる）
+  var stemOfHensei = {};
+  for (var k = 0; k < 10; k++) { stemOfHensei[calcHensei(nik, k)] = k; }
+
+  // ②配置・構造としての強さ
+  var structureScore = {};
+  var detail = {};
+  TSUHENSEI_LIST.forEach(function (name) {
+    structureScore[name] = 0;
+    detail[name] = { toukan: [], zougan: [], konpon: 0 };
+  });
+
+  var posLabel = ['年干', '月干', '日干', '時干'];
+  var branchLabel = ['年支', '月支', '日支', '時支'];
+  var posWeight = [15, 25, 0, 15]; // 日柱は日主自身との比較になるため対象外（0）
+  pillars.forEach(function (p, i) {
+    if (!p || i === 2) return;
+    var hn = calcHensei(nik, p.kan);
+    structureScore[hn] += posWeight[i];
+    detail[hn].toukan.push(posLabel[i]);
+  });
+
+  var roleWeight = { 0: 5, 1: 10, 2: 20 }; // ZOUGANは[余気,中気,正気]の順
+  var roleLabel = { 0: '余気', 1: '中気', 2: '正気' };
+  pillars.forEach(function (p, i) {
+    if (!p) return;
+    var zg = ZOUGAN[p.shi];
+    for (var ri = 0; ri < 3; ri++) {
+      var kanIdx = zg[ri];
+      if (kanIdx === null || kanIdx === undefined) continue;
+      var hn2 = calcZouganHensei(nik, kanIdx);
+      var w = roleWeight[ri] * (i === 1 ? 1.5 : 1); // 月柱の蔵干は月令に直結するため1.5倍
+      structureScore[hn2] += w;
+      detail[hn2].zougan.push(branchLabel[i] + roleLabel[ri]);
+    }
+  });
+
+  // 通根（同じ五行が、いずれかの柱の蔵干にあるか。柱ごとに1回まで）
+  TSUHENSEI_LIST.forEach(function (name) {
+    var el = STEM_EL_SANMEI[KAN10[stemOfHensei[name]]];
+    var rootCount = 0;
+    pillars.forEach(function (p) {
+      if (!p) return;
+      var zg = ZOUGAN[p.shi];
+      for (var ri = 0; ri < 3; ri++) {
+        var kanIdx = zg[ri];
+        if (kanIdx === null || kanIdx === undefined) continue;
+        if (STEM_EL_SANMEI[KAN10[kanIdx]] === el) { rootCount++; break; }
+      }
+    });
+    detail[name].konpon = rootCount;
+    structureScore[name] += rootCount * 5;
+  });
+
+  // ⑦⑧生じられる関係・剋される関係
+  var adjust = {};
+  TSUHENSEI_LIST.forEach(function (name) {
+    var group = TSUHENSEI_GROUP[name];
+    var genGroup = null, ctrlGroup = null;
+    for (var gk in TSUHENSEI_GEN_NEXT) { if (TSUHENSEI_GEN_NEXT[gk] === group) genGroup = gk; }
+    for (var ck in TSUHENSEI_CTRL_NEXT) { if (TSUHENSEI_CTRL_NEXT[ck] === group) ctrlGroup = ck; }
+    var groupStrength = function (g) {
+      var members = TSUHENSEI_LIST.filter(function (n) { return TSUHENSEI_GROUP[n] === g; });
+      if (!members.length) return 0;
+      return members.reduce(function (s, n) { return s + elementScore[STEM_EL_SANMEI[KAN10[stemOfHensei[n]]]]; }, 0) / members.length;
+    };
+    var genStrength = genGroup ? groupStrength(genGroup) : 0;
+    var ctrlStrength = ctrlGroup ? groupStrength(ctrlGroup) : 0;
+    adjust[name] = { genBonus: genStrength * 1.5, ctrlPenalty: ctrlStrength * 1.2, genGroup: genGroup, ctrlGroup: ctrlGroup };
+  });
+
+  // ③通変星としての相対的な出現度（総合スコア）
+  var results = TSUHENSEI_LIST.map(function (name) {
+    var stemIdx = stemOfHensei[name];
+    var el = STEM_EL_SANMEI[KAN10[stemIdx]];
+    var eScore = elementScore[el];
+    var sScore = structureScore[name];
+    var gBonus = adjust[name].genBonus;
+    var cPenalty = adjust[name].ctrlPenalty;
+    var total = eScore * 0.6 + sScore * 1.0 + gBonus - cPenalty;
+    return { name: name, element: el, elementScore: eScore, structureScore: sScore, genBonus: gBonus, ctrlPenalty: cPenalty, genGroup: adjust[name].genGroup, ctrlGroup: adjust[name].ctrlGroup, total: total, detail: detail[name] };
+  });
+
+  results.sort(function (a, b) { return b.total - a.total; });
+  var starMap = [5, 5, 4, 4, 3, 3, 2, 2, 1, 1]; // 命式全体を比較した相対順位で★を決定
+  results.forEach(function (r, idx) { r.star = starMap[idx]; r.rank = idx + 1; });
+
+  return results;
+}
+
+/* 判定理由テキストを生成（実際に確認できた根拠のみを記載する） */
+function buildTsuuhenseiReasonHTML(entry, allResults) {
+  var d = entry.detail;
+  var lines = [];
+  if (d.toukan.length) lines.push('天干に透干（' + d.toukan.join('・') + '）');
+  if (d.zougan.length) lines.push('蔵干に配置（' + d.zougan.join('・') + '）');
+  if (d.konpon > 0) lines.push('地支に通根（' + d.konpon + '柱）');
+  if (entry.genBonus > 3 && entry.genGroup) lines.push('生じる要素（' + entry.genGroup + '）から勢いを受けている');
+  if (entry.ctrlPenalty > 3 && entry.ctrlGroup) lines.push('剋す要素（' + entry.ctrlGroup + '）から抑えられている面がある');
+  if (!lines.length) lines.push('天干・蔵干のいずれにも目立った配置がなく、通根も弱い');
+
+  var betterCount = allResults.filter(function (r) { return r.total > entry.total; }).length;
+  var compareLine = betterCount === 0
+    ? '命式内の10通変星の中で最も出現度が高い'
+    : '命式内の他の通変星と比べると、出現度は10星中' + (betterCount + 1) + '番目';
+
+  return lines.map(function (l) { return '<div style="font-size:11px;color:var(--text);line-height:1.7;padding-left:1em;text-indent:-1em;">・' + l + '</div>'; }).join('') +
+    '<div style="font-size:11px;color:var(--sk-gold-light);margin-top:6px;">・' + compareLine + '</div>';
+}
+
+// ========================================================
 //  HTML描画
 // ========================================================
 function kanClass(kan_idx){
@@ -18380,38 +18514,28 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
 
   // 5行目: 通変星（天干）
   var pillarLabels = ['年柱', '月柱', '日柱', '時柱'];
+  // 出現度解析エンジンの呼び出し引数（★評価・評価バッジ・解析バッジで共通利用）
+  var _engArgs = nik + ',[' + [year_p ? year_p.kan : -1, month_p.kan, day_p.kan, hour_p ? hour_p.kan : -1].join(',') + '],[' + [year_p ? year_p.shi : -1, month_p.shi, day_p.shi, hour_p ? hour_p.shi : -1].join(',') + ']';
+  var _tsuEngine = calcTsuuhenseiEngine(nik, pillars);
+  var _tsuByName = {};
+  _tsuEngine.forEach(function (r) { _tsuByName[r.name] = r; });
   tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u901A\u5909\u661F')\">\u2461\u901A\u5909\u661F</td>\n    ".concat(hensei.map(function (h, i) {
     if (!pillars[i]) return "<td class=\"".concat(cols[i], " hour-col hensei-cell\">\u2014</td>");
     var dayStyle = i === 2 ? 'color:var(--sk-gold-light);font-weight:500;' : '';
     var ctx = pillarLabels[i] + 'の通変星';
     if (i === 2) return "<td class=\"".concat(cols[i], " hensei-cell\" style=\"").concat(dayStyle, "\"><span style=\"font-size:0.65rem;color:var(--sk-gold-dark);display:block;\">\u65E5 \u4E3B</span></td>");
-    // 月柱の通変星が「性格として出やすい」条件を満たすかチェック
-    // ※チャッピーさんの指摘を踏まえ、「五行としての強さ（十二運スコア）」を
-    //   主要因子にはしない。優先順位に沿って、
-    //   ①月支の蔵干・正気が同じ通変星か（＝月令を得ているか）を最重要視し、
-    //   ④命式内（天干）に同じ通変星が重複しているかを補助的に見る。
-    //   ②天干透干・③月柱にある、はこの行を見ている時点で自動的に満たされるため
-    //   別途の判定材料にはしていない。
-    // ※以前入れていた「食神・傷官は身弱だと除外」ルールは削除。
-    //   日干丙・月干己(傷官)・月支正気も己(傷官)のように、身弱でも
-    //   月令一致という配置そのもので性格に強く出るケースがあるため
-    //   （チャッピーさんの助言・実際の人物像との一致から判断）。
-    var monthWarn = false;
-    var _rootMatch = false, _isDupe = false, _zgMain = null;
-    if (i === 1 && h) {
-      _zgMain = (typeof zgHensei !== 'undefined' && zgHensei[1] && zgHensei[1][0] && zgHensei[1][0].isMain) ? zgHensei[1][0].hensei : null;
-      _rootMatch = (_zgMain === h); // ①月支蔵干・正気が同じ通変星（月令を得ている）
-      // ④命式内の重複（日柱自身は日主と比較して必ず「比肩」になる自明な値のため、
-      //   重複判定の対象からは除外する。年柱・時柱にのみ同じ通変星があるかを見る）
-      _isDupe = (hensei[0] === h) || (hensei[3] === h);
-      monthWarn = _rootMatch || _isDupe;
+    // 月柱の通変星に、出現度解析エンジンによる★評価を表示する
+    var starHtml = '';
+    if (i === 1 && h && _tsuByName[h]) {
+      var _entry = _tsuByName[h];
+      var _starText = new Array(_entry.star + 1).join('\u2605') + new Array(6 - _entry.star).join('\u2606');
+      starHtml = '<span onclick="event.stopPropagation();showTsuuhenseiReason(' + _engArgs + ',\'' + h + '\')" style="display:block;font-size:9px;letter-spacing:1px;color:var(--sk-gold-light);margin-top:2px;cursor:pointer;" title="タップで判定理由を見る">' + _starText + '</span>';
     }
-    var warnMark = monthWarn ? '<span onclick="event.stopPropagation();showHenseiWarnReason(\'' + h + '\',' + _rootMatch + ',' + _isDupe + ')" style="position:absolute;top:50%;left:4px;transform:translateY(-50%);font-size:11px;line-height:1;cursor:pointer;" title="タップで理由を見る">\u26A0\uFE0F</span>' : '';
-    return "<td class=\"".concat(cols[i], " hensei-cell\"").concat(monthWarn ? ' style="position:relative;"' : '', ">\n        ").concat(warnMark, "\n        <span class=\"hj-pill\" onclick=\"openHenseiPanel('").concat(h, "','").concat(ctx, "')\" style=\"").concat(function () {
+    return "<td class=\"".concat(cols[i], " hensei-cell\">\n        <span class=\"hj-pill\" onclick=\"openHenseiPanel('").concat(h, "','").concat(ctx, "')\" style=\"").concat(function () {
       if (typeof getHenseiColor !== 'function' || typeof window._lastIsShinkyou === 'undefined') return '';
       var hc = getHenseiColor(h, window._lastIsShinkyou);
       return 'color:' + hc.color + ';background:' + hc.bg + ';border:1px solid ' + hc.border + ';border-radius:8px;padding:1px 6px;';
-    }(), "\">").concat(h, "</span>\n      </td>");
+    }(), "\">").concat(h, "</span>\n        ").concat(starHtml, "\n      </td>");
   }).join(''), "\n  </tr>");
 
   // 6行目: 蔵干通変星
@@ -18710,7 +18834,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   if (_bsTime) _birthDisplay += ' ' + _bsTime;
   if (_bsPlace) _birthDisplay += '（' + _bsPlace + '）';
   if (_bsAge) _birthDisplay += '（' + _bsAge + '）';
-  var html = (hideTabs ? '' : _toggleHTML) + "\n  <div class=\"result-title fade-in\">\n    <h2>\u547D \u5F0F \u8868</h2>\n    <div class=\"person-name\">".concat(_birthDisplay, "\u751F</div>\n    ").concat(personName ? '<div style="font-size:0.75rem;letter-spacing:0.3em;color:var(--sk-silver);margin-top:0.4rem;">' + personName + '</div>' : '', "\n  </div>\n\n  <div class=\"meishiki-wrapper fade-in\">\n    <table class=\"meishiki-table ").concat(noHourClass, "\">\n      ").concat(tableRows, "\n    </table>\n  </div>\n\n  <div class=\"kuubo-card fade-in\">\n    <div class=\"kuubo-title\">\u7A7A \u4EA1\uFF08\u5929 \u4E2D \u6BBA\uFF09</div>\n    <div class=\"kuubo-content\">\n      <div class=\"kuubo-shi\">\n        ").concat(kuuboNames.map(function (s) {
+  var html = (hideTabs ? '' : _toggleHTML) + "\n  <div class=\"result-title fade-in\">\n    <h2>\u547D \u5F0F \u8868</h2>\n    <div class=\"person-name\">".concat(_birthDisplay, "\u751F</div>\n    ").concat(personName ? '<div style="font-size:0.75rem;letter-spacing:0.3em;color:var(--sk-silver);margin-top:0.4rem;">' + personName + '</div>' : '', "\n  </div>\n\n  <div class=\"meishiki-wrapper fade-in\">\n    <table class=\"meishiki-table ").concat(noHourClass, "\">\n      ").concat(tableRows, "\n    </table>\n  </div>\n\n  <div style=\"display:flex;gap:8px;justify-content:center;margin:10px 0;\">\n    <button onclick=\"showTsuuhenseiRanking(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(184,150,46,.4);background:rgba(184,150,46,.1);color:var(--sk-gold-light);font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDCCA \u8A55\u4FA1</button>\n    <button onclick=\"showTsuuhenseiFullAnalysis(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(168,154,255,.5);background:rgba(168,154,255,.1);color:#b8a8ff;font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDD0D \u89E3\u6790</button>\n  </div>\n\n  <div class=\"kuubo-card fade-in\">\n    <div class=\"kuubo-title\">\u7A7A \u4EA1\uFF08\u5929 \u4E2D \u6BBA\uFF09</div>\n    <div class=\"kuubo-content\">\n      <div class=\"kuubo-shi\">\n        ").concat(kuuboNames.map(function (s) {
     return "<span class=\"kuubo-badge\">".concat(s, "</span>");
   }).join('<span class="kuubo-sep">・</span>'), "\n      </div>\n      <div class=\"kuubo-note\">\n        \u65E5\u67F1\u300C").concat(KAN10[day_p.kan]).concat(SHI12[day_p.shi], "\u300D\u304C\u5C5E\u3059\u308B\u65EC\u306E\u7A7A\u4EA1\u5730\u652F\u3067\u3059\u3002\n        ").concat(kuuboInPillars.length > 0 ? "\u547D\u5F0F\u4E2D\u306B\u7A7A\u4EA1\u5730\u652F\uFF08".concat(kuuboInPillars.map(function (p) {
     return SHI12[p.shi];
@@ -20044,26 +20168,75 @@ function getSeasonEffect(nichiGo, moonShi) {
   return '通常';
 }
 
-/* 月柱の通変星に⚠️が付いた理由を表示するミニパネル */
-function showHenseiWarnReason(h, rootMatch, isDupe) {
-  var reasons = '';
-  if (rootMatch) {
-    reasons += '<div style="margin-bottom:10px;padding:8px 10px;background:rgba(184,150,46,0.08);border-radius:8px;border-left:3px solid var(--sk-gold-light);">' +
-      '<div style="font-size:12px;font-weight:700;color:var(--sk-gold-light);margin-bottom:3px;">✅ 月令を得ている</div>' +
-      '<div style="font-size:11px;color:var(--text);line-height:1.7;">月支の蔵干・正気が同じ「' + h + '」のため、月柱の天干に出た「' + h + '」が根を持っている状態です。五行としての強さ（十二運など）に関わらず、この配置そのものが「' + h + '」の性質を性格として出やすくします。</div>' +
-      '</div>';
+/* 出現度解析エンジンの呼び出し引数から、pillars配列を再構築する共通ヘルパー */
+function _rebuildPillarsForEngine(nik, pKan, pShi) {
+  var pillars = [];
+  for (var i = 0; i < 4; i++) {
+    pillars.push(pKan[i] === -1 ? null : { kan: pKan[i], shi: pShi[i] });
   }
-  if (isDupe) {
-    reasons += '<div style="margin-bottom:10px;padding:8px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border-left:3px solid #b8a8ff;">' +
-      '<div style="font-size:12px;font-weight:700;color:#b8a8ff;margin-bottom:3px;">✅ 命式内で重複している</div>' +
-      '<div style="font-size:11px;color:var(--text);line-height:1.7;">同じ「' + h + '」が命式内の他の柱にも出ているため、その性質が繰り返し強調されて出やすくなります。</div>' +
-      '</div>';
-  }
+  return pillars;
+}
+
+/* 月柱の通変星★評価をタップした時の、個別の判定理由ミニパネル */
+function showTsuuhenseiReason(nik, pKan, pShi, name) {
+  var pillars = _rebuildPillarsForEngine(nik, pKan, pShi);
+  var results = calcTsuuhenseiEngine(nik, pillars);
+  var entry = null;
+  for (var i = 0; i < results.length; i++) { if (results[i].name === name) { entry = results[i]; break; } }
+  if (!entry) return;
+  var starText = new Array(entry.star + 1).join('★') + new Array(6 - entry.star).join('☆');
   var html =
-    '<div style="font-size:15px;font-weight:700;color:var(--sk-gold-light);margin-bottom:4px;">\u26A0\uFE0F 月柱「' + h + '」が性格に出やすい理由</div>' +
-    '<div style="font-size:11px;color:var(--muted);margin-bottom:12px;">通変星の「性格としての出やすさ」を、五行の強弱とは分けて判定しています。</div>' +
-    reasons +
-    '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);line-height:1.6;">※判定は月令（月支蔵干・正気との一致）と重複を中心に見ており、五行バランス上の強弱だけでは判断していません。生剋関係など、さらに細かい要素までは今のところ加味していません。</div>';
+    '<div style="font-size:15px;font-weight:700;color:var(--sk-gold-light);margin-bottom:2px;">月柱「' + name + '」の出現度</div>' +
+    '<div style="font-size:16px;letter-spacing:2px;color:var(--sk-gold-light);margin-bottom:10px;">' + starText + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:10px;">五行としての強さ・配置構造としての強さ・命式内での相対的な出現度を分けて判定しています。</div>' +
+    buildTsuuhenseiReasonHTML(entry, results) +
+    '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">※★は「命式全体の中でどれだけ独立した存在感を持っているか」の相対評価です。五行バランス単体の強弱だけでは判断していません。</div>';
+  showModal(html);
+}
+
+/* 📊評価バッジ：命式全体の通変星・出現度ランキング */
+function showTsuuhenseiRanking(nik, pKan, pShi) {
+  var pillars = _rebuildPillarsForEngine(nik, pKan, pShi);
+  var results = calcTsuuhenseiEngine(nik, pillars);
+  var top3 = results.slice(0, 3);
+  var bottom3 = results.slice(-3).reverse();
+  var medals = ['🥇', '🥈', '🥉'];
+  var rowHtml = function (list) {
+    return list.map(function (r, i) {
+      var starText = new Array(r.star + 1).join('★') + new Array(6 - r.star).join('☆');
+      return '<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;">' +
+        '<span style="font-size:14px;">' + medals[i] + '</span>' +
+        '<span style="font-size:13px;font-weight:700;color:var(--text);min-width:3.5em;">' + r.name + '</span>' +
+        '<span style="font-size:12px;letter-spacing:1px;color:var(--sk-gold-light);">' + starText + '</span>' +
+        '</div>';
+    }).join('');
+  };
+  var html =
+    '<div style="font-size:15px;font-weight:700;color:var(--sk-gold-light);margin-bottom:12px;">通変星・出現度ランキング</div>' +
+    '<div style="font-size:12px;font-weight:700;color:#ff9d5c;margin-bottom:4px;">🔥 強く出やすい</div>' +
+    rowHtml(top3) +
+    '<div style="font-size:12px;font-weight:700;color:#8fb8ff;margin-top:12px;margin-bottom:4px;">🌙 弱く出やすい</div>' +
+    rowHtml(bottom3) +
+    '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:12px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">※命式内の10通変星を相対比較して順位付けしています。単純な星の数だけでは決めていません。</div>';
+  showModal(html);
+}
+
+/* 🔍解析バッジ：全10通変星の★評価と判定理由をまとめて表示 */
+function showTsuuhenseiFullAnalysis(nik, pKan, pShi) {
+  var pillars = _rebuildPillarsForEngine(nik, pKan, pShi);
+  var results = calcTsuuhenseiEngine(nik, pillars);
+  var html = '<div style="font-size:15px;font-weight:700;color:var(--sk-gold-light);margin-bottom:12px;">通変星・出現度 解析</div>';
+  results.forEach(function (r) {
+    var starText = new Array(r.star + 1).join('★') + new Array(6 - r.star).join('☆');
+    html += '<div style="margin-bottom:14px;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:8px;border-left:3px solid ' + (r.star >= 4 ? 'var(--sk-gold-light)' : r.star <= 2 ? '#8fb8ff' : 'rgba(255,255,255,0.2)') + ';">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+      '<span style="font-size:13px;font-weight:700;color:var(--text);">' + r.name + '</span>' +
+      '<span style="font-size:12px;letter-spacing:1px;color:var(--sk-gold-light);">' + starText + '</span>' +
+      '</div>' +
+      buildTsuuhenseiReasonHTML(r, results) +
+      '</div>';
+  });
+  html += '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:4px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">※五行としての強さ・配置構造としての強さ・命式内での相対的な出現度を分けて分析しています。存在しない配置は理由に含めていません。</div>';
   showModal(html);
 }
 
