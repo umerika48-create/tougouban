@@ -5274,9 +5274,9 @@ function runShichuu() {
     + '<div style="font-size:11px;color:var(--muted);margin-bottom:16px;">タップすると友達名が表示されます</div>'
     + (function(){ FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {}; return ''; })()  // ここでキャッシュクリア
     + (function(){ makeKanShiTagData(2); makeKanShiTagData(1); return ''; })()  // 日柱・月柱の組み合わせデータを裏で用意（干タップ時のタブ用）
+    + makeHenseiTagSection('通変星（月柱）', 1)
     + makeTagSection('月干', KAN10, 1, true)
     + makeTagSection('日干', KAN10, 2, true)
-    + makeHenseiTagSection('通変星（月柱）', 1)
     + makeTagSection('月支', SHI12, 1, false)
     + makeTagSection('日支', SHI12, 2, false)
     + makeKanShiTagSection('日柱（干支の組み合わせ）', 2)
