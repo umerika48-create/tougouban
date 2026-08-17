@@ -1757,8 +1757,9 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     </div>
     <h1>Sakuraco<br>占星術</h1>
     <p class="subtitle" style="font-size:11px;letter-spacing:.25em;color:rgba(255,255,255,.25);font-style:italic;">Astrology by Sakuraco</p>
-    <div style="text-align:center;margin-top:8px;">
+    <div style="text-align:center;margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
       <button type="button" onclick="openFriendDataManager()" style="padding:5px 14px;border-radius:12px;border:1px solid rgba(201,168,76,.4);background:rgba(201,168,76,.1);color:#c9a84c;font-size:11px;font-weight:700;cursor:pointer;">👥 友達データ管理</button>
+      <button type="button" onclick="openStudyMode()" style="padding:5px 14px;border-radius:12px;border:1px solid rgba(168,154,255,.5);background:rgba(168,154,255,.1);color:#b8a8ff;font-size:11px;font-weight:700;cursor:pointer;">📖 勉強モード</button>
     </div>
   </header>
 
@@ -16249,12 +16250,12 @@ var CHOKO_SEASON_DESC = {
 
 /* ======= 基本性格カード ラベルデータ ======= */
 var KAN_LABELS = {
-  '甲': ['芯が強い','曲げない','まっすぐ','自分で決める','生命力がある'],
-  '乙': ['柔らかくしなやか','どんな環境にも馴染む','絶対に曲げないラインがある','人に合わせるのが得意','表は柔らかく内側は芯がある','しなやかに迂回する'],
+  '甲': ['芯が強い','曲げない','まっすぐ','自分で決める','生命力がある','自分の言い分を通す'],
+  '乙': ['柔らかくしなやか','どんな環境にも馴染む','絶対に曲げないラインがある','人に合わせるのが得意','表は柔らかく内側は芯がある','しなやかに迂回する','自分の言い分を上手く通す','交渉上手'],
   '丙': ['いるだけで場が明るい','表裏がない','場の温度を上げる','自然と人が集まる','本質から出ている明るさ'],
   '丁': ['じわじわ人の心に届く','派手でないのに記憶に残る','消えない炎の芯がある','近づいた人だけが知る深さ','時間が経つほど好きになられる'],
-  '戊': ['どっしりした安定感','周りが揺れても動じない','懐が深い','そばにいると安心','山のような存在感'],
-  '己': ['人の気持ちをよく察する','言わなくてもわかる','人の気持ちを受け止める','気づいたら人を育てている','感受性が豊か'],
+  '戊': ['どっしりした安定感','周りが揺れても動じない','懐が深い','そばにいると安心','山のような存在感','自分の考えを貫く'],
+  '己': ['人の気持ちをよく察する','言わなくてもわかる','人の気持ちを受け止める','気づいたら人を育てている','感受性が豊か','相手や状況に合わせる'],
   '庚': ['決断が速くぶれない','白黒はっきりしている','切れ味がある','鋭い判断力がある','潔い・すっきり決める','ハッキリ言う','正義感が強い'],
   '辛': ['細部にこだわる','本物を見抜くセンス','繊細で傷つきやすい','本物にこだわる','磨かれるほど美しくなる'],
   '壬': ['スケールが大きい','枠に収まらない','発想が周りと違う','大局を見る','スケールが人と違う'],
@@ -16264,11 +16265,11 @@ var KAN_LABELS = {
 var SHI_LABELS = {
   '子': ['場の空気を敏感に読む','繊細で感受性が高い','賢くて記憶力がいい','静かに待てる・動くときは素早い','観察力と分析力がある','感情を表に出さない','行動が読みづらい','合理的','事実をそのまま伝える','頭で考える','臨機応変'],
   '丑': ['コツコツ積み上げる','急がない・焦らない','でも止まらない','粘り強い','頑張り屋さん'],
-  '寅': ['行動力がある','考えるより先に動く','度胸がある','直感が鋭い','勢いがある'],
+  '寅': ['行動力がある','考えるより先に動く','度胸がある','直感が鋭い','勢いがある','自分で決めて動く'],
   '卯': ['気づいたら人が集まる','いるだけで場が和む','押しつけがましくない温かさ','自然体で人を引き寄せる','居心地がいいと言われる','おしゃべり好き','寂しがり屋','平和主義'],
-  '辰': ['大きな可能性が眠っている','まだ出し切れていない力','スケールが周りと違う','これからどんどん開花する','本番はこれから','「こうしたい」がある','粘り強い','理想や未来を見る'],
+  '辰': ['大きな可能性が眠っている','まだ出し切れていない力','スケールが周りと違う','これからどんどん開花する','本番はこれから','「こうしたい」がある','粘り強い','理想や未来を見る','掘り下げる'],
   '巳': ['直感が鋭い・本質を見抜く','初対面でも相手がわかる','内側に秘めた熱さがある','表は落ち着いて内側は鋭い','第六感が働く'],
-  '午': ['情熱的で裏表がない','感じたことが正直に出る','情熱が表に出る','全力投球する','燃え尽きるくらい本気になれる'],
+  '午': ['情熱的で裏表がない','感じたことが正直に出る','情熱が表に出る','全力投球する','燃え尽きるくらい本気になれる','勢いよく主張'],
   '未': ['面倒見がいい・放っておけない','仲間意識が強い','人のために動ける','温かくて尽くせる','諦めない粘り強さがある','相手に気を遣う','穏やかに過ごしたい','空気を読む'],
   '申': ['頭の回転が速い','状況をすぐ読める','機転が利く・器用','臨機応変に対応できる','チャンスを逃さない'],
   '酉': ['こだわりが強い','本物を見抜くセンス','審美眼が高い','細部が気になる','完璧主義なところがある','内側を見せない'],
@@ -16283,7 +16284,7 @@ var HENSEI_LABELS = {
   '比肩': ['独立心が強い','自分の道を行く','人に頼らない','こだわりがある','ぶれない'],
   '劫財': ['負けず嫌い','ライバル意識が強い','競争心がある','頑張り屋','向上心が強い'],
   '食神': ['自由でのびやか','楽しむことが得意','表現力がある','マイペース','おおらか','喋り出すと止まらない','面白い話が好き'],
-  '傷官': ['感性が鋭い','完璧主義','既存の枠を壊す','クリエイティブ','こだわりが強い'],
+  '傷官': ['感性が鋭い','完璧主義','既存の枠を壊す','クリエイティブ','こだわりが強い','毒舌','正論','ツッコミ','批判','言語化','表現','改善'],
   '偏財': ['行動力がある','人脈が広い','フットワークが軽い','社交的','チャンスをつかむ'],
   '正財': ['堅実','コツコツ積み上げる','安定を大切にする','真面目','計画的'],
   '偏官': ['プレッシャーに強い','反骨精神がある','追い込まれると燃える','負けず嫌い','チャレンジ精神'],
@@ -16741,7 +16742,9 @@ var FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {};
 /* 60干支（甲子〜癸亥）の組み合わせそのものが持つ意味・特徴のラベル
    まだ全部は埋まっていません。分かったものから少しずつ追加していきます */
 var KANSHI_KEYWORD = {
-  '甲寅': '去る者追わず'
+  '甲寅': '去る者追わず',
+  '甲午': '自分を追わせたい／自分の言い分を主張する',
+  '甲戌': '自分の言い分を譲らない'
 };
 
 /* 命式の日柱マークから、同じ日柱干支（例：甲辰）の友達一覧を表示 */
@@ -16977,6 +16980,157 @@ function showFriendMeishiki(name, isYakodoki) {
 function closeFriendMeishikiModal() {
   var modal = document.getElementById('friend-meishiki-modal');
   if(modal) modal.style.display = 'none';
+}
+
+/* ======= 勉強モード（命式読み取りトレーニング） ======= */
+var STUDY_MODE_COUNT = 3;
+
+function openStudyMode() {
+  if (typeof closeModal === 'function') { closeModal(); }
+  var modal = document.getElementById('study-mode-modal');
+  if (!modal) { alert('勉強モードを表示できませんでした'); return; }
+  modal.style.display = 'flex';
+  renderStudyModeCards();
+}
+
+function closeStudyModeModal() {
+  var modal = document.getElementById('study-mode-modal');
+  if (modal) modal.style.display = 'none';
+}
+
+/* 友達データ帳から、非表示・本人を除いてランダムにn人選ぶ */
+function pickRandomStudyFriends(n) {
+  var pool = FRIEND_DATA.filter(function(f) {
+    return f && f.date && !f.hidden && f.category !== '本人';
+  });
+  for (var i = pool.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var tmp = pool[i]; pool[i] = pool[j]; pool[j] = tmp;
+  }
+  return pool.slice(0, Math.min(n, pool.length));
+}
+
+/* 勉強モードのカードをランダムに生成して表示（生年月日・名前は伏せる） */
+/* 命式フルHTMLから「命式表・五行バランス」だけを抜き出す */
+function extractStudyCardSections(fullHtml) {
+  var tmp = document.createElement('div');
+  tmp.innerHTML = fullHtml;
+  var out = '';
+
+  var titleEl = tmp.querySelector('.result-title');
+  if (titleEl) out += titleEl.outerHTML;
+
+  var meishikiEl = tmp.querySelector('.meishiki-wrapper');
+  if (meishikiEl) out += meishikiEl.outerHTML;
+
+  // 五行バランスカードを取得
+  // ※ buildShichuuCardHTML内のreorderResultCardsで基本性格と五行バランスの順番が
+  //   入れ替わっているため、見出しテキストで特定して取得する（空白文字が
+  //   間に入っているため除去してから判定）。
+  var gogyoCard = null;
+  var cardTitles = tmp.querySelectorAll('.interp-card-title');
+  for (var ti = 0; ti < cardTitles.length; ti++) {
+    var _t = cardTitles[ti].textContent.replace(/\s+/g, '');
+    if (_t.indexOf('五行') !== -1) {
+      gogyoCard = cardTitles[ti].closest('.interp-card');
+      break;
+    }
+  }
+  if (gogyoCard) out += gogyoCard.outerHTML;
+  return out;
+}
+
+/* 指定idxの1枚だけを、その時点の0時/23時モードに従って計算・マスク生成する */
+function buildStudyCardHTML(idx) {
+  var f = window._studyModePicks[idx];
+  if (!f) return '';
+  var unknown = !f.time || f.timeUnknown;
+  var isYak = !!(window._studyModeYakodoki && window._studyModeYakodoki[idx]);
+  var timeStr;
+  if (unknown) {
+    timeStr = isYak ? 'FORCE_UNKNOWN' : '12:00';
+    window._yakodoki = isYak; // buildShichuuCardHTML内の翌日切替判定に使われるグローバル
+  } else {
+    timeStr = f.time;
+  }
+  var cityData = (f.place && typeof lookupCity === 'function') ? lookupCity(f.place) : null;
+  var cardHtml = '';
+  try {
+    var fullHtml = buildShichuuCardHTML(f.date, timeStr, cityData, false, true);
+    cardHtml = extractStudyCardSections(fullHtml);
+  } catch (e) {
+    cardHtml = '<div style="font-size:12px;color:var(--muted);">命式を計算できませんでした</div>';
+  }
+
+  var unknownNote = unknown ? '（時刻不明・' + (isYak ? '23時モード' : '0時モード（正午）') + '）' : ' ' + f.time;
+  var answerText = f.name + '　（' + f.date + unknownNote + '）';
+  window._studyModeAnswers[idx] = answerText;
+
+  var maskId = 'study-mask-' + idx;
+  var btnId = 'study-reveal-btn-' + idx;
+  var maskedHtml = cardHtml.replace(/<div class="person-name">([\s\S]*?)<\/div>/,
+    '<div class="person-name">' +
+    '<span id="' + maskId + '" style="letter-spacing:1px;color:var(--muted);font-size:0.85em;">🔒 生年月日・名前は非表示</span> ' +
+    '<button id="' + btnId + '" onclick="revealStudyAnswer(' + idx + ')" style="margin-left:8px;padding:2px 10px;border-radius:10px;font-size:10px;border:1px solid rgba(184,150,46,0.5);background:rgba(184,150,46,0.15);color:var(--sk-gold-light);cursor:pointer;">👁 表示</button>' +
+    '</div>'
+  );
+
+  var switchHtml = '';
+  if (unknown) {
+    var btn0Style = 'flex:1;padding:5px;border-radius:8px;font-size:10px;cursor:pointer;border:1px solid rgba(184,150,46,' + (!isYak ? '0.8' : '0.3') + ');background:rgba(184,150,46,' + (!isYak ? '0.2' : '0.05') + ');color:var(--sk-gold-light);font-weight:' + (!isYak ? '700' : '400') + ';';
+    var btn23Style = 'flex:1;padding:5px;border-radius:8px;font-size:10px;cursor:pointer;border:1px solid rgba(184,150,46,' + (isYak ? '0.8' : '0.3') + ');background:rgba(184,150,46,' + (isYak ? '0.2' : '0.05') + ');color:var(--sk-gold-light);font-weight:' + (isYak ? '700' : '400') + ';';
+    switchHtml = '<div style="font-size:10px;color:var(--muted);margin-bottom:4px;">⏱ 時刻不明のため2パターンで確認できます</div>' +
+      '<div style="display:flex;gap:6px;margin-bottom:10px;">' +
+      '<button style="' + btn0Style + '" onclick="setStudyYakodoki(' + idx + ',false)">0時（正午計算）</button>' +
+      '<button style="' + btn23Style + '" onclick="setStudyYakodoki(' + idx + ',true)">23時</button>' +
+      '</div>';
+  }
+
+  return switchHtml + maskedHtml;
+}
+
+/* 0時/23時モードを切り替えて、該当カードだけを再描画する */
+function setStudyYakodoki(idx, isYak) {
+  if (!window._studyModeYakodoki) window._studyModeYakodoki = {};
+  window._studyModeYakodoki[idx] = isYak;
+  var bodyEl = document.getElementById('study-card-body-' + idx);
+  if (bodyEl) bodyEl.innerHTML = buildStudyCardHTML(idx);
+}
+
+function renderStudyModeCards() {
+  var bodyEl = document.getElementById('study-mode-body');
+  if (!bodyEl) return;
+  var picks = pickRandomStudyFriends(STUDY_MODE_COUNT);
+  window._studyModePicks = picks;
+  window._studyModeYakodoki = {};
+  window._studyModeAnswers = [];
+  if (!picks.length) {
+    bodyEl.innerHTML = '<div style="font-size:12px;color:var(--muted);text-align:center;padding:20px;">友達データがまだ登録されていません。</div>';
+    return;
+  }
+  var html = '';
+  picks.forEach(function(f, idx) {
+    html += '<div style="margin-bottom:10px;">' +
+      '<div style="font-size:12px;color:#b8a8ff;font-weight:700;margin-bottom:6px;">命式 #' + (idx + 1) + '</div>' +
+      '<div id="study-card-body-' + idx + '">' + buildStudyCardHTML(idx) + '</div>' +
+      '</div>' +
+      (idx < picks.length - 1 ? '<div style="border-top:1px solid rgba(255,255,255,0.1);margin:18px 0;"></div>' : '');
+  });
+  bodyEl.innerHTML = html;
+}
+
+/* 個別カードの「表示」タップで生年月日・名前を開示 */
+function revealStudyAnswer(idx) {
+  var el = document.getElementById('study-mask-' + idx);
+  if (!el) return;
+  var answer = (window._studyModeAnswers && window._studyModeAnswers[idx]) || '';
+  el.textContent = answer;
+  el.style.color = 'var(--sk-gold-light)';
+  el.style.letterSpacing = 'normal';
+  el.style.fontSize = '';
+
+  var btn = document.getElementById('study-reveal-btn-' + idx);
+  if (btn) btn.style.display = 'none';
 }
 
 function resetAllFriendData() {
@@ -18227,11 +18381,31 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   // 5行目: 通変星（天干）
   var pillarLabels = ['年柱', '月柱', '日柱', '時柱'];
   tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u901A\u5909\u661F')\">\u2461\u901A\u5909\u661F</td>\n    ".concat(hensei.map(function (h, i) {
-    if (!pillars[i]) return "<td class=\"".concat(cols[i], " hensei-cell hour-col\">\u2014</td>");
+    if (!pillars[i]) return "<td class=\"".concat(cols[i], " hour-col hensei-cell\">\u2014</td>");
     var dayStyle = i === 2 ? 'color:var(--sk-gold-light);font-weight:500;' : '';
     var ctx = pillarLabels[i] + 'の通変星';
     if (i === 2) return "<td class=\"".concat(cols[i], " hensei-cell\" style=\"").concat(dayStyle, "\"><span style=\"font-size:0.65rem;color:var(--sk-gold-dark);display:block;\">\u65E5 \u4E3B</span></td>");
-    return "<td class=\"".concat(cols[i], " hensei-cell\">\n        <span class=\"hj-pill\" onclick=\"openHenseiPanel('").concat(h, "','").concat(ctx, "')\" style=\"").concat(function () {
+    // 月柱の通変星が「性格として出やすい」条件を満たすかチェック
+    // ※チャッピーさんの指摘を踏まえ、「五行としての強さ（十二運スコア）」を
+    //   主要因子にはしない。優先順位に沿って、
+    //   ①月支の蔵干・正気が同じ通変星か（＝月令を得ているか）を最重要視し、
+    //   ④命式内（天干）に同じ通変星が重複しているかを補助的に見る。
+    //   ②天干透干・③月柱にある、はこの行を見ている時点で自動的に満たされるため
+    //   別途の判定材料にはしていない。
+    // ※以前入れていた「食神・傷官は身弱だと除外」ルールは削除。
+    //   日干丙・月干己(傷官)・月支正気も己(傷官)のように、身弱でも
+    //   月令一致という配置そのもので性格に強く出るケースがあるため
+    //   （チャッピーさんの助言・実際の人物像との一致から判断）。
+    var monthWarn = false;
+    var _rootMatch = false, _isDupe = false, _zgMain = null;
+    if (i === 1 && h) {
+      _zgMain = (typeof zgHensei !== 'undefined' && zgHensei[1] && zgHensei[1][0] && zgHensei[1][0].isMain) ? zgHensei[1][0].hensei : null;
+      _rootMatch = (_zgMain === h); // ①月支蔵干・正気が同じ通変星（月令を得ている）
+      _isDupe = hensei.filter(function (hh) { return hh && hh === h; }).length >= 2; // ④命式内の重複
+      monthWarn = _rootMatch || _isDupe;
+    }
+    var warnMark = monthWarn ? '<span onclick="event.stopPropagation();showHenseiWarnReason(\'' + h + '\',' + _rootMatch + ',' + _isDupe + ')" style="position:absolute;top:50%;left:4px;transform:translateY(-50%);font-size:11px;line-height:1;cursor:pointer;" title="タップで理由を見る">\u26A0\uFE0F</span>' : '';
+    return "<td class=\"".concat(cols[i], " hensei-cell\"").concat(monthWarn ? ' style="position:relative;"' : '', ">\n        ").concat(warnMark, "\n        <span class=\"hj-pill\" onclick=\"openHenseiPanel('").concat(h, "','").concat(ctx, "')\" style=\"").concat(function () {
       if (typeof getHenseiColor !== 'function' || typeof window._lastIsShinkyou === 'undefined') return '';
       var hc = getHenseiColor(h, window._lastIsShinkyou);
       return 'color:' + hc.color + ';background:' + hc.bg + ';border:1px solid ' + hc.border + ';border-radius:8px;padding:1px 6px;';
@@ -19868,6 +20042,29 @@ function getSeasonEffect(nichiGo, moonShi) {
   return '通常';
 }
 
+/* 月柱の通変星に⚠️が付いた理由を表示するミニパネル */
+function showHenseiWarnReason(h, rootMatch, isDupe) {
+  var reasons = '';
+  if (rootMatch) {
+    reasons += '<div style="margin-bottom:10px;padding:8px 10px;background:rgba(184,150,46,0.08);border-radius:8px;border-left:3px solid var(--sk-gold-light);">' +
+      '<div style="font-size:12px;font-weight:700;color:var(--sk-gold-light);margin-bottom:3px;">✅ 月令を得ている</div>' +
+      '<div style="font-size:11px;color:var(--text);line-height:1.7;">月支の蔵干・正気が同じ「' + h + '」のため、月柱の天干に出た「' + h + '」が根を持っている状態です。五行としての強さ（十二運など）に関わらず、この配置そのものが「' + h + '」の性質を性格として出やすくします。</div>' +
+      '</div>';
+  }
+  if (isDupe) {
+    reasons += '<div style="margin-bottom:10px;padding:8px 10px;background:rgba(168,154,255,0.08);border-radius:8px;border-left:3px solid #b8a8ff;">' +
+      '<div style="font-size:12px;font-weight:700;color:#b8a8ff;margin-bottom:3px;">✅ 命式内で重複している</div>' +
+      '<div style="font-size:11px;color:var(--text);line-height:1.7;">同じ「' + h + '」が命式内の他の柱にも出ているため、その性質が繰り返し強調されて出やすくなります。</div>' +
+      '</div>';
+  }
+  var html =
+    '<div style="font-size:15px;font-weight:700;color:var(--sk-gold-light);margin-bottom:4px;">\u26A0\uFE0F 月柱「' + h + '」が性格に出やすい理由</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:12px;">通変星の「性格としての出やすさ」を、五行の強弱とは分けて判定しています。</div>' +
+    reasons +
+    '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);line-height:1.6;">※判定は月令（月支蔵干・正気との一致）と重複を中心に見ており、五行バランス上の強弱だけでは判断していません。生剋関係など、さらに細かい要素までは今のところ加味していません。</div>';
+  showModal(html);
+}
+
 function showNikkanReason(nichi, moonShi, dayShi, moonKan) {
   var gogyo = {'甲':'木','乙':'木','丙':'火','丁':'火','戊':'土','己':'土','庚':'金','辛':'金','壬':'水','癸':'水'};
   var seasonDetail = {'子':'冬の真ん中','丑':'冬の終わり','寅':'春の初め','卯':'春の真ん中','辰':'春の終わり','巳':'夏の初め','午':'夏の真ん中','未':'夏の終わり','申':'秋の初め','酉':'秋の真ん中','戌':'秋の終わり','亥':'冬の初め'};
@@ -20074,7 +20271,7 @@ function toggleSakurakoText(btn) {
 
 
 <!-- 友達命式モーダル -->
-<div id="friend-meishiki-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:500;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;box-sizing:border-box;">
+<div id="friend-meishiki-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:600;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;box-sizing:border-box;">
   <div style="background:#0d1a2b;border:1px solid rgba(184,150,46,0.4);border-radius:12px;width:min(480px,100%);margin:0 auto;padding:16px;position:relative;">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
       <div>
@@ -20085,6 +20282,21 @@ function toggleSakurakoText(btn) {
     </div>
     <div id="fmm-switch" style="margin-bottom:10px;"></div>
     <div id="fmm-body"></div>
+  </div>
+</div>
+
+<!-- 勉強モード：命式読み取りトレーニング -->
+<div id="study-mode-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:500;align-items:flex-start;justify-content:center;overflow-y:auto;padding:20px;box-sizing:border-box;">
+  <div style="background:#0d1a2b;border:1px solid rgba(168,154,255,0.4);border-radius:12px;width:min(480px,100%);margin:0 auto;padding:16px;position:relative;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <div style="font-size:16px;font-weight:700;color:#b8a8ff;">📖 勉強モード</div>
+      <button onclick="closeStudyModeModal()" style="background:transparent;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;">×</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.6;">命式だけを見て、どんな人かを読み取る練習です。生年月日と名前は各命式の「👁 表示」タップで確認できます。</div>
+    <div style="margin-bottom:14px;">
+      <button onclick="renderStudyModeCards()" style="width:100%;padding:9px;border-radius:8px;border:1px solid rgba(168,154,255,0.5);background:rgba(168,154,255,0.12);color:#b8a8ff;font-size:12px;font-weight:700;cursor:pointer;">🔀 ランダムでやり直す</button>
+    </div>
+    <div id="study-mode-body"></div>
   </div>
 </div>
 
