@@ -18546,11 +18546,22 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   var _tsuByName = {};
   _tsuEngine.forEach(function (r) { _tsuByName[r.name] = r; });
   var _dominantEl = calcDominantGogyou(pillars);
+  // 月柱の通変星（フレーバー判定の元）を先に取得しておく（日柱セルで使うため）
+  var _monthHenseiForFlavor = hensei[1];
+  var _flavorForDay = TSUHENSEI_GOGYOU_FLAVOR[_monthHenseiForFlavor] ? TSUHENSEI_GOGYOU_FLAVOR[_monthHenseiForFlavor][_dominantEl] : null;
   tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u901A\u5909\u661F')\">\u2461\u901A\u5909\u661F</td>\n    ".concat(hensei.map(function (h, i) {
     if (!pillars[i]) return "<td class=\"".concat(cols[i], " hour-col hensei-cell\">\u2014</td>");
     var dayStyle = i === 2 ? 'color:var(--sk-gold-light);font-weight:500;' : '';
     var ctx = pillarLabels[i] + 'の通変星';
-    if (i === 2) return "<td class=\"".concat(cols[i], " hensei-cell\" style=\"").concat(dayStyle, "\"><span style=\"font-size:0.65rem;color:var(--sk-gold-dark);display:block;\">\u65E5 \u4E3B</span></td>");
+    if (i === 2) {
+      // 日柱は常に「日主」固定表示だが、五行フレーバーのデータがある場合は
+      // そちらのバッジに差し替えてスペースを有効活用する（月柱セルの混雑を避けるため）
+      if (_flavorForDay) {
+        var _dayFlColor = GOGYOU_ELEMENT_COLOR[_dominantEl];
+        return "<td class=\"".concat(cols[i], " hensei-cell\" style=\"").concat(dayStyle, "\"><span onclick=\"event.stopPropagation();showGogyouFlavorDetail('").concat(_monthHenseiForFlavor, "','").concat(_dominantEl, "')\" style=\"display:inline-block;padding:1px 8px;border-radius:999px;background:").concat(_dayFlColor, ";color:#fff;font-size:9px;font-weight:500;cursor:pointer;\">").concat(_flavorForDay.keyword, "</span></td>");
+      }
+      return "<td class=\"".concat(cols[i], " hensei-cell\" style=\"").concat(dayStyle, "\"><span style=\"font-size:0.65rem;color:var(--sk-gold-dark);display:block;\">\u65E5 \u4E3B</span></td>");
+    }
     // 月柱の通変星に、出現度解析エンジンによる★評価を表示する
     var starHtml = '';
     if (i === 1 && h && _tsuByName[h]) {
@@ -18558,18 +18569,11 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
       var _starText = new Array(_entry.star + 1).join('\u2605') + new Array(6 - _entry.star).join('\u2606');
       starHtml = '<span onclick="event.stopPropagation();showTsuuhenseiReason(' + _engArgs + ',\'' + h + '\')" style="display:block;font-size:9px;letter-spacing:1px;color:var(--sk-gold-light);margin-top:2px;cursor:pointer;" title="タップで判定理由を見る">' + _starText + '</span>';
     }
-    // 月柱の通変星に、五行フレーバーバッジを表示する（命式で最も強い五行×通変星の組み合わせ）
-    var flavorHtml = '';
-    if (i === 1 && h && TSUHENSEI_GOGYOU_FLAVOR[h] && TSUHENSEI_GOGYOU_FLAVOR[h][_dominantEl]) {
-      var _fl = TSUHENSEI_GOGYOU_FLAVOR[h][_dominantEl];
-      var _flColor = GOGYOU_ELEMENT_COLOR[_dominantEl];
-      flavorHtml = '<span onclick="event.stopPropagation();showGogyouFlavorDetail(\'' + h + '\',\'' + _dominantEl + '\')" style="display:inline-block;margin-top:3px;padding:1px 8px;border-radius:999px;background:' + _flColor + ';color:#fff;font-size:9px;font-weight:500;cursor:pointer;">' + _fl.keyword + '</span>';
-    }
     return "<td class=\"".concat(cols[i], " hensei-cell\">\n        <span class=\"hj-pill\" onclick=\"openHenseiPanel('").concat(h, "','").concat(ctx, "')\" style=\"").concat(function () {
       if (typeof getHenseiColor !== 'function' || typeof window._lastIsShinkyou === 'undefined') return '';
       var hc = getHenseiColor(h, window._lastIsShinkyou);
       return 'color:' + hc.color + ';background:' + hc.bg + ';border:1px solid ' + hc.border + ';border-radius:8px;padding:1px 6px;';
-    }(), "\">").concat(h, "</span>\n        ").concat(starHtml, "\n        ").concat(flavorHtml, "\n      </td>");
+    }(), "\">").concat(h, "</span>\n        ").concat(starHtml, "\n      </td>");
   }).join(''), "\n  </tr>");
 
   // 6行目: 蔵干通変星
