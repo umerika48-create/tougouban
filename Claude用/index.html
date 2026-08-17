@@ -5148,25 +5148,43 @@ function runShichuu() {
   window._shichuuTagData = {};
 
   function getFriendsByKan(kanIdx, colIdx) {
-    var meishikis = getFriendMeishiki();
+    var meishikis = getFriendMeishiki(false);
+    var meishikis23 = (colIdx === 2) ? getFriendMeishiki(true) : null;
     var result = [];
     meishikis.forEach(function(m){
       var fd = FRIEND_DATA.find(function(d){ return d.name === m.name; });
       if(fd && fd.hidden) return;
       var p = [m.year_p, m.month_p, m.day_p, m.hour_p][colIdx];
-      if(p && p.kan === kanIdx) result.push(m.name);
+      var match0 = p && p.kan === kanIdx;
+      var match23 = false;
+      // 日柱（colIdx===2）は時刻不明の場合、0時/23時どちらか一方でも
+      // 当てはまれば漏れなく含める（日柱は時刻不明だと0時/23時で変わりうるため）
+      if (colIdx === 2 && fd && (!fd.time || fd.timeUnknown)) {
+        var m23 = meishikis23.find(function(x){ return x.name === m.name; });
+        var p23 = m23 && m23.day_p;
+        match23 = p23 && p23.kan === kanIdx;
+      }
+      if(match0 || match23) result.push(m.name);
     });
     return result;
   }
 
   function getFriendsByShi(shiIdx, colIdx) {
-    var meishikis = getFriendMeishiki();
+    var meishikis = getFriendMeishiki(false);
+    var meishikis23 = (colIdx === 2) ? getFriendMeishiki(true) : null;
     var result = [];
     meishikis.forEach(function(m){
       var fd = FRIEND_DATA.find(function(d){ return d.name === m.name; });
       if(fd && fd.hidden) return;
       var p = [m.year_p, m.month_p, m.day_p, m.hour_p][colIdx];
-      if(p && p.shi === shiIdx) result.push(m.name);
+      var match0 = p && p.shi === shiIdx;
+      var match23 = false;
+      if (colIdx === 2 && fd && (!fd.time || fd.timeUnknown)) {
+        var m23 = meishikis23.find(function(x){ return x.name === m.name; });
+        var p23 = m23 && m23.day_p;
+        match23 = p23 && p23.shi === shiIdx;
+      }
+      if(match0 || match23) result.push(m.name);
     });
     return result;
   }
@@ -5191,16 +5209,30 @@ function runShichuu() {
   }
 
   function getFriendsByHensei(henseiName, colIdx) {
-    var meishikis = getFriendMeishiki();
+    // 通変星は日主（日柱の天干）との関係で決まるため、時刻不明の場合は
+    // 0時/23時どちらの日主で計算しても対応できるよう、両方をチェックする
+    var meishikis0 = getFriendMeishiki(false);
+    var meishikis23 = getFriendMeishiki(true);
     var result = [];
-    meishikis.forEach(function(m){
+    meishikis0.forEach(function(m){
       var fd = FRIEND_DATA.find(function(d){ return d.name === m.name; });
       if(fd && fd.hidden) return;
-      if(!m.day_p) return;
-      var p = [m.year_p, m.month_p, m.day_p, m.hour_p][colIdx];
-      if(!p) return;
-      var h = calcHensei(m.day_p.kan, p.kan);
-      if(h === henseiName) result.push(m.name);
+      var isUnknown = !!(fd && (!fd.time || fd.timeUnknown));
+      var p0 = [m.year_p, m.month_p, m.day_p, m.hour_p][colIdx];
+      var match0 = false, match23 = false;
+      if (p0 && m.day_p) {
+        var h0 = calcHensei(m.day_p.kan, p0.kan);
+        match0 = (h0 === henseiName);
+      }
+      if (isUnknown) {
+        var m23 = meishikis23.find(function(x){ return x.name === m.name; });
+        var p23 = m23 && [m23.year_p, m23.month_p, m23.day_p, m23.hour_p][colIdx];
+        if (p23 && m23.day_p) {
+          var h23 = calcHensei(m23.day_p.kan, p23.kan);
+          match23 = (h23 === henseiName);
+        }
+      }
+      if (match0 || match23) result.push(m.name);
     });
     return result;
   }
@@ -5211,7 +5243,7 @@ function runShichuu() {
       var friends = getFriendsByHensei(item, colIdx);
       var count = friends.length;
       var key = 'tag_' + colIdx + '_hensei_' + item;
-      window._shichuuTagData[key] = { label: item, friends: friends, colIdx: colIdx };
+      window._shichuuTagData[key] = { label: item, friends: friends, colIdx: colIdx, isHenseiTag: true };
       return '<div style="display:inline-block;margin:3px;position:relative;">'
         + '<button onclick="showShichuuFriendPopup(\'' + key + '\')" style="padding:8px 14px;border-radius:14px;font-size:15px;font-weight:500;border:1px solid rgba(184,150,46,0.4);background:rgba(184,150,46,0.08);color:var(--sk-gold-light);cursor:pointer;min-width:52px;position:relative;">'
         + item
@@ -5226,13 +5258,21 @@ function runShichuu() {
   }
 
   function getFriendsByKanShi(kanIdx, shiIdx, colIdx) {
-    var meishikis = getFriendMeishiki();
+    var meishikis = getFriendMeishiki(false);
+    var meishikis23 = (colIdx === 2) ? getFriendMeishiki(true) : null;
     var result = [];
     meishikis.forEach(function(m){
       var fd = FRIEND_DATA.find(function(d){ return d.name === m.name; });
       if(fd && fd.hidden) return;
       var p = [m.year_p, m.month_p, m.day_p, m.hour_p][colIdx];
-      if(p && p.kan === kanIdx && p.shi === shiIdx) result.push(m.name);
+      var match0 = p && p.kan === kanIdx && p.shi === shiIdx;
+      var match23 = false;
+      if (colIdx === 2 && fd && (!fd.time || fd.timeUnknown)) {
+        var m23 = meishikis23.find(function(x){ return x.name === m.name; });
+        var p23 = m23 && m23.day_p;
+        match23 = p23 && p23.kan === kanIdx && p23.shi === shiIdx;
+      }
+      if(match0 || match23) result.push(m.name);
     });
     return result;
   }
@@ -5965,7 +6005,7 @@ function showShichuuFriendPopup(key) {
       }
     }
 
-    var lbl = n + seasonSuffix + (isUnknown && isDayCol ? '（？）' : '');
+    var lbl = n + seasonSuffix + (isUnknown && (isDayCol || data.isHenseiTag) ? '（？）' : '');
 
     if(isUnknown && isDayCol) {
       var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
@@ -5986,6 +6026,26 @@ function showShichuuFriendPopup(key) {
         + '<div style="display:flex;gap:6px;">'
         + '<button class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="flex:1;padding:8px;border-radius:8px;background:rgba(184,150,46,0.1);border:1px solid rgba(184,150,46,0.3);color:var(--sk-gold-light);cursor:pointer;font-size:11px;">当日（' + todayKan + todayShi + '）</button>'
         + '<button class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="true" style="flex:1;padding:8px;border-radius:8px;background:rgba(120,120,200,0.1);border:1px solid rgba(120,120,200,0.3);color:#b8a8ff;cursor:pointer;font-size:11px;">翌日（' + nextKan + nextShi + '）</button>'
+        + '</div>'
+        + '</div>';
+    } else if (isUnknown && data.isHenseiTag) {
+      // 通変星タグは日主（日柱）の影響を受けるため、時刻不明の場合は
+      // 0時/23時それぞれの通変星を示した上で選べるようにする
+      var meishikis0h = getFriendMeishiki(false);
+      var meishikis23h = getFriendMeishiki(true);
+      var fMei0 = meishikis0h.find(function(m){ return m.name === n; });
+      var fMei23 = meishikis23h.find(function(m){ return m.name === n; });
+      var pCol0 = fMei0 && [fMei0.year_p, fMei0.month_p, fMei0.day_p, fMei0.hour_p][data.colIdx];
+      var pCol23 = fMei23 && [fMei23.year_p, fMei23.month_p, fMei23.day_p, fMei23.hour_p][data.colIdx];
+      var h0text = (pCol0 && fMei0.day_p) ? calcHensei(fMei0.day_p.kan, pCol0.kan) : '?';
+      var h23text = (pCol23 && fMei23.day_p) ? calcHensei(fMei23.day_p.kan, pCol23.kan) : '?';
+      var unkBaseStyle2 = seasonStyle || 'background:rgba(184,150,46,0.06);border:1px solid rgba(184,150,46,0.2);';
+      html += '<div style="padding:10px 14px;margin-bottom:6px;border-radius:10px;' + unkBaseStyle2 + '">'
+        + '<div style="font-size:13px;color:var(--text);margin-bottom:8px;">' + lbl + '</div>'
+        + '<div style="font-size:11px;color:var(--muted);margin-bottom:8px;">時刻不明のため、日主が変わり通変星も2つの可能性があります</div>'
+        + '<div style="display:flex;gap:6px;">'
+        + '<button class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="false" style="flex:1;padding:8px;border-radius:8px;background:rgba(184,150,46,0.1);border:1px solid rgba(184,150,46,0.3);color:var(--sk-gold-light);cursor:pointer;font-size:11px;">0時（' + h0text + '）</button>'
+        + '<button class="sfp-item" data-name="' + n.replace(/"/g,'&quot;') + '" data-unknown="true" style="flex:1;padding:8px;border-radius:8px;background:rgba(120,120,200,0.1);border:1px solid rgba(120,120,200,0.3);color:#b8a8ff;cursor:pointer;font-size:11px;">23時（' + h23text + '）</button>'
         + '</div>'
         + '</div>';
     } else {
