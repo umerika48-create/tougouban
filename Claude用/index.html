@@ -18562,6 +18562,8 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   var pillarLabels = ['年柱', '月柱', '日柱', '時柱'];
   // 出現度解析エンジンの呼び出し引数（★評価・評価バッジ・解析バッジで共通利用）
   var _engArgs = nik + ',[' + [year_p ? year_p.kan : -1, month_p.kan, day_p.kan, hour_p ? hour_p.kan : -1].join(',') + '],[' + [year_p ? year_p.shi : -1, month_p.shi, day_p.shi, hour_p ? hour_p.shi : -1].join(',') + ']';
+  // 五行バランスカードへジャンプするための、このカード専用の一意なID
+  var _cardUid = 'gogyo_' + Math.floor(Math.random() * 1e9);
   var _tsuEngine = calcTsuuhenseiEngine(nik, pillars);
   var _tsuByName = {};
   _tsuEngine.forEach(function (r) { _tsuByName[r.name] = r; });
@@ -18570,14 +18572,21 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   var _monthHenseiForFlavor = hensei[1];
   var _flavorBadgesForDay = '';
   if (_dominantResult.type === 'neutral') {
-    _flavorBadgesForDay = '<span onclick="event.stopPropagation();showGogyouFlavorDetail(\'' + _monthHenseiForFlavor + '\',\'neutral\')" style="display:inline-block;padding:1px 8px;border-radius:999px;background:#8A8A82;color:#fff;font-size:9px;font-weight:500;cursor:pointer;">バランス型</span>';
-  } else if (TSUHENSEI_GOGYOU_FLAVOR[_monthHenseiForFlavor]) {
-    _flavorBadgesForDay = _dominantResult.elements.map(function (el) {
-      var fl = TSUHENSEI_GOGYOU_FLAVOR[_monthHenseiForFlavor][el];
-      if (!fl) return '';
-      var clr = GOGYOU_ELEMENT_COLOR[el];
-      return '<span onclick="event.stopPropagation();showGogyouFlavorDetail(\'' + _monthHenseiForFlavor + '\',\'' + el + '\')" style="display:inline-block;margin:1px;padding:1px 7px;border-radius:999px;background:' + clr + ';color:#fff;font-size:8px;font-weight:500;cursor:pointer;">' + fl.keyword + '</span>';
-    }).join('');
+    // 満遍なく均等＝五行バランスが良い状態。バッジで「バランス」とだけ伝える
+    _flavorBadgesForDay = '<span onclick="event.stopPropagation();scrollToGogyoBalance(\'' + _cardUid + '\')" style="display:inline-block;padding:1px 8px;border-radius:999px;background:#8A8A82;color:#fff;font-size:9px;font-weight:500;cursor:pointer;">バランス</span>';
+  } else if (_dominantResult.type === 'single' || (_dominantResult.type === 'multi' && _dominantResult.elements.length === 2)) {
+    // 明確に偏っている（1つ、または僅差で2つまで）場合だけバッジで直接表示
+    if (TSUHENSEI_GOGYOU_FLAVOR[_monthHenseiForFlavor]) {
+      _flavorBadgesForDay = _dominantResult.elements.map(function (el) {
+        var fl = TSUHENSEI_GOGYOU_FLAVOR[_monthHenseiForFlavor][el];
+        if (!fl) return '';
+        var clr = GOGYOU_ELEMENT_COLOR[el];
+        return '<span onclick="event.stopPropagation();showGogyouFlavorDetail(\'' + _monthHenseiForFlavor + '\',\'' + el + '\')" style="display:inline-block;margin:1px;padding:1px 7px;border-radius:999px;background:' + clr + ';color:#fff;font-size:8px;font-weight:500;cursor:pointer;">' + fl.keyword + '</span>';
+      }).join('');
+    }
+  } else {
+    // 3つ以上が拮抗＝複雑なので、バッジで無理に出さず五行バランスカードへ誘導する
+    _flavorBadgesForDay = '<span onclick="event.stopPropagation();scrollToGogyoBalance(\'' + _cardUid + '\')" style="display:inline-block;padding:1px 8px;border-radius:999px;background:rgba(168,154,255,0.2);border:1px solid rgba(168,154,255,0.4);color:#b8a8ff;font-size:9px;font-weight:500;cursor:pointer;">五行を見る</span>';
   }
   tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u901A\u5909\u661F')\">\u2461\u901A\u5909\u661F</td>\n    ".concat(hensei.map(function (h, i) {
     if (!pillars[i]) return "<td class=\"".concat(cols[i], " hour-col hensei-cell\">\u2014</td>");
@@ -18905,7 +18914,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
     return "<span class=\"kuubo-badge\">".concat(s, "</span>");
   }).join('<span class="kuubo-sep">・</span>'), "\n      </div>\n      <div class=\"kuubo-note\">\n        \u65E5\u67F1\u300C").concat(KAN10[day_p.kan]).concat(SHI12[day_p.shi], "\u300D\u304C\u5C5E\u3059\u308B\u65EC\u306E\u7A7A\u4EA1\u5730\u652F\u3067\u3059\u3002\n        ").concat(kuuboInPillars.length > 0 ? "\u547D\u5F0F\u4E2D\u306B\u7A7A\u4EA1\u5730\u652F\uFF08".concat(kuuboInPillars.map(function (p) {
     return SHI12[p.shi];
-  }).join('・'), "\uFF09\u304C\u542B\u307E\u308C\u3066\u3044\u307E\u3059\u3002") : '命式中に空亡地支は含まれていません。', "\n      </div>\n    </div>\n  </div>\n\n  <div class=\"interp-grid fade-in\">\n    <div class=\"interp-card\">\n      <div style=\"display:flex;justify-content:space-between;align-items:flex-start;\">\n        <div class=\"interp-card-title\">\u57FA\u672C\u6027\u683C</div>\n        <span onclick=\"openNikkanBasicPanel('").concat(nichikan, "')\" style=\"font-size:10px;color:var(--sk-gold-light);cursor:pointer;text-decoration:underline;white-space:nowrap;margin-left:8px;margin-top:2px;\">\u57FA\u672C</span>\n      </div>\n      <div style=\"display:flex;align-items:baseline;gap:8px;margin-bottom:0.3rem;\">\n        <div class=\"nichikan-name ").concat(kanClass(nik), "\">").concat(nichikan, "</div>\n        <div class=\"").concat(shiClass(month_shi_name), "\" style=\"font-size:2rem;font-weight:300;\">").concat(month_shi_name, "</div>\n        ").concat(typeof MOON_SHI_LABEL !== 'undefined' && MOON_SHI_LABEL[nichikan] && MOON_SHI_LABEL[nichikan][month_shi_name] ? '<button onclick="showMoonShiDetail(\'' + nichikan + '\',\'' + month_shi_name + '\')" style="display:inline-block;margin-left:6px;padding:3px 10px;border-radius:12px;font-size:11px;background:rgba(184,150,46,0.15);border:1px solid rgba(184,150,46,0.4);color:var(--sk-gold-light);cursor:pointer;vertical-align:middle;">' + MOON_SHI_LABEL[nichikan][month_shi_name].label.split('・')[0] + '</button>' : '', "\n      </div>\n      <div style=\"display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px;\">\n        <button onclick=\"generateNikkanAI('").concat(nichikan, "','").concat(month_shi_name, "','").concat(day_shi_name, "','").concat(month_p ? KAN10[month_p.kan] : '', "')\" style=\"padding:2px 10px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid var(--sk-gold);background:transparent;color:var(--sk-gold);\">\u2728 AI\u9451\u5B9A\u6587</button>\n        <button onclick=\"showNikkanReason('").concat(nichikan, "','").concat(month_shi_name, "','").concat(day_shi_name, "','").concat(month_p ? KAN10[month_p.kan] : '', "')\" style=\"padding:2px 10px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid rgba(255,255,255,0.2);background:transparent;color:var(--muted);\">\uD83D\uDCD6 \u7406\u7531</button>\n      </div>\n      <div id=\"nikkan-ai-result\" class=\"nichikan-desc\">").concat(getNikkanMessage(nichikan, month_shi_name, day_shi_name, month_p ? KAN10[month_p.kan] : '', hensei) || ndesc.desc, "</div>\n      ").concat(month_shi_name ? '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:6px;">' + nichikan + '（' + month_shi_name + '月・' + day_shi_name + '日支）</div>' : '', "\n\n    </div>\n\n    <div class=\"interp-card\">\n      <div class=\"interp-card-title\">\u4E94 \u884C \u30D0 \u30E9 \u30F3 \u30B9</div>\n      ").concat(balHtml, "\n      <div style=\"margin-top:1rem;\">\n        <div class=\"interp-card-title\" style=\"margin-bottom:0.5rem;\">\u5929 \u5E72 \u4E00 \u89A7</div>\n        <div style=\"font-size:0.68rem;color:var(--sk-silver-dim);margin-bottom:0.5rem;\">\u30BF\u30C3\u30D7\u3067\u8A73\u7D30\u3092\u5C55\u958B</div>\n        <div class=\"tenkan-list\">").concat(tenkanList.join(''), "</div>\n        ").concat(usedKan.map(function (k) {
+  }).join('・'), "\uFF09\u304C\u542B\u307E\u308C\u3066\u3044\u307E\u3059\u3002") : '命式中に空亡地支は含まれていません。', "\n      </div>\n    </div>\n  </div>\n\n  <div class=\"interp-grid fade-in\">\n    <div class=\"interp-card\">\n      <div style=\"display:flex;justify-content:space-between;align-items:flex-start;\">\n        <div class=\"interp-card-title\">\u57FA\u672C\u6027\u683C</div>\n        <span onclick=\"openNikkanBasicPanel('").concat(nichikan, "')\" style=\"font-size:10px;color:var(--sk-gold-light);cursor:pointer;text-decoration:underline;white-space:nowrap;margin-left:8px;margin-top:2px;\">\u57FA\u672C</span>\n      </div>\n      <div style=\"display:flex;align-items:baseline;gap:8px;margin-bottom:0.3rem;\">\n        <div class=\"nichikan-name ").concat(kanClass(nik), "\">").concat(nichikan, "</div>\n        <div class=\"").concat(shiClass(month_shi_name), "\" style=\"font-size:2rem;font-weight:300;\">").concat(month_shi_name, "</div>\n        ").concat(typeof MOON_SHI_LABEL !== 'undefined' && MOON_SHI_LABEL[nichikan] && MOON_SHI_LABEL[nichikan][month_shi_name] ? '<button onclick="showMoonShiDetail(\'' + nichikan + '\',\'' + month_shi_name + '\')" style="display:inline-block;margin-left:6px;padding:3px 10px;border-radius:12px;font-size:11px;background:rgba(184,150,46,0.15);border:1px solid rgba(184,150,46,0.4);color:var(--sk-gold-light);cursor:pointer;vertical-align:middle;">' + MOON_SHI_LABEL[nichikan][month_shi_name].label.split('・')[0] + '</button>' : '', "\n      </div>\n      <div style=\"display:flex;justify-content:flex-end;gap:6px;margin-bottom:6px;\">\n        <button onclick=\"generateNikkanAI('").concat(nichikan, "','").concat(month_shi_name, "','").concat(day_shi_name, "','").concat(month_p ? KAN10[month_p.kan] : '', "')\" style=\"padding:2px 10px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid var(--sk-gold);background:transparent;color:var(--sk-gold);\">\u2728 AI\u9451\u5B9A\u6587</button>\n        <button onclick=\"showNikkanReason('").concat(nichikan, "','").concat(month_shi_name, "','").concat(day_shi_name, "','").concat(month_p ? KAN10[month_p.kan] : '', "')\" style=\"padding:2px 10px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid rgba(255,255,255,0.2);background:transparent;color:var(--muted);\">\uD83D\uDCD6 \u7406\u7531</button>\n      </div>\n      <div id=\"nikkan-ai-result\" class=\"nichikan-desc\">").concat(getNikkanMessage(nichikan, month_shi_name, day_shi_name, month_p ? KAN10[month_p.kan] : '', hensei) || ndesc.desc, "</div>\n      ").concat(month_shi_name ? '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:6px;">' + nichikan + '（' + month_shi_name + '月・' + day_shi_name + '日支）</div>' : '', "\n\n    </div>\n\n    <div class=\"interp-card\" id=\"").concat(_cardUid, "\">\n      <div class=\"interp-card-title\">\u4E94 \u884C \u30D0 \u30E9 \u30F3 \u30B9</div>\n      ").concat(balHtml, "\n      <div style=\"margin-top:1rem;\">\n        <div class=\"interp-card-title\" style=\"margin-bottom:0.5rem;\">\u5929 \u5E72 \u4E00 \u89A7</div>\n        <div style=\"font-size:0.68rem;color:var(--sk-silver-dim);margin-bottom:0.5rem;\">\u30BF\u30C3\u30D7\u3067\u8A73\u7D30\u3092\u5C55\u958B</div>\n        <div class=\"tenkan-list\">").concat(tenkanList.join(''), "</div>\n        ").concat(usedKan.map(function (k) {
     var d = TENKAN_DETAIL[k];
     var gc = kanClass(KAN10.indexOf(k));
     var gogyoColorMap2 = {
@@ -20237,15 +20246,6 @@ function getSeasonEffect(nichiGo, moonShi) {
 
 /* 五行フレーバーバッジをタップした時の、口癖セリフ付き詳細パネル */
 function showGogyouFlavorDetail(name, element) {
-  if (element === 'neutral') {
-    var html2 =
-      '<div style="font-size:15px;font-weight:700;color:var(--sk-gold-light);margin-bottom:10px;">月柱「' + name + '」の出方</div>' +
-      '<div style="display:inline-block;padding:4px 12px;border-radius:999px;background:#8A8A82;color:#fff;font-size:13px;font-weight:500;margin-bottom:12px;">バランス型</div>' +
-      '<div style="font-size:13px;color:var(--text);line-height:1.8;background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 12px;">五行バランスが特定の要素に偏っておらず、満遍なく整っています。状況や相手によって、出方が一色に固定されず多面的に表れやすいタイプです。</div>' +
-      '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:12px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">※命式の五行バランスで最も強い五行によって、同じ通変星でも出方の色（表現のされ方）が変わります。</div>';
-    showModal(html2);
-    return;
-  }
   var data = TSUHENSEI_GOGYOU_FLAVOR[name] && TSUHENSEI_GOGYOU_FLAVOR[name][element];
   if (!data) return;
   var color = GOGYOU_ELEMENT_COLOR[element];
@@ -20255,6 +20255,19 @@ function showGogyouFlavorDetail(name, element) {
     '<div style="font-size:13px;color:var(--text);line-height:1.8;background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 12px;">「' + data.quote + '」</div>' +
     '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:12px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">※命式の五行バランスで最も強い五行によって、同じ通変星でも出方の色（表現のされ方）が変わります。</div>';
   showModal(html);
+}
+
+/* 五行が拮抗している／バランスが良い場合に、五行バランスカードへスクロールしてハイライトする */
+function scrollToGogyoBalance(cardUid) {
+  var el = document.getElementById(cardUid);
+  if (!el) return;
+  if (typeof el.scrollIntoView === 'function') {
+    try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (e) { try { el.scrollIntoView(); } catch (e2) {} }
+  }
+  el.style.transition = 'background 0.3s';
+  var prevBg = el.style.background;
+  el.style.background = 'rgba(184,150,46,0.15)';
+  setTimeout(function () { el.style.background = prevBg; }, 1200);
 }
 
 /* 出現度解析エンジンの呼び出し引数から、pillars配列を再構築する共通ヘルパー */
