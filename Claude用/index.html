@@ -18454,28 +18454,86 @@ var TSUHENSEI_GOGYOU_FLAVOR = {
   }
 };
 
-/* 命式全体の五行バランスを判定する（五行バランスカードに表示される「生の数字」だけで判定し、
-   月令ボーナスなどの見えない補正は加えない。さくらこさんが実際にカードを見て確認できる数字と
-   必ず一致させるため）
-   - 1つが断然強い → { type: 'single', elements: [その五行] }
-   - 僅差で2〜3個が拮抗し、かつ他より明らかに高い → { type: 'multi', elements: [それらの五行] }
-   - ほぼ全体が横並び（満遍なく） → { type: 'neutral', elements: [] } */
-function calcDominantGogyou(pillars) {
-  var balance = calcBalance(pillars); // 五行バランスカードと同じ、天干+地支の単純カウント（月令ボーナスなし）
-  var elems = ['木', '火', '土', '金', '水'];
-  var sorted = elems.slice().sort(function (a, b) { return balance[b] - balance[a]; });
-  var maxScore = balance[sorted[0]];
-  var TIE_EPS = 0.5; // この差以内なら「並んでいる」とみなす
+/* 月令（旺相休囚死）テーブル：生まれ月の地支によって、各五行がどの勢いの状態かを表す
+   旺＝当令（季節そのものの五行）／相＝旺が生む五行／休＝旺を生む五行／
+   囚＝旺を剋す五行（旺に抑えられ勢いを発揮できない）／死＝旺に剋される五行（最も勢いが弱い） */
+var SEASON_WANGXIANGXIUQIUSI = {
+  '寅': { 旺: '木', 相: '火', 休: '水', 囚: '金', 死: '土' },
+  '卯': { 旺: '木', 相: '火', 休: '水', 囚: '金', 死: '土' },
+  '巳': { 旺: '火', 相: '土', 休: '木', 囚: '水', 死: '金' },
+  '午': { 旺: '火', 相: '土', 休: '木', 囚: '水', 死: '金' },
+  '申': { 旺: '金', 相: '水', 休: '土', 囚: '火', 死: '木' },
+  '酉': { 旺: '金', 相: '水', 休: '土', 囚: '火', 死: '木' },
+  '亥': { 旺: '水', 相: '木', 休: '金', 囚: '土', 死: '火' },
+  '子': { 旺: '水', 相: '木', 休: '金', 囚: '土', 死: '火' },
+  '辰': { 旺: '土', 相: '金', 休: '火', 囚: '木', 死: '水' },
+  '未': { 旺: '土', 相: '金', 休: '火', 囚: '木', 死: '水' },
+  '戌': { 旺: '土', 相: '金', 休: '火', 囚: '木', 死: '水' },
+  '丑': { 旺: '土', 相: '金', 休: '火', 囚: '木', 死: '水' }
+};
+// 旺相休囚死の重み係数（後から調整できるよう、名前付き定数として独立させている）
+var WANGXIANGXIUQIUSI_COEFF = { 旺: 1.5, 相: 1.3, 休: 1.0, 囚: 0.7, 死: 0.5 };
 
-  var group = elems.filter(function (g) { return maxScore - balance[g] <= TIE_EPS; });
+/* ①生の五行バランス（個数）と、②月令による五行の勢い（旺相休囚死）を別レイヤーで算出する */
+function calcGogyouMomentum(pillars) {
+  var raw = calcBalance(pillars); // 生の数字（五行バランスカードの表示と完全に一致させる）
+  var monthShiName = SHI12[pillars[1].shi];
+  var stateMap = SEASON_WANGXIANGXIUQIUSI[monthShiName] || {};
+  var elState = {}; // 五行名 → 旺/相/休/囚/死
+  Object.keys(stateMap).forEach(function (state) { elState[stateMap[state]] = state; });
+  var momentum = {};
+  ['木', '火', '土', '金', '水'].forEach(function (el) {
+    var state = elState[el] || '休';
+    momentum[el] = raw[el] * (WANGXIANGXIUQIUSI_COEFF[state] || 1.0);
+  });
+  return { raw: raw, elState: elState, momentum: momentum, monthShiName: monthShiName };
+}
+
+/* 命式全体の五行の「勢い」を判定する（生の数字だけでなく、月令＝季節による旺相休囚死も加味する）
+   - 生の数字はそのまま五行バランスカードで表示し、ここでは判定にのみ使う。内部の補正後の
+     数値そのものは画面には出さず、「〇〇が優勢です」という自然文の説明で見せる方針。
+   - 断然/やや優勢どちらも「単独で1つの五行が勢いを持っている」状態としてelements.length===1、
+     levelで強さの度合いを区別する。
+   - 1つが断然優勢 → { type:'single', level:'優勢', elements:[その五行] }
+   - 1つがやや優勢（僅差でリード） → { type:'single', level:'やや優勢', elements:[その五行] }
+   - 2〜3個が拮抗 → { type:'multi', level:'拮抗', elements:[それらの五行] }
+   - ほぼ全体が横並び → { type:'neutral', level:'ニュートラル', elements:[] } */
+function calcDominantGogyou(pillars) {
+  var g = calcGogyouMomentum(pillars);
+  var elems = ['木', '火', '土', '金', '水'];
+  var sorted = elems.slice().sort(function (a, b) { return g.momentum[b] - g.momentum[a]; });
+  var top = sorted[0], second = sorted[1];
+  var TIE_EPS = 0.3; // 勢い（小数を含む）用のタイ判定幅
+
+  var group = elems.filter(function (el) { return g.momentum[top] - g.momentum[el] <= TIE_EPS; });
+
   if (group.length >= 4) {
-    // ほぼ全部が横並び＝満遍なく強い状態なので中立扱い
-    return { type: 'neutral', elements: [] };
+    return {
+      type: 'neutral', level: 'ニュートラル', elements: [], raw: g.raw,
+      narrative: '五行バランスに大きな偏りがなく、特定の方向に強く出るというより、通変星本来の性質が比較的ニュートラルに出やすい状態です。'
+    };
   }
-  if (group.length === 1) {
-    return { type: 'single', elements: group };
+  if (group.length >= 2) {
+    return {
+      type: 'multi', level: '拮抗', elements: group, raw: g.raw,
+      narrative: group.join('・') + 'が拮抗しており、複数の方向性が混ざって出やすい状態です。'
+    };
   }
-  return { type: 'multi', elements: group };
+
+  // group.length === 1（優勢 or やや優勢）
+  var gap = g.momentum[top] - g.momentum[second];
+  var level = gap >= 1.0 ? '優勢' : 'やや優勢';
+  var rawTopCandidates = elems.filter(function (el) { return g.raw[el] >= g.raw[top]; }); // 生の数字だけで見ると並んでいた五行
+  var seasonBoosted = (g.elState[top] === '旺' || g.elState[top] === '相');
+  var narrative;
+  if (rawTopCandidates.length > 1 && seasonBoosted) {
+    narrative = '個数では' + rawTopCandidates.join('・') + 'と並んでいますが、' + g.monthShiName + '月生まれで' + top + 'が季節の力（' + g.elState[top] + '）を得ているため' + level + 'です。';
+  } else if (seasonBoosted) {
+    narrative = g.monthShiName + '月生まれのため、' + top + 'が季節の力（' + g.elState[top] + '）を得て' + level + 'です。';
+  } else {
+    narrative = top + 'が' + g.raw[top] + '個と最も多く、五行バランスの中心になっています。';
+  }
+  return { type: 'single', level: level, elements: [top], raw: g.raw, narrative: narrative, state: g.elState[top] };
 }
 
 /* pillars = [年柱, 月柱, 日柱, 時柱]（{kan,shi}のインデックス、時柱はnull可） */
@@ -18727,11 +18785,12 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   } else if (_dominantResult.type === 'single' || (_dominantResult.type === 'multi' && _dominantResult.elements.length === 2)) {
     // 明確に偏っている（1つ、または僅差で2つまで）場合だけバッジで直接表示
     if (TSUHENSEI_GOGYOU_FLAVOR[_monthHenseiForFlavor]) {
+      var _narrativeEsc = (_dominantResult.narrative || '').replace(/'/g, "\\'");
       _flavorBadgesForDay = _dominantResult.elements.map(function (el) {
         var fl = TSUHENSEI_GOGYOU_FLAVOR[_monthHenseiForFlavor][el];
         if (!fl) return '';
         var clr = GOGYOU_ELEMENT_COLOR[el];
-        return '<span onclick="event.stopPropagation();showGogyouFlavorDetail(\'' + _monthHenseiForFlavor + '\',\'' + el + '\')" style="display:inline-block;margin:1px;padding:1px 7px;border-radius:999px;background:' + clr + ';color:#fff;font-size:8px;font-weight:500;cursor:pointer;">' + fl.keyword + '</span>';
+        return '<span onclick="event.stopPropagation();showGogyouFlavorDetail(\'' + _monthHenseiForFlavor + '\',\'' + el + '\',\'' + (_dominantResult.level || '') + '\',\'' + _narrativeEsc + '\')" style="display:inline-block;margin:1px;padding:1px 7px;border-radius:999px;background:' + clr + ';color:#fff;font-size:8px;font-weight:500;cursor:pointer;">' + fl.keyword + '</span>';
       }).join('');
     }
   } else {
@@ -20395,15 +20454,25 @@ function getSeasonEffect(nichiGo, moonShi) {
 }
 
 /* 五行フレーバーバッジをタップした時の、口癖セリフ付き詳細パネル */
-function showGogyouFlavorDetail(name, element) {
+function showGogyouFlavorDetail(name, element, level, narrative) {
   var data = TSUHENSEI_GOGYOU_FLAVOR[name] && TSUHENSEI_GOGYOU_FLAVOR[name][element];
   if (!data) return;
   var color = GOGYOU_ELEMENT_COLOR[element];
+  var momentumHtml = '';
+  if (level || narrative) {
+    momentumHtml =
+      '<div style="font-size:11px;color:var(--muted);margin-bottom:4px;">五行の勢い</div>' +
+      '<div style="font-size:13px;font-weight:700;color:' + color + ';margin-bottom:4px;">' + (level ? (element + 'が' + level) : '') + '</div>' +
+      (narrative ? '<div style="font-size:12px;color:var(--text);line-height:1.7;margin-bottom:12px;">「' + narrative + '」</div>' : '');
+  }
   var html =
     '<div style="font-size:15px;font-weight:700;color:var(--sk-gold-light);margin-bottom:10px;">月柱「' + name + '」の出方</div>' +
+    momentumHtml +
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:4px;">五行フレーバー</div>' +
     '<div style="display:inline-block;padding:4px 12px;border-radius:999px;background:' + color + ';color:#fff;font-size:13px;font-weight:500;margin-bottom:12px;">' + data.keyword + '</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:4px;">口癖の例</div>' +
     '<div style="font-size:13px;color:var(--text);line-height:1.8;background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 12px;">「' + data.quote + '」</div>' +
-    '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:12px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">※命式の五行バランスで最も強い五行によって、同じ通変星でも出方の色（表現のされ方）が変わります。</div>';
+    '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:12px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">※通変星の基本性質＋五行の勢い（月令による季節の力）を組み合わせた「出方の色」です。五行バランスの個数がそのままその通変星を強めるわけではありません。</div>';
   showModal(html);
 }
 
