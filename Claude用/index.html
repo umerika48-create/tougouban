@@ -18282,6 +18282,32 @@ var TSUHENSEI_GEN_NEXT = { '印星': '比劫', '比劫': '食傷', '食傷': '�
 var TSUHENSEI_CTRL_NEXT = { '官殺': '比劫', '比劫': '財星', '財星': '印星', '印星': '食傷', '食傷': '官殺' };
 var SEASON_WANG_ENGINE = { '寅': '木', '卯': '木', '辰': '土', '巳': '火', '午': '火', '未': '土', '申': '金', '酉': '金', '戌': '土', '亥': '水', '子': '水', '丑': '土' };
 
+/* 五行フレーバー：命式の五行バランスで最も強い五行によって、同じ通変星でも「出方の色」が変わる
+   漢字は表示せず、色だけで五行を区別する（さくらこさんの指定） */
+var GOGYOU_ELEMENT_COLOR = { '木': '#22A854', '火': '#E8433D', '土': '#D99A1E', '金': '#8C93A6', '水': '#2F6FE0' };
+var TSUHENSEI_GOGYOU_FLAVOR = {
+  '傷官': {
+    '木': { keyword: '改善・成長', quote: 'もっと良くするにはどうしたらいい？' },
+    '火': { keyword: '表現・発信', quote: 'これ面白い！こう表現したい！' },
+    '土': { keyword: '現実・実用', quote: 'それ、現実的にできるの？' },
+    '金': { keyword: '違和感・精度', quote: 'いや、そこ矛盾してない？' },
+    '水': { keyword: '洞察・本質', quote: 'この人、本当は何を考えてるんだろう？' }
+  }
+  // 他の9星（比肩・劫財・食神・偏財・正財・偏官・正官・偏印・印綬）は今後追加
+};
+
+/* 命式全体で最も強い五行を判定（月令ボーナス込み） */
+function calcDominantGogyou(pillars) {
+  var balance = calcBalance(pillars);
+  var seasonEl = SEASON_WANG_ENGINE[SHI12[pillars[1].shi]];
+  var best = '木', bestScore = -1;
+  ['木', '火', '土', '金', '水'].forEach(function (g) {
+    var score = balance[g] + (g === seasonEl ? balance[g] * 0.5 : 0);
+    if (score > bestScore) { bestScore = score; best = g; }
+  });
+  return best;
+}
+
 /* pillars = [年柱, 月柱, 日柱, 時柱]（{kan,shi}のインデックス、時柱はnull可） */
 function calcTsuuhenseiEngine(nik, pillars) {
   // ①五行としての強さ（命式の五行バランス＋月令ボーナス）
@@ -18519,6 +18545,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   var _tsuEngine = calcTsuuhenseiEngine(nik, pillars);
   var _tsuByName = {};
   _tsuEngine.forEach(function (r) { _tsuByName[r.name] = r; });
+  var _dominantEl = calcDominantGogyou(pillars);
   tableRows += "<tr>\n    <td class=\"col-label\" style=\"cursor:pointer;\" onclick=\"openRowLabelPanel('\u901A\u5909\u661F')\">\u2461\u901A\u5909\u661F</td>\n    ".concat(hensei.map(function (h, i) {
     if (!pillars[i]) return "<td class=\"".concat(cols[i], " hour-col hensei-cell\">\u2014</td>");
     var dayStyle = i === 2 ? 'color:var(--sk-gold-light);font-weight:500;' : '';
@@ -18531,11 +18558,18 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
       var _starText = new Array(_entry.star + 1).join('\u2605') + new Array(6 - _entry.star).join('\u2606');
       starHtml = '<span onclick="event.stopPropagation();showTsuuhenseiReason(' + _engArgs + ',\'' + h + '\')" style="display:block;font-size:9px;letter-spacing:1px;color:var(--sk-gold-light);margin-top:2px;cursor:pointer;" title="タップで判定理由を見る">' + _starText + '</span>';
     }
+    // 月柱の通変星に、五行フレーバーバッジを表示する（命式で最も強い五行×通変星の組み合わせ）
+    var flavorHtml = '';
+    if (i === 1 && h && TSUHENSEI_GOGYOU_FLAVOR[h] && TSUHENSEI_GOGYOU_FLAVOR[h][_dominantEl]) {
+      var _fl = TSUHENSEI_GOGYOU_FLAVOR[h][_dominantEl];
+      var _flColor = GOGYOU_ELEMENT_COLOR[_dominantEl];
+      flavorHtml = '<span onclick="event.stopPropagation();showGogyouFlavorDetail(\'' + h + '\',\'' + _dominantEl + '\')" style="display:inline-block;margin-top:3px;padding:1px 8px;border-radius:999px;background:' + _flColor + ';color:#fff;font-size:9px;font-weight:500;cursor:pointer;">' + _fl.keyword + '</span>';
+    }
     return "<td class=\"".concat(cols[i], " hensei-cell\">\n        <span class=\"hj-pill\" onclick=\"openHenseiPanel('").concat(h, "','").concat(ctx, "')\" style=\"").concat(function () {
       if (typeof getHenseiColor !== 'function' || typeof window._lastIsShinkyou === 'undefined') return '';
       var hc = getHenseiColor(h, window._lastIsShinkyou);
       return 'color:' + hc.color + ';background:' + hc.bg + ';border:1px solid ' + hc.border + ';border-radius:8px;padding:1px 6px;';
-    }(), "\">").concat(h, "</span>\n        ").concat(starHtml, "\n      </td>");
+    }(), "\">").concat(h, "</span>\n        ").concat(starHtml, "\n        ").concat(flavorHtml, "\n      </td>");
   }).join(''), "\n  </tr>");
 
   // 6行目: 蔵干通変星
@@ -20166,6 +20200,19 @@ function getSeasonEffect(nichiGo, moonShi) {
   if(seikoku[sg] === nichiGo) return '囚（制御される・プレッシャーがかかる）';
   if(seikoku[nichiGo] === sg) return '死（弱まりやすい・休む季節）';
   return '通常';
+}
+
+/* 五行フレーバーバッジをタップした時の、口癖セリフ付き詳細パネル */
+function showGogyouFlavorDetail(name, element) {
+  var data = TSUHENSEI_GOGYOU_FLAVOR[name] && TSUHENSEI_GOGYOU_FLAVOR[name][element];
+  if (!data) return;
+  var color = GOGYOU_ELEMENT_COLOR[element];
+  var html =
+    '<div style="font-size:15px;font-weight:700;color:var(--sk-gold-light);margin-bottom:10px;">月柱「' + name + '」の出方</div>' +
+    '<div style="display:inline-block;padding:4px 12px;border-radius:999px;background:' + color + ';color:#fff;font-size:13px;font-weight:500;margin-bottom:12px;">' + data.keyword + '</div>' +
+    '<div style="font-size:13px;color:var(--text);line-height:1.8;background:rgba(255,255,255,0.04);border-radius:8px;padding:10px 12px;">「' + data.quote + '」</div>' +
+    '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:12px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">※命式の五行バランスで最も強い五行によって、同じ通変星でも出方の色（表現のされ方）が変わります。</div>';
+  showModal(html);
 }
 
 /* 出現度解析エンジンの呼び出し引数から、pillars配列を再構築する共通ヘルパー */
