@@ -1949,6 +1949,15 @@ function lonToHouse(lon, cusps) {
   return null;
 }
 
+/* アスペクト線の表示/非表示を切り替える（デフォルトは非表示） */
+function toggleAspectLinesVisibility(id, btnEl) {
+  var g = document.getElementById(id);
+  if (!g) return;
+  var isHidden = (g.style.display === 'none' || g.style.display === '');
+  g.style.display = isHidden ? 'block' : 'none';
+  if (btnEl) btnEl.textContent = isHidden ? '✕ アスペクト線を非表示' : '⟡ アスペクト線を表示';
+}
+
 function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
   var size = 460, cx = size/2, cy = size/2;
   var zodiacOuterR = 222, zodiacInnerR = 190, signR = 206, houseR = 172, tickR = 122, aspectR = 130, labelR = 158;
@@ -2045,9 +2054,12 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
   }
 
   /* アスペクトライン（内側の円の中だけで結ぶ。緊張系（合・刑・衝）=実線、調和系（六・三・向）=破線で見分けやすく。
-     紺色背景でも映えるよう、彩度・明度を上げた色を使う） */
+     紺色背景でも映えるよう、彩度・明度を上げた色を使う）
+     線が多いと非常に見にくくなるため、デフォルトは非表示にし、ボタンで表示/非表示を切り替えられるようにする */
+  var aspLineGroupId = 'aspline_' + Math.floor(Math.random() * 1e9);
   var HARD_ASPECTS = { 'コンジャンクション':1, 'スクエア':1, 'オポジション':1 };
   var ASPECT_COLOR_DARKBG = { 'コンジャンクション':'#f2d06a', 'セクスタイル':'#5cc8f2', 'スクエア':'#ff6b6b', 'トライン':'#5cc8f2', 'クインカンクス':'#b89aff', 'オポジション':'#ff6b6b' };
+  svg += '<g id="'+aspLineGroupId+'" style="display:none;">';
   aspects.forEach(function(asp) {
     if (asp.a.lon===null || asp.b.lon===null) return;
     var ia = bodies.indexOf(asp.a), ib = bodies.indexOf(asp.b);
@@ -2057,6 +2069,7 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
     var pb = pt(asp.b.lon, aspectR);
     svg += '<line x1="'+pa.x+'" y1="'+pa.y+'" x2="'+pb.x+'" y2="'+pb.y+'" stroke="'+lineColor+'" stroke-width="1.3" opacity=".8"'+(isHard?'':' stroke-dasharray="3,3"')+'/>';
   });
+  svg += '</g>';
 
   /* 天体：実位置の目盛りに目立つマーカーを置き、シンボルの真下に度数を配置。
      目盛り自体のゴールド系の色と混同しないよう、マーカーはビビッドなピンクで統一し、
@@ -2089,14 +2102,16 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
     svg += '<text x="'+degPt.x+'" y="'+degPt.y+'" font-size="9" fill="#c8ccd8" text-anchor="middle">'+sd.deg+"°"+('0'+sd.min).slice(-2)+"'"+(b.retro?' R':'')+'</text>';
   });
 
-  /* 凡例（実線=緊張系アスペクト／破線=調和系アスペクト） */
-  var legY = size - 14;
-  svg += '<line x1="16" y1="'+legY+'" x2="40" y2="'+legY+'" stroke="#ff6b6b" stroke-width="1.6"/>';
-  svg += '<text x="44" y="'+(legY+4)+'" font-size="10" fill="#a0a4b8">緊張系（合・刑・衝）</text>';
-  svg += '<line x1="'+(size-96)+'" y1="'+legY+'" x2="'+(size-72)+'" y2="'+legY+'" stroke="#5cc8f2" stroke-width="1.6" stroke-dasharray="3,3"/>';
-  svg += '<text x="'+(size-68)+'" y="'+(legY+4)+'" font-size="10" fill="#a0a4b8">調和系</text>';
-
-  svg += '</svg></div>';
+  /* アスペクト線はデフォルト非表示のため、凡例の代わりに表示/非表示を切り替えるボタンを置く */
+  svg += '</svg>';
+  svg += '<div style="text-align:center;margin-top:10px;">';
+  svg += '<button onclick="toggleAspectLinesVisibility(\''+aspLineGroupId+'\',this)" style="padding:7px 18px;border-radius:20px;border:1px solid rgba(201,168,76,.35);background:rgba(255,255,255,.04);color:var(--gold-light);font-size:11px;cursor:pointer;">⟡ アスペクト線を表示</button>';
+  svg += '<div style="margin-top:8px;font-size:10px;color:var(--muted);display:flex;justify-content:center;gap:16px;">';
+  svg += '<span><span style="display:inline-block;width:20px;border-top:1.6px solid #ff6b6b;vertical-align:middle;margin-right:4px;"></span>緊張系（合・刑・衝）</span>';
+  svg += '<span><span style="display:inline-block;width:20px;border-top:1.6px dashed #5cc8f2;vertical-align:middle;margin-right:4px;"></span>調和系</span>';
+  svg += '</div>';
+  svg += '</div>';
+  svg += '</div>';
   return svg;
 }
 
