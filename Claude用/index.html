@@ -2267,21 +2267,6 @@ function buildAspectHTML(p) {
   h += '</table>';
   h += '</div>';
 
-  /* 凡例 */
-  h += '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">';
-  var legends = [
-    ['☌','#fbbf24','コンジャンクション 0°'],
-    ['⚹','#34d399','セクスタイル 60°'],
-    ['□','#f87171','スクエア 90°'],
-    ['△','#60a5fa','トライン 120°'],
-    ['⚻','#a78bfa','クインカンクス 150°'],
-    ['☍','#fb7185','オポジション 180°'],
-  ];
-  legends.forEach(function(l){
-    h += '<span style="font-size:10px;color:'+l[1]+';white-space:nowrap;">'+l[0]+' '+l[2]+'</span>';
-  });
-  h += '</div>';
-
   /* リスト表示 */
   h += '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.08);padding-top:8px;">';
   found.forEach(function(asp) {
