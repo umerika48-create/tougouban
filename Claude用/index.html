@@ -18376,20 +18376,24 @@ function buildUnseiHTML(dauResult, birthYear, nik){
   var remainLabel = dauResult.remainMonths > 0 ? dauResult.remainMonths + 'ヶ月' : '';
   var daunBodyId = 'daunbody_' + Math.floor(Math.random() * 1e9);
   var nenunBodyId = 'nenunbody_' + Math.floor(Math.random() * 1e9);
+  // 「▶ 基本性格」と同じ見た目（サイズ・太さ・色・左側の▶）に揃える
+  var titleStyle = 'font-size:14px;font-weight:700;color:#d4af5a;cursor:pointer;padding:8px 0;list-style:none;display:flex;align-items:center;gap:6px;border-bottom:none;';
 
   return '<div class="unsei-section fade-in">'
-    + '<div class="unsei-section-title" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onclick="toggleShichuuDetail(\'' + daunBodyId + '\')">'
-    + '<span>大 運（だいうん）— 10年ごとの流れ　<span onclick="event.stopPropagation();openRowLabelPanel(\'大運\')" style="font-size:0.6rem;opacity:0.5;">ⓘ</span></span>'
-    + '<span id="' + daunBodyId + '-arrow" style="font-size:0.7rem;color:var(--sk-silver-dim);">▼</span>'
+    + '<div class="unsei-section-title" style="' + titleStyle + '" onclick="toggleShichuuDetail(\'' + daunBodyId + '\')">'
+    + '<span>▶</span>'
+    + '<span>大運（だいうん）— 10年ごとの流れ</span>'
+    + '<span onclick="event.stopPropagation();openRowLabelPanel(\'大運\')" style="font-size:0.6rem;opacity:0.5;">ⓘ</span>'
     + '</div>'
     + '<div id="' + daunBodyId + '" style="display:none;">'
     + '<div style="font-size:0.72rem;color:var(--sk-silver-dim);margin-bottom:0.7rem;">起運: '
     + dauResult.startAge + '歳' + remainLabel + '　' + junkoLabel + '</div>'
     + '<div class="daun-grid">' + daunHTML + '</div>'
     + '</div>'
-    + '<div class="unsei-section-title" style="margin-top:1rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onclick="toggleShichuuDetail(\'' + nenunBodyId + '\')">'
-    + '<span>年 運（ねんうん）— その年の運気　<span onclick="event.stopPropagation();openRowLabelPanel(\'年運\')" style="font-size:0.6rem;opacity:0.5;">ⓘ</span></span>'
-    + '<span id="' + nenunBodyId + '-arrow" style="font-size:0.7rem;color:var(--sk-silver-dim);">▼</span>'
+    + '<div class="unsei-section-title" style="margin-top:1rem;' + titleStyle + '" onclick="toggleShichuuDetail(\'' + nenunBodyId + '\')">'
+    + '<span>▶</span>'
+    + '<span>年運（ねんうん）— その年の運気</span>'
+    + '<span onclick="event.stopPropagation();openRowLabelPanel(\'年運\')" style="font-size:0.6rem;opacity:0.5;">ⓘ</span>'
     + '</div>'
     + '<div id="' + nenunBodyId + '" style="display:none;">'
     + '<table class="nenun-table">'
