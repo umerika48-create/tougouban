@@ -10140,9 +10140,16 @@ function buildPersonalCardsHTML(birthdate, honmei, kYear, kMonth, isPartner) {
         '</div>'+
       '</div>';
     })() +
-    '<div class="card fade-up">'+
-      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span>'+_sanmeiBtnHTML+'</div></div>'+
-      '<div id="sanmei-body">' + buildSanmeiEnergyHTML(birthdate) + '</div>'+
+    '<div class="accordion-wrap">'+
+      '<button class="accordion-btn" id="abtn-sanmei-energy" onclick="toggleAccordion(\'sanmei-energy\')">'+
+        '<span style="display:flex;align-items:center;justify-content:space-between;width:100%;">'+
+          '<span>🎋 算命学エネルギー値</span>'+_sanmeiBtnHTML+
+        '</span>'+
+        '<span class="accordion-arrow">▼</span>'+
+      '</button>'+
+      '<div class="accordion-body" id="abody-sanmei-energy">'+
+        '<div id="sanmei-body">' + buildSanmeiEnergyHTML(birthdate) + '</div>'+
+      '</div>'+
     '</div>';
   h += buildAspectCardHTML(birthdate, isPartner);
 
@@ -10783,9 +10790,16 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
         '</div>'+
       '</div>';
     })() +
-    '<div class="card fade-up">'+
-      '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span>'+_sanmeiBtnHTML+'</div></div>'+
-      '<div id="sanmei-body">' + buildSanmeiEnergyHTML(birthdate) + '</div>'+
+    '<div class="accordion-wrap">'+
+      '<button class="accordion-btn" id="abtn-sanmei-energy" onclick="toggleAccordion(\'sanmei-energy\')">'+
+        '<span style="display:flex;align-items:center;justify-content:space-between;width:100%;">'+
+          '<span>🎋 算命学エネルギー値</span>'+_sanmeiBtnHTML+
+        '</span>'+
+        '<span class="accordion-arrow">▼</span>'+
+      '</button>'+
+      '<div class="accordion-body" id="abody-sanmei-energy">'+
+        '<div id="sanmei-body">' + buildSanmeiEnergyHTML(birthdate) + '</div>'+
+      '</div>'+
     '</div>';
   h += buildAspectCardHTML(birthdate, isPartner);
 
@@ -11787,9 +11801,16 @@ function calculate() {
       '</div>';
     })();
     html +=
-      '<div class="card fade-up">'+
-        '<div class="card-title" style="width:100%;"><div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex:1;"><span>🎋 算命学エネルギー値</span></div></div>'+
-        '<div id="sanmei-body">' + buildSanmeiEnergyHTML(birthdate) + '</div>'+
+      '<div class="accordion-wrap">'+
+        '<button class="accordion-btn" id="abtn-sanmei-energy" onclick="toggleAccordion(\'sanmei-energy\')">'+
+          '<span style="display:flex;align-items:center;justify-content:space-between;width:100%;">'+
+            '<span>🎋 算命学エネルギー値</span>'+
+          '</span>'+
+          '<span class="accordion-arrow">▼</span>'+
+        '</button>'+
+        '<div class="accordion-body" id="abody-sanmei-energy">'+
+          '<div id="sanmei-body">' + buildSanmeiEnergyHTML(birthdate) + '</div>'+
+        '</div>'+
       '</div>';
     html += buildAspectCardHTML(birthdate, false);
 
