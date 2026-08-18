@@ -2052,14 +2052,24 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
     svg += '<line x1="'+pa.x+'" y1="'+pa.y+'" x2="'+pb.x+'" y2="'+pb.y+'" stroke="'+lineColor+'" stroke-width="1.3" opacity=".8"'+(isHard?'':' stroke-dasharray="3,3"')+'/>';
   });
 
-  /* 天体：実位置に短いtick、シンボルの真下に度数を配置 */
+  /* 天体：実位置の目盛りに目立つマーカーを置き、シンボルの真下に度数を配置。
+     ラベルが重なり回避で角度をずらしている場合でも、実際どの目盛りを指しているか
+     ひと目で分かるよう、実位置に小さな丸印＋濃い目盛り線を追加する */
   symBodies.forEach(function(b, i) {
     if (b.lon===null) return;
     var trueLon = b.lon;
     var showLon = dispLon[i]!==undefined ? dispLon[i] : trueLon;
-    var tickInner = pt(trueLon, zodiacInnerR - 2);
+    /* 実位置の目盛り線を強調（他の目盛りより濃く・太く） */
+    var truTickOuter = pt(trueLon, zodiacInnerR);
+    var truTickInner = pt(trueLon, zodiacInnerR - 9);
+    svg += '<line x1="'+truTickOuter.x+'" y1="'+truTickOuter.y+'" x2="'+truTickInner.x+'" y2="'+truTickInner.y+'" stroke="#f4d98a" stroke-width="1.6"/>';
+    /* 実位置そのものに小さな丸印 */
+    var truDot = pt(trueLon, zodiacInnerR);
+    svg += '<circle cx="'+truDot.x+'" cy="'+truDot.y+'" r="2.2" fill="#f4d98a"/>';
+
+    var tickInner = pt(trueLon, zodiacInnerR - 9);
     var tickOuter = pt(showLon, tickR);
-    svg += '<line x1="'+tickInner.x+'" y1="'+tickInner.y+'" x2="'+tickOuter.x+'" y2="'+tickOuter.y+'" stroke="#5a5470" stroke-width="0.6"/>';
+    svg += '<line x1="'+tickInner.x+'" y1="'+tickInner.y+'" x2="'+tickOuter.x+'" y2="'+tickOuter.y+'" stroke="#5a5470" stroke-width="0.6" stroke-dasharray="1.5,2"/>';
 
     var sd = lonToSignDeg(trueLon);
     svg += '<circle cx="'+pt(showLon,labelR).x+'" cy="'+pt(showLon,labelR).y+'" r="12" fill="#1a1730"/>';
