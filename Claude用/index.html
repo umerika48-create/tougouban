@@ -18271,7 +18271,7 @@ function addSignLabelsToMeishiki() {
 
 function reorderResultCards(html) {
   // 基本性格カードと五行バランスカードの順序を入れ替え
-  // 基本性格カードを折りたたみ式にする
+  // 基本性格カードを、他の展開ボタン（アスペクト一覧など）と同じバー型の折りたたみにする
   var parser = typeof DOMParser !== 'undefined' ? new DOMParser() : null;
   if(!parser) return html;
 
@@ -18286,13 +18286,20 @@ function reorderResultCards(html) {
   var basicCard = cards[0];
   var basicTitle = basicCard.querySelector('.interp-card-title');
   var titleText = basicTitle ? basicTitle.textContent : '基本性格';
+  var bodyId = 'basicbody_' + Math.floor(Math.random() * 1e9);
 
-  var details = doc.createElement('details');
-  var summary = doc.createElement('summary');
-  summary.style.cssText = 'font-size:14px;font-weight:700;color:#d4af5a;cursor:pointer;padding:8px 0;list-style:none;display:flex;align-items:center;gap:6px;';
-  summary.innerHTML = '<span>▶</span>' + titleText;
-  details.appendChild(summary);
+  var wrap = doc.createElement('div');
 
+  var btn = doc.createElement('div');
+  btn.setAttribute('onclick', "toggleShichuuDetail('" + bodyId + "')");
+  btn.style.cssText = 'margin-top:14px;width:100%;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:11px 16px;cursor:pointer;';
+  btn.innerHTML = '<span style="font-size:11px;letter-spacing:.1em;color:var(--gold);">' + titleText + '</span>'
+    + '<span id="' + bodyId + '-arrow" style="font-size:10px;color:var(--muted);">\u25BC</span>';
+  wrap.appendChild(btn);
+
+  var body = doc.createElement('div');
+  body.id = bodyId;
+  body.style.cssText = 'display:none;margin-top:10px;';
   var wrapper = doc.createElement('div');
   wrapper.className = 'interp-card';
   // basicCardの子要素を移動（タイトルdivを除く）
@@ -18300,12 +18307,13 @@ function reorderResultCards(html) {
   children.forEach(function(child) {
     wrapper.appendChild(child);
   });
-  details.appendChild(wrapper);
+  body.appendChild(wrapper);
+  wrap.appendChild(body);
 
   // 五行バランスカード（2番目）を先頭に、基本性格を後に
   var gogyoCard = cards[1];
   grid.insertBefore(gogyoCard, cards[0]);
-  grid.replaceChild(details, basicCard);
+  grid.replaceChild(wrap, basicCard);
 
   return doc.documentElement.outerHTML.replace(/^.*<body>|<\/body>.*$/gs, '').trim();
 }
@@ -18376,26 +18384,26 @@ function buildUnseiHTML(dauResult, birthYear, nik){
   var remainLabel = dauResult.remainMonths > 0 ? dauResult.remainMonths + 'ヶ月' : '';
   var daunBodyId = 'daunbody_' + Math.floor(Math.random() * 1e9);
   var nenunBodyId = 'nenunbody_' + Math.floor(Math.random() * 1e9);
-  // 「▶ 基本性格」と同じ見た目（サイズ・太さ・色・左側の▶）に揃える
-  var titleStyle = 'font-size:14px;font-weight:700;color:#d4af5a;cursor:pointer;padding:8px 0;list-style:none;display:flex;align-items:center;gap:6px;border-bottom:none;';
+  // 他の展開ボタン（アスペクト一覧・天体の位置など）と同じバー型の見た目に揃える
+  var barBtnStyle = 'width:100%;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:11px 16px;cursor:pointer;';
+  var barTextStyle = 'font-size:11px;letter-spacing:.1em;color:var(--gold);';
+  var barArrowStyle = 'font-size:10px;color:var(--muted);';
 
   return '<div class="unsei-section fade-in">'
-    + '<div class="unsei-section-title" style="' + titleStyle + '" onclick="toggleShichuuDetail(\'' + daunBodyId + '\')">'
-    + '<span>▶</span>'
-    + '<span>大運（だいうん）— 10年ごとの流れ</span>'
-    + '<span onclick="event.stopPropagation();openRowLabelPanel(\'大運\')" style="font-size:0.6rem;opacity:0.5;">ⓘ</span>'
+    + '<div style="margin-top:14px;' + barBtnStyle + '" onclick="toggleShichuuDetail(\'' + daunBodyId + '\')">'
+    + '<span style="' + barTextStyle + '">大運<span onclick="event.stopPropagation();openRowLabelPanel(\'大運\')" style="opacity:0.6;margin-left:4px;">\u24D8</span></span>'
+    + '<span id="' + daunBodyId + '-arrow" style="' + barArrowStyle + '">\u25BC</span>'
     + '</div>'
-    + '<div id="' + daunBodyId + '" style="display:none;">'
+    + '<div id="' + daunBodyId + '" style="display:none;margin-top:10px;">'
     + '<div style="font-size:0.72rem;color:var(--sk-silver-dim);margin-bottom:0.7rem;">起運: '
     + dauResult.startAge + '歳' + remainLabel + '　' + junkoLabel + '</div>'
     + '<div class="daun-grid">' + daunHTML + '</div>'
     + '</div>'
-    + '<div class="unsei-section-title" style="margin-top:1rem;' + titleStyle + '" onclick="toggleShichuuDetail(\'' + nenunBodyId + '\')">'
-    + '<span>▶</span>'
-    + '<span>年運（ねんうん）— その年の運気</span>'
-    + '<span onclick="event.stopPropagation();openRowLabelPanel(\'年運\')" style="font-size:0.6rem;opacity:0.5;">ⓘ</span>'
+    + '<div style="margin-top:10px;' + barBtnStyle + '" onclick="toggleShichuuDetail(\'' + nenunBodyId + '\')">'
+    + '<span style="' + barTextStyle + '">年運<span onclick="event.stopPropagation();openRowLabelPanel(\'年運\')" style="opacity:0.6;margin-left:4px;">\u24D8</span></span>'
+    + '<span id="' + nenunBodyId + '-arrow" style="' + barArrowStyle + '">\u25BC</span>'
     + '</div>'
-    + '<div id="' + nenunBodyId + '" style="display:none;">'
+    + '<div id="' + nenunBodyId + '" style="display:none;margin-top:10px;">'
     + '<table class="nenun-table">'
     + '<tr><th>年</th><th>年齢</th><th>干支</th><th>天干の星</th><th>十二運</th></tr>'
     + nenunRows
