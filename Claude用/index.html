@@ -1951,7 +1951,7 @@ function lonToHouse(lon, cusps) {
 
 function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
   var size = 460, cx = size/2, cy = size/2;
-  var zodiacOuterR = 222, zodiacInnerR = 190, signR = 206, houseR = 172, tickR = 148, aspectR = 130, labelR = 158;
+  var zodiacOuterR = 222, zodiacInnerR = 190, signR = 206, houseR = 172, tickR = 122, aspectR = 130, labelR = 158;
   var ZODIAC_SYMS = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
 
   /* ハウスがある場合、ASC（1ハウスの始点）が必ず左（9時の位置）に来るよう盤全体を回転させる */
@@ -2053,23 +2053,24 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
   });
 
   /* 天体：実位置の目盛りに目立つマーカーを置き、シンボルの真下に度数を配置。
-     ラベルが重なり回避で角度をずらしている場合でも、実際どの目盛りを指しているか
-     ひと目で分かるよう、実位置に小さな丸印＋濃い目盛り線を追加する */
+     目盛り自体のゴールド系の色と混同しないよう、マーカーはビビッドなピンクで統一し、
+     ガイド線も太く長く伸ばして、実位置とシンボルの対応が一目で分かるようにする */
+  var MARKER_COLOR = '#ff5fa8';
   symBodies.forEach(function(b, i) {
     if (b.lon===null) return;
     var trueLon = b.lon;
     var showLon = dispLon[i]!==undefined ? dispLon[i] : trueLon;
-    /* 実位置の目盛り線を強調（他の目盛りより濃く・太く） */
-    var truTickOuter = pt(trueLon, zodiacInnerR);
-    var truTickInner = pt(trueLon, zodiacInnerR - 9);
-    svg += '<line x1="'+truTickOuter.x+'" y1="'+truTickOuter.y+'" x2="'+truTickInner.x+'" y2="'+truTickInner.y+'" stroke="#f4d98a" stroke-width="1.6"/>';
-    /* 実位置そのものに小さな丸印 */
+    /* 実位置の目盛り線を強調（目盛りのゴールドとは全く違う色にして見分けやすくする） */
+    var truTickOuter = pt(trueLon, zodiacInnerR + 3);
+    var truTickInner = pt(trueLon, zodiacInnerR - 14);
+    svg += '<line x1="'+truTickOuter.x+'" y1="'+truTickOuter.y+'" x2="'+truTickInner.x+'" y2="'+truTickInner.y+'" stroke="'+MARKER_COLOR+'" stroke-width="2.2"/>';
+    /* 実位置そのものに丸印 */
     var truDot = pt(trueLon, zodiacInnerR);
-    svg += '<circle cx="'+truDot.x+'" cy="'+truDot.y+'" r="2.2" fill="#f4d98a"/>';
+    svg += '<circle cx="'+truDot.x+'" cy="'+truDot.y+'" r="3.2" fill="'+MARKER_COLOR+'" stroke="#0d0a18" stroke-width="1"/>';
 
-    var tickInner = pt(trueLon, zodiacInnerR - 9);
+    var tickInner = pt(trueLon, zodiacInnerR - 14);
     var tickOuter = pt(showLon, tickR);
-    svg += '<line x1="'+tickInner.x+'" y1="'+tickInner.y+'" x2="'+tickOuter.x+'" y2="'+tickOuter.y+'" stroke="#5a5470" stroke-width="0.6" stroke-dasharray="1.5,2"/>';
+    svg += '<line x1="'+tickInner.x+'" y1="'+tickInner.y+'" x2="'+tickOuter.x+'" y2="'+tickOuter.y+'" stroke="'+MARKER_COLOR+'" stroke-width="1" opacity="0.55" stroke-dasharray="2,2.5"/>';
 
     var sd = lonToSignDeg(trueLon);
     svg += '<circle cx="'+pt(showLon,labelR).x+'" cy="'+pt(showLon,labelR).y+'" r="12" fill="#1a1730"/>';
