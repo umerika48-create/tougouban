@@ -1981,6 +1981,51 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
       }
     }
   }
+  /* 表示位置がサインやハウスの境界を越えて隣のサイン/ハウスに見えてしまうと
+     誤解を招くため、実位置と同じサイン（30度の枠）かつ同じハウスの範囲内に
+     収まるようクランプする（ハウスはPlacidusなど不等分割のため、サインの
+     30度枠だけでは足りず、実際のハウス境界も別途考慮する） */
+  sortedIdx.forEach(function(i){
+    var trueLon = symBodies[i].lon;
+    var signStart = Math.floor(((trueLon % 360) + 360) % 360 / 30) * 30;
+    var signEnd = signStart + 30;
+    var margin = 2; // 境界の線ぎりぎりに張り付かないよう少し余白を持たせる
+    var loBound = signStart + margin;
+    var hiBound = signEnd - margin;
+
+    /* 実位置が属するハウスの範囲も求めて、サインの枠と重ねてさらに絞り込む */
+    if (cusps && cusps.length === 12) {
+      var normTrue = ((trueLon % 360) + 360) % 360;
+      for (var hh = 0; hh < 12; hh++) {
+        var hStart = ((cusps[hh] % 360) + 360) % 360;
+        var hEnd = ((cusps[(hh + 1) % 12] % 360) + 360) % 360;
+        var inHouse;
+        if (hStart <= hEnd) { inHouse = (normTrue >= hStart && normTrue < hEnd); }
+        else { inHouse = (normTrue >= hStart || normTrue < hEnd); } // 0度をまたぐハウス
+        if (inHouse) {
+          // ハウス境界を、サイン境界と同じ0-360の連続値に揃えて比較できるようにする
+          var hLo = hStart, hHi = hEnd;
+          if (hHi < hLo) hHi += 360; // 0度またぎを解消
+          var sLo = signStart, sHi = signEnd;
+          // trueLonに近い側（sLo/sHiの前後360度違い）に揃える
+          while (hLo > sHi) { hLo -= 360; hHi -= 360; }
+          while (hHi < sLo) { hLo += 360; hHi += 360; }
+          loBound = Math.max(loBound, hLo + margin);
+          hiBound = Math.min(hiBound, hHi - margin);
+          break;
+        }
+      }
+    }
+    if (hiBound < loBound) { var _t = loBound; loBound = hiBound; hiBound = _t; } // 万一逆転したら安全側に戻す
+
+    var d = dispLon[i];
+    var normD = ((d % 360) + 360) % 360;
+    while (normD < loBound - 180) normD += 360;
+    while (normD > loBound + 180) normD -= 360;
+    if (normD < loBound) normD = loBound;
+    if (normD > hiBound) normD = hiBound;
+    dispLon[i] = ((normD % 360) + 360) % 360;
+  });
 
   var svg = '<div style="display:flex;justify-content:center;padding:10px 0;background:transparent;border-radius:10px;margin-bottom:10px;">';
   svg += '<svg viewBox="0 0 '+size+' '+size+'" width="100%" height="100%" style="max-width:400px;">';
