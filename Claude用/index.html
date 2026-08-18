@@ -2307,6 +2307,7 @@ function buildAspectHTML(p) {
   }
   h += '</table>';
   h += '</div>';
+  h += '</div>'; // アスペクト表を囲む余白ラッパーをここで閉じる（下のボタン類が他の展開ボタンと同じ幅になるように）
 
   /* リスト表示（展開式） */
   var listId = 'asplist_' + Math.floor(Math.random() * 1e9);
@@ -2326,7 +2327,6 @@ function buildAspectHTML(p) {
     h += '<span style="font-size:10px;color:var(--muted);margin-left:auto;">±' + asp.orb + '°</span>';
     h += '</div>';
   });
-  h += '</div>';
   h += '</div>';
   h += dataTables;
   return h;
