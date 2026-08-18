@@ -2000,6 +2000,18 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
   svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+zodiacInnerR+'" fill="none" stroke="#999" stroke-width="1"/>';
   svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+aspectR+'" fill="none" stroke="#ddd" stroke-width="1"/>';
 
+  /* 度数の目盛り（1度ごと。10度ごとは長め・太め、5度ごとはやや長めにして読み取りやすくする） */
+  for (var deg = 0; deg < 360; deg++) {
+    var isMajor = (deg % 10 === 0);
+    var isMid = (deg % 5 === 0);
+    var tickLen = isMajor ? 8 : (isMid ? 5.5 : 3);
+    var tickW = isMajor ? 1.1 : 0.5;
+    var tickCol = isMajor ? '#777' : '#bbb';
+    var tp1 = pt(deg, zodiacInnerR);
+    var tp2 = pt(deg, zodiacInnerR - tickLen);
+    svg += '<line x1="'+tp1.x+'" y1="'+tp1.y+'" x2="'+tp2.x+'" y2="'+tp2.y+'" stroke="'+tickCol+'" stroke-width="'+tickW+'"/>';
+  }
+
   /* ハウスカスプ線（データがある場合のみ） */
   if (cusps && cusps.length === 12) {
     for (var hI = 0; hI < 12; hI++) {
