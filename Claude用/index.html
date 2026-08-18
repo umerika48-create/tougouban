@@ -1951,7 +1951,7 @@ function lonToHouse(lon, cusps) {
 
 function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
   var size = 460, cx = size/2, cy = size/2;
-  var zodiacOuterR = 222, zodiacInnerR = 190, signR = 206, houseR = 172, tickR = 122, aspectR = 130, labelR = 158;
+  var zodiacOuterR = 222, zodiacInnerR = 190, signR = 206, houseR = 172, tickR = 122, aspectR = 130, labelR = 172;
   var ZODIAC_SYMS = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
 
   /* ハウスがある場合、ASC（1ハウスの始点）が必ず左（9時の位置）に来るよう盤全体を回転させる */
@@ -2066,7 +2066,7 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
     if (b.lon===null) return;
     var trueLon = b.lon;
     var myTier = tier[i] || 0;
-    var symR = labelR - myTier * 26; // 段違い：重なる天体は外側へ26ずつ離す（角度は変えない）
+    var symR = labelR - myTier * 15; // 段違い：リングに近い位置にとどめるため間隔を詰める（角度は変えない）
 
     /* 実位置の目盛り線を強調（目盛りのゴールドとは全く違う色にして見分けやすくする） */
     var truTickOuter = pt(trueLon, zodiacInnerR + 3);
