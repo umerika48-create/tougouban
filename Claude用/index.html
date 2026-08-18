@@ -1982,23 +1982,23 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
     }
   }
 
-  var svg = '<div style="display:flex;justify-content:center;padding:10px 0;background:#fff;border-radius:10px;margin-bottom:10px;">';
+  var svg = '<div style="display:flex;justify-content:center;padding:10px 0;background:#0d0a18;border-radius:10px;margin-bottom:10px;">';
   svg += '<svg viewBox="0 0 '+size+' '+size+'" width="100%" height="100%" style="max-width:400px;">';
-  svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+(zodiacOuterR+2)+'" fill="#fff"/>';
+  svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+(zodiacOuterR+2)+'" fill="#0d0a18"/>';
 
-  /* 12サインの色帯（外周リング、パステル調） */
+  /* 12サインの色帯（外周リング。紺色の背景に映えるよう彩度・明度を上げたビビッドな配色） */
   for (var s = 0; s < 12; s++) {
     var lonStart = s*30, lonEnd = s*30+30;
     var o1 = pt(lonStart, zodiacOuterR), o2 = pt(lonEnd, zodiacOuterR);
     var i1 = pt(lonStart, zodiacInnerR), i2 = pt(lonEnd, zodiacInnerR);
     var d = 'M '+i1.x+' '+i1.y+' L '+o1.x+' '+o1.y+' A '+zodiacOuterR+' '+zodiacOuterR+' 0 0 0 '+o2.x+' '+o2.y+' L '+i2.x+' '+i2.y+' A '+zodiacInnerR+' '+zodiacInnerR+' 0 0 1 '+i1.x+' '+i1.y+' Z';
-    svg += '<path d="'+d+'" fill="'+SIGN_INFO[s].color+'" opacity=".55" stroke="#fff" stroke-width="1"/>';
+    svg += '<path d="'+d+'" fill="'+SIGN_INFO[s].color+'" opacity=".85" stroke="#0d0a18" stroke-width="1.5"/>';
     var pSym = pt(s*30+15, signR);
-    svg += '<text x="'+pSym.x+'" y="'+pSym.y+'" font-size="18" fill="#2a2a2a" text-anchor="middle" dominant-baseline="middle">'+ZODIAC_SYMS[s]+'</text>';
+    svg += '<text x="'+pSym.x+'" y="'+pSym.y+'" font-size="18" fill="#0d0a18" font-weight="700" text-anchor="middle" dominant-baseline="middle">'+ZODIAC_SYMS[s]+'</text>';
   }
-  svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+zodiacOuterR+'" fill="none" stroke="#999" stroke-width="1"/>';
-  svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+zodiacInnerR+'" fill="none" stroke="#999" stroke-width="1"/>';
-  svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+aspectR+'" fill="none" stroke="#ddd" stroke-width="1"/>';
+  svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+zodiacOuterR+'" fill="none" stroke="#d4af5a" stroke-width="1"/>';
+  svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+zodiacInnerR+'" fill="none" stroke="#d4af5a" stroke-width="1"/>';
+  svg += '<circle cx="'+cx+'" cy="'+cy+'" r="'+aspectR+'" fill="none" stroke="#3a3550" stroke-width="1"/>';
 
   /* 度数の目盛り（1度ごと。10度ごとは長め・太め、5度ごとはやや長めにして読み取りやすくする） */
   for (var deg = 0; deg < 360; deg++) {
@@ -2006,7 +2006,7 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
     var isMid = (deg % 5 === 0);
     var tickLen = isMajor ? 8 : (isMid ? 5.5 : 3);
     var tickW = isMajor ? 1.1 : 0.5;
-    var tickCol = isMajor ? '#777' : '#bbb';
+    var tickCol = isMajor ? '#d4af5a' : '#5a5470';
     var tp1 = pt(deg, zodiacInnerR);
     var tp2 = pt(deg, zodiacInnerR - tickLen);
     svg += '<line x1="'+tp1.x+'" y1="'+tp1.y+'" x2="'+tp2.x+'" y2="'+tp2.y+'" stroke="'+tickCol+'" stroke-width="'+tickW+'"/>';
@@ -2017,36 +2017,39 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
     for (var hI = 0; hI < 12; hI++) {
       var isAngle = (hI===0||hI===3||hI===6||hI===9); /* ASC/IC/DSC/MC */
       var hp1 = pt(cusps[hI], 4), hp2 = pt(cusps[hI], zodiacInnerR);
-      svg += '<line x1="'+hp1.x+'" y1="'+hp1.y+'" x2="'+hp2.x+'" y2="'+hp2.y+'" stroke="'+(isAngle?'#555':'#bbb')+'" stroke-width="'+(isAngle?1.6:0.7)+'"/>';
+      svg += '<line x1="'+hp1.x+'" y1="'+hp1.y+'" x2="'+hp2.x+'" y2="'+hp2.y+'" stroke="'+(isAngle?'#e8e4da':'#5a5470')+'" stroke-width="'+(isAngle?1.6:0.7)+'"/>';
       var nextCusp = cusps[(hI+1)%12];
       var midLon = cusps[hI] + (((nextCusp - cusps[hI]) % 360 + 360) % 360) / 2;
       var hNumPt = pt(midLon, houseR);
-      svg += '<text x="'+hNumPt.x+'" y="'+hNumPt.y+'" font-size="10" font-weight="700" fill="#777" text-anchor="middle" dominant-baseline="middle">'+(hI+1)+'</text>';
+      svg += '<text x="'+hNumPt.x+'" y="'+hNumPt.y+'" font-size="10" font-weight="700" fill="#a0a4b8" text-anchor="middle" dominant-baseline="middle">'+(hI+1)+'</text>';
     }
     var ascPt = pt(cusps[0], zodiacInnerR + 14);
-    svg += '<text x="'+ascPt.x+'" y="'+ascPt.y+'" font-size="12" fill="#333" font-weight="700" text-anchor="middle">ASC</text>';
+    svg += '<text x="'+ascPt.x+'" y="'+ascPt.y+'" font-size="12" fill="#e8e4da" font-weight="700" text-anchor="middle">ASC</text>';
     var mcPt = pt(cusps[9], zodiacInnerR + 14);
-    svg += '<text x="'+mcPt.x+'" y="'+mcPt.y+'" font-size="12" fill="#333" font-weight="700" text-anchor="middle">MC</text>';
+    svg += '<text x="'+mcPt.x+'" y="'+mcPt.y+'" font-size="12" fill="#e8e4da" font-weight="700" text-anchor="middle">MC</text>';
     var dscPt = pt(cusps[6], zodiacInnerR + 14);
-    svg += '<text x="'+dscPt.x+'" y="'+dscPt.y+'" font-size="10" fill="#999" font-weight="700" text-anchor="middle">DSC</text>';
+    svg += '<text x="'+dscPt.x+'" y="'+dscPt.y+'" font-size="10" fill="#a0a4b8" font-weight="700" text-anchor="middle">DSC</text>';
     var icPt = pt(cusps[3], zodiacInnerR + 14);
-    svg += '<text x="'+icPt.x+'" y="'+icPt.y+'" font-size="10" fill="#999" font-weight="700" text-anchor="middle">IC</text>';
+    svg += '<text x="'+icPt.x+'" y="'+icPt.y+'" font-size="10" fill="#a0a4b8" font-weight="700" text-anchor="middle">IC</text>';
   } else {
     for (var s2 = 0; s2 < 12; s2++) {
       var lp1 = pt(s2*30, 4), lp2 = pt(s2*30, zodiacInnerR);
-      svg += '<line x1="'+lp1.x+'" y1="'+lp1.y+'" x2="'+lp2.x+'" y2="'+lp2.y+'" stroke="#ddd" stroke-width="0.7"/>';
+      svg += '<line x1="'+lp1.x+'" y1="'+lp1.y+'" x2="'+lp2.x+'" y2="'+lp2.y+'" stroke="#3a3550" stroke-width="0.7"/>';
     }
   }
 
-  /* アスペクトライン（内側の円の中だけで結ぶ。緊張系（合・刑・衝）=実線、調和系（六・三・向）=破線で見分けやすく） */
+  /* アスペクトライン（内側の円の中だけで結ぶ。緊張系（合・刑・衝）=実線、調和系（六・三・向）=破線で見分けやすく。
+     紺色背景でも映えるよう、彩度・明度を上げた色を使う） */
   var HARD_ASPECTS = { 'コンジャンクション':1, 'スクエア':1, 'オポジション':1 };
+  var ASPECT_COLOR_DARKBG = { 'コンジャンクション':'#f2d06a', 'セクスタイル':'#5cc8f2', 'スクエア':'#ff6b6b', 'トライン':'#5cc8f2', 'クインカンクス':'#b89aff', 'オポジション':'#ff6b6b' };
   aspects.forEach(function(asp) {
     if (asp.a.lon===null || asp.b.lon===null) return;
     var ia = bodies.indexOf(asp.a), ib = bodies.indexOf(asp.b);
     var isHard = !!HARD_ASPECTS[asp.name];
+    var lineColor = ASPECT_COLOR_DARKBG[asp.name] || asp.color;
     var pa = pt(dispLon[ia]!==undefined?dispLon[ia]:asp.a.lon, aspectR);
     var pb = pt(dispLon[ib]!==undefined?dispLon[ib]:asp.b.lon, aspectR);
-    svg += '<line x1="'+pa.x+'" y1="'+pa.y+'" x2="'+pb.x+'" y2="'+pb.y+'" stroke="'+asp.color+'" stroke-width="1.2" opacity=".6"'+(isHard?'':' stroke-dasharray="3,3"')+'/>';
+    svg += '<line x1="'+pa.x+'" y1="'+pa.y+'" x2="'+pb.x+'" y2="'+pb.y+'" stroke="'+lineColor+'" stroke-width="1.3" opacity=".8"'+(isHard?'':' stroke-dasharray="3,3"')+'/>';
   });
 
   /* 天体：実位置に短いtick、シンボルの真下に度数を配置 */
@@ -2056,22 +2059,22 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
     var showLon = dispLon[i]!==undefined ? dispLon[i] : trueLon;
     var tickInner = pt(trueLon, zodiacInnerR - 2);
     var tickOuter = pt(showLon, tickR);
-    svg += '<line x1="'+tickInner.x+'" y1="'+tickInner.y+'" x2="'+tickOuter.x+'" y2="'+tickOuter.y+'" stroke="#bbb" stroke-width="0.6"/>';
+    svg += '<line x1="'+tickInner.x+'" y1="'+tickInner.y+'" x2="'+tickOuter.x+'" y2="'+tickOuter.y+'" stroke="#5a5470" stroke-width="0.6"/>';
 
     var sd = lonToSignDeg(trueLon);
-    svg += '<circle cx="'+pt(showLon,labelR).x+'" cy="'+pt(showLon,labelR).y+'" r="11" fill="#fff" opacity="0.001"/>';
+    svg += '<circle cx="'+pt(showLon,labelR).x+'" cy="'+pt(showLon,labelR).y+'" r="12" fill="#1a1730"/>';
     var symPt = pt(showLon, labelR);
-    svg += '<text x="'+symPt.x+'" y="'+symPt.y+'" font-size="18" fill="#222" text-anchor="middle" dominant-baseline="middle">'+b.sym+'</text>';
+    svg += '<text x="'+symPt.x+'" y="'+symPt.y+'" font-size="18" fill="#f4d98a" text-anchor="middle" dominant-baseline="middle">'+b.sym+'</text>';
     var degPt = pt(showLon, labelR - 20);
-    svg += '<text x="'+degPt.x+'" y="'+degPt.y+'" font-size="9" fill="#888" text-anchor="middle">'+sd.deg+"°"+('0'+sd.min).slice(-2)+"'"+(b.retro?' R':'')+'</text>';
+    svg += '<text x="'+degPt.x+'" y="'+degPt.y+'" font-size="9" fill="#c8ccd8" text-anchor="middle">'+sd.deg+"°"+('0'+sd.min).slice(-2)+"'"+(b.retro?' R':'')+'</text>';
   });
 
   /* 凡例（実線=緊張系アスペクト／破線=調和系アスペクト） */
   var legY = size - 14;
-  svg += '<line x1="16" y1="'+legY+'" x2="40" y2="'+legY+'" stroke="#e8635a" stroke-width="1.4"/>';
-  svg += '<text x="44" y="'+(legY+4)+'" font-size="10" fill="#888">緊張系（合・刑・衝）</text>';
-  svg += '<line x1="'+(size-96)+'" y1="'+legY+'" x2="'+(size-72)+'" y2="'+legY+'" stroke="#4a95c9" stroke-width="1.4" stroke-dasharray="3,3"/>';
-  svg += '<text x="'+(size-68)+'" y="'+(legY+4)+'" font-size="10" fill="#888">調和系</text>';
+  svg += '<line x1="16" y1="'+legY+'" x2="40" y2="'+legY+'" stroke="#ff6b6b" stroke-width="1.6"/>';
+  svg += '<text x="44" y="'+(legY+4)+'" font-size="10" fill="#a0a4b8">緊張系（合・刑・衝）</text>';
+  svg += '<line x1="'+(size-96)+'" y1="'+legY+'" x2="'+(size-72)+'" y2="'+legY+'" stroke="#5cc8f2" stroke-width="1.6" stroke-dasharray="3,3"/>';
+  svg += '<text x="'+(size-68)+'" y="'+(legY+4)+'" font-size="10" fill="#a0a4b8">調和系</text>';
 
   svg += '</svg></div>';
   return svg;
