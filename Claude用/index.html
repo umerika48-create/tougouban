@@ -2093,7 +2093,13 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
 /* 天体位置・ハウスカスプ・サイン区分の一覧テーブル */
 function buildHoroscopeDataTables(bodies, cusps) {
   var h = '';
-  h += '<div style="font-size:11px;color:var(--muted);margin:14px 0 8px;">天体の位置</div>';
+  var uid = 'hp_' + Math.floor(Math.random() * 1e9);
+  var planetsId = uid + '_planets';
+  h += '<div onclick="toggleShichuuDetail(\''+planetsId+'\')" style="margin-top:14px;width:100%;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:11px 16px;cursor:pointer;">'
+    + '<span style="font-size:11px;letter-spacing:.1em;color:var(--gold);">天体の位置</span>'
+    + '<span id="'+planetsId+'-arrow" style="font-size:10px;color:var(--muted);">▼</span>'
+    + '</div>';
+  h += '<div id="'+planetsId+'" style="display:none;margin-top:10px;">';
   h += '<table style="width:100%;border-collapse:collapse;font-size:11px;color:var(--text);">';
   bodies.forEach(function(b){
     if (b.lon===null) { return; }
@@ -2107,9 +2113,15 @@ function buildHoroscopeDataTables(bodies, cusps) {
     h += '</tr>';
   });
   h += '</table>';
+  h += '</div>';
 
   if (cusps && cusps.length===12) {
-    h += '<div style="font-size:11px;color:var(--muted);margin:14px 0 8px;">ハウスのカスプ</div>';
+    var cuspsId = uid + '_cusps';
+    h += '<div onclick="toggleShichuuDetail(\''+cuspsId+'\')" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:11px 16px;cursor:pointer;">'
+      + '<span style="font-size:11px;letter-spacing:.1em;color:var(--gold);">ハウスのカスプ</span>'
+      + '<span id="'+cuspsId+'-arrow" style="font-size:10px;color:var(--muted);">▼</span>'
+      + '</div>';
+    h += '<div id="'+cuspsId+'" style="display:none;margin-top:10px;">';
     h += '<table style="width:100%;border-collapse:collapse;font-size:11px;color:var(--text);">';
     for (var i=0;i<12;i++){
       var sd2 = lonToSignDeg(cusps[i]);
@@ -2120,6 +2132,7 @@ function buildHoroscopeDataTables(bodies, cusps) {
       h += '</tr>';
     }
     h += '</table>';
+    h += '</div>';
   }
 
   /* サイン区分（元素・区分・性質ごとにグルーピング） */
@@ -2267,8 +2280,13 @@ function buildAspectHTML(p) {
   h += '</table>';
   h += '</div>';
 
-  /* リスト表示 */
-  h += '<div style="margin-top:10px;border-top:1px solid rgba(255,255,255,.08);padding-top:8px;">';
+  /* リスト表示（展開式） */
+  var listId = 'asplist_' + Math.floor(Math.random() * 1e9);
+  h += '<div onclick="toggleShichuuDetail(\''+listId+'\')" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:11px 16px;cursor:pointer;">'
+    + '<span style="font-size:11px;letter-spacing:.1em;color:var(--gold);">アスペクト一覧</span>'
+    + '<span id="'+listId+'-arrow" style="font-size:10px;color:var(--muted);">▼</span>'
+    + '</div>';
+  h += '<div id="'+listId+'" style="display:none;margin-top:10px;padding-top:8px;">';
   found.forEach(function(asp) {
     h += '<div style="display:flex;align-items:center;padding:3px 0;gap:5px;">';
     h += '<span style="font-size:11px;min-width:18px;">' + asp.a.sym + '</span>';
