@@ -18374,19 +18374,29 @@ function buildUnseiHTML(dauResult, birthYear, nik){
 
   var junkoLabel  = dauResult.junko ? '順行（じゅんこう）' : '逆行（ぎゃっこう）';
   var remainLabel = dauResult.remainMonths > 0 ? dauResult.remainMonths + 'ヶ月' : '';
+  var daunBodyId = 'daunbody_' + Math.floor(Math.random() * 1e9);
+  var nenunBodyId = 'nenunbody_' + Math.floor(Math.random() * 1e9);
 
   return '<div class="unsei-section fade-in">'
-    + '<div class="unsei-section-title" style="cursor:pointer;" onclick="openRowLabelPanel(\'大運\')">'
-    + '大 運（だいうん）— 10年ごとの流れ　<span style="font-size:0.6rem;opacity:0.5;">ⓘ</span></div>'
+    + '<div class="unsei-section-title" style="cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onclick="toggleShichuuDetail(\'' + daunBodyId + '\')">'
+    + '<span>大 運（だいうん）— 10年ごとの流れ　<span onclick="event.stopPropagation();openRowLabelPanel(\'大運\')" style="font-size:0.6rem;opacity:0.5;">ⓘ</span></span>'
+    + '<span id="' + daunBodyId + '-arrow" style="font-size:0.7rem;color:var(--sk-silver-dim);">▼</span>'
+    + '</div>'
+    + '<div id="' + daunBodyId + '" style="display:none;">'
     + '<div style="font-size:0.72rem;color:var(--sk-silver-dim);margin-bottom:0.7rem;">起運: '
     + dauResult.startAge + '歳' + remainLabel + '　' + junkoLabel + '</div>'
     + '<div class="daun-grid">' + daunHTML + '</div>'
-    + '<div class="unsei-section-title" style="margin-top:1rem;cursor:pointer;" onclick="openRowLabelPanel(\'年運\')">'
-    + '年 運（ねんうん）— その年の運気　<span style="font-size:0.6rem;opacity:0.5;">ⓘ</span></div>'
+    + '</div>'
+    + '<div class="unsei-section-title" style="margin-top:1rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;" onclick="toggleShichuuDetail(\'' + nenunBodyId + '\')">'
+    + '<span>年 運（ねんうん）— その年の運気　<span onclick="event.stopPropagation();openRowLabelPanel(\'年運\')" style="font-size:0.6rem;opacity:0.5;">ⓘ</span></span>'
+    + '<span id="' + nenunBodyId + '-arrow" style="font-size:0.7rem;color:var(--sk-silver-dim);">▼</span>'
+    + '</div>'
+    + '<div id="' + nenunBodyId + '" style="display:none;">'
     + '<table class="nenun-table">'
     + '<tr><th>年</th><th>年齢</th><th>干支</th><th>天干の星</th><th>十二運</th></tr>'
     + nenunRows
     + '</table>'
+    + '</div>'
     + '</div>';
 }
 
