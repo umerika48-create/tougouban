@@ -1965,67 +1965,28 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
   /* ASC・MCはハウスカスプ側で既にラベル表示するため、天体シンボル/度数の重複描画からは除外する */
   var symBodies = bodies.filter(function(b){ return b.name !== 'ASC' && b.name !== 'MC'; });
 
-  /* 天体が近すぎる場合に表示上の角度をずらして重なりを防ぐ（実際の位置はtickで示す） */
+  /* 天体シンボルは常に「実際の角度」のまま描く（サイン・ハウスの境界を絶対に越えない）。
+     重なる場合は角度をずらすのではなく、外側に向かって段違い（半径を変える）に並べる。
+     これにより、目盛りとシンボルを結ぶ線は常にまっすぐな放射線になり、
+     「どの線がどの天体か」が一目で分かる */
   var sortedIdx = symBodies.map(function(b,i){return i;}).filter(function(i){return symBodies[i].lon!==null;})
     .sort(function(a,b){ return symBodies[a].lon - symBodies[b].lon; });
-  var dispLon = {};
-  sortedIdx.forEach(function(i){ dispLon[i] = symBodies[i].lon; });
-  var minSep = 24;
-  for (var pass=0; pass<14; pass++) {
-    for (var k=0; k<sortedIdx.length; k++) {
-      var cur = sortedIdx[k], prev = sortedIdx[(k-1+sortedIdx.length)%sortedIdx.length];
-      var diff = dispLon[cur] - dispLon[prev];
-      while (diff < 0) diff += 360;
-      if (k>0 && diff < minSep) {
-        dispLon[cur] = dispLon[prev] + minSep;
-      }
+  var CLUSTER_GAP = 14; // これより角度が近い天体同士は「重なる」とみなして段をずらす
+  var tier = {};
+  sortedIdx.forEach(function(i, k){
+    if (k === 0) { tier[i] = 0; return; }
+    var prev = sortedIdx[k-1];
+    var gap = symBodies[i].lon - symBodies[prev].lon;
+    tier[i] = (gap < CLUSTER_GAP) ? tier[prev] + 1 : 0;
+  });
+  // 円環の先頭と末尾がまたいで近い場合も連続した密集とみなす
+  if (sortedIdx.length > 1) {
+    var firstI = sortedIdx[0], lastI = sortedIdx[sortedIdx.length-1];
+    var wrapGap = (symBodies[firstI].lon + 360) - symBodies[lastI].lon;
+    if (wrapGap < CLUSTER_GAP && tier[firstI] === 0) {
+      tier[firstI] = tier[lastI] + 1;
     }
   }
-  /* 表示位置がサインやハウスの境界を越えて隣のサイン/ハウスに見えてしまうと
-     誤解を招くため、実位置と同じサイン（30度の枠）かつ同じハウスの範囲内に
-     収まるようクランプする（ハウスはPlacidusなど不等分割のため、サインの
-     30度枠だけでは足りず、実際のハウス境界も別途考慮する） */
-  sortedIdx.forEach(function(i){
-    var trueLon = symBodies[i].lon;
-    var signStart = Math.floor(((trueLon % 360) + 360) % 360 / 30) * 30;
-    var signEnd = signStart + 30;
-    var margin = 2; // 境界の線ぎりぎりに張り付かないよう少し余白を持たせる
-    var loBound = signStart + margin;
-    var hiBound = signEnd - margin;
-
-    /* 実位置が属するハウスの範囲も求めて、サインの枠と重ねてさらに絞り込む */
-    if (cusps && cusps.length === 12) {
-      var normTrue = ((trueLon % 360) + 360) % 360;
-      for (var hh = 0; hh < 12; hh++) {
-        var hStart = ((cusps[hh] % 360) + 360) % 360;
-        var hEnd = ((cusps[(hh + 1) % 12] % 360) + 360) % 360;
-        var inHouse;
-        if (hStart <= hEnd) { inHouse = (normTrue >= hStart && normTrue < hEnd); }
-        else { inHouse = (normTrue >= hStart || normTrue < hEnd); } // 0度をまたぐハウス
-        if (inHouse) {
-          // ハウス境界を、サイン境界と同じ0-360の連続値に揃えて比較できるようにする
-          var hLo = hStart, hHi = hEnd;
-          if (hHi < hLo) hHi += 360; // 0度またぎを解消
-          var sLo = signStart, sHi = signEnd;
-          // trueLonに近い側（sLo/sHiの前後360度違い）に揃える
-          while (hLo > sHi) { hLo -= 360; hHi -= 360; }
-          while (hHi < sLo) { hLo += 360; hHi += 360; }
-          loBound = Math.max(loBound, hLo + margin);
-          hiBound = Math.min(hiBound, hHi - margin);
-          break;
-        }
-      }
-    }
-    if (hiBound < loBound) { var _t = loBound; loBound = hiBound; hiBound = _t; } // 万一逆転したら安全側に戻す
-
-    var d = dispLon[i];
-    var normD = ((d % 360) + 360) % 360;
-    while (normD < loBound - 180) normD += 360;
-    while (normD > loBound + 180) normD -= 360;
-    if (normD < loBound) normD = loBound;
-    if (normD > hiBound) normD = hiBound;
-    dispLon[i] = ((normD % 360) + 360) % 360;
-  });
 
   var svg = '<div style="display:flex;justify-content:center;padding:10px 0;background:transparent;border-radius:10px;margin-bottom:10px;">';
   svg += '<svg viewBox="0 0 '+size+' '+size+'" width="100%" height="100%" style="max-width:400px;">';
@@ -2092,8 +2053,8 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
     var ia = bodies.indexOf(asp.a), ib = bodies.indexOf(asp.b);
     var isHard = !!HARD_ASPECTS[asp.name];
     var lineColor = ASPECT_COLOR_DARKBG[asp.name] || asp.color;
-    var pa = pt(dispLon[ia]!==undefined?dispLon[ia]:asp.a.lon, aspectR);
-    var pb = pt(dispLon[ib]!==undefined?dispLon[ib]:asp.b.lon, aspectR);
+    var pa = pt(asp.a.lon, aspectR);
+    var pb = pt(asp.b.lon, aspectR);
     svg += '<line x1="'+pa.x+'" y1="'+pa.y+'" x2="'+pb.x+'" y2="'+pb.y+'" stroke="'+lineColor+'" stroke-width="1.3" opacity=".8"'+(isHard?'':' stroke-dasharray="3,3"')+'/>';
   });
 
@@ -2104,7 +2065,9 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
   symBodies.forEach(function(b, i) {
     if (b.lon===null) return;
     var trueLon = b.lon;
-    var showLon = dispLon[i]!==undefined ? dispLon[i] : trueLon;
+    var myTier = tier[i] || 0;
+    var symR = labelR - myTier * 26; // 段違い：重なる天体は外側へ26ずつ離す（角度は変えない）
+
     /* 実位置の目盛り線を強調（目盛りのゴールドとは全く違う色にして見分けやすくする） */
     var truTickOuter = pt(trueLon, zodiacInnerR + 3);
     var truTickInner = pt(trueLon, zodiacInnerR - 14);
@@ -2113,15 +2076,16 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
     var truDot = pt(trueLon, zodiacInnerR);
     svg += '<circle cx="'+truDot.x+'" cy="'+truDot.y+'" r="3.2" fill="'+MARKER_COLOR+'" stroke="#0d0a18" stroke-width="1"/>';
 
+    /* 目盛りからシンボルまで、同じ角度のまっすぐな線でつなぐ（斜めにならないので迷わない） */
     var tickInner = pt(trueLon, zodiacInnerR - 14);
-    var tickOuter = pt(showLon, tickR);
+    var tickOuter = pt(trueLon, symR + 13);
     svg += '<line x1="'+tickInner.x+'" y1="'+tickInner.y+'" x2="'+tickOuter.x+'" y2="'+tickOuter.y+'" stroke="'+MARKER_COLOR+'" stroke-width="1" opacity="0.55" stroke-dasharray="2,2.5"/>';
 
     var sd = lonToSignDeg(trueLon);
-    svg += '<circle cx="'+pt(showLon,labelR).x+'" cy="'+pt(showLon,labelR).y+'" r="12" fill="#1a1730"/>';
-    var symPt = pt(showLon, labelR);
+    svg += '<circle cx="'+pt(trueLon,symR).x+'" cy="'+pt(trueLon,symR).y+'" r="12" fill="#1a1730"/>';
+    var symPt = pt(trueLon, symR);
     svg += '<text x="'+symPt.x+'" y="'+symPt.y+'" font-size="18" fill="#f4d98a" text-anchor="middle" dominant-baseline="middle">'+b.sym+'</text>';
-    var degPt = pt(showLon, labelR - 20);
+    var degPt = pt(trueLon, symR - 20);
     svg += '<text x="'+degPt.x+'" y="'+degPt.y+'" font-size="9" fill="#c8ccd8" text-anchor="middle">'+sd.deg+"°"+('0'+sd.min).slice(-2)+"'"+(b.retro?' R':'')+'</text>';
   });
 
