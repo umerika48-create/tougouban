@@ -11360,15 +11360,6 @@ function runHoroscope() {
   /* moonLon: lt_moonLon はUT(世界時)で計算するため、JSTの場合は-9時間して渡す */
   var _moonHourUT = hasTime ? (birthHourDec - (cityData ? cityData.tz : 9)) : 12;
   var moonLon = lt_moonLon(y, mo, d, _moonHourUT);
-  /* 月は約2.5日でサインが変わるため、生まれた日のうちにサインが切り替わることがある。
-     出生時刻が分かっている場合は、日付だけで判定する lt_getMoonSign（不確実・遷移ロジック）
-     ではなく、正確な出生時刻から計算した moonLon（度数計算はこちらが正しい）を優先して
-     サイン名を決め直す。これをしないと「度数は獅子座なのにサイン名は蟹座のまま」のような
-     矛盾した表示になってしまう（2009/6/25 22:30のようなケースで実際に発生していた不具合） */
-  if (hasTime) {
-    var _moonSignIdx = Math.floor(((moonLon % 360) + 360) % 360 / 30);
-    moon = { sign: LT_SIGNS[_moonSignIdx], uncertain: false, alt: null, transition: null };
-  }
   var mercury = lt_getMercurySign(ymd);
   var venus   = lt_getVenusSign(ymd);   /* lt_getVenusSign は ymd(数値) を受け付ける */
   var mars    = lt_getMarsSign(bd);     /* lt_getMarsSign は birthdate(文字列) を受け付ける */
@@ -11402,6 +11393,37 @@ function runHoroscope() {
   }
   var sunDeg  = lonToDeg(sunLon);
   var moonDeg = lonToDeg(moonLon);
+
+  /* 太陽・月に限らず、他の天体も「日付だけで判定する簡易サイン判定（不確実・遷移ロジック）」と
+     「精密な経度計算」が、天体がサインを跨ぐ日に生まれた場合はまれに食い違うことがある
+     （2009/6/25生まれの月で実際に発生していた不具合と同じ構造の問題が、太陽・水星・金星・
+     火星・木星・土星・天王星・海王星・冥王星すべてに共通して存在していた）。
+     出生時刻が分かっている場合は、全天体で精密な経度から改めてサイン名を決め直し、
+     度数の表示と絶対に矛盾しないようにする */
+  if (hasTime) {
+    function _rawLon(nm) {
+      var tbl = _lonTables[nm];
+      var l = tbl ? getPlanetLonInterp(tbl, y, mo, d, _sunHourUT) : null;
+      return (l === null || l === undefined) ? null : (((l % 360) + 360) % 360);
+    }
+    function _resolvedSign(nm) {
+      var raw = _rawLon(nm);
+      if (raw === null) return null;
+      return { sign: LT_SIGNS[Math.floor(raw / 30) % 12], uncertain: false, alt: null, transition: null };
+    }
+    var _sunSignIdx = Math.floor(((sunLon % 360) + 360) % 360 / 30);
+    sun = { sign: LT_SIGNS[_sunSignIdx], uncertain: false, alt: null, transition: null };
+    var _moonSignIdx = Math.floor(((moonLon % 360) + 360) % 360 / 30);
+    moon = { sign: LT_SIGNS[_moonSignIdx], uncertain: false, alt: null, transition: null };
+    mercury = _resolvedSign('MERCURY') || mercury;
+    venus   = _resolvedSign('VENUS')   || venus;
+    mars    = _resolvedSign('MARS')    || mars;
+    jupiter = _resolvedSign('JUPITER') || jupiter;
+    saturn  = _resolvedSign('SATURN')  || saturn;
+    uranus  = _resolvedSign('URANUS')  || uranus;
+    neptune = _resolvedSign('NEPTUNE') || neptune;
+    pluto   = _resolvedSign('PLUTO')   || pluto;
+  }
 
   /* ASC・MC */
   var ascmc = null;
