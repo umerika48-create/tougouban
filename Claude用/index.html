@@ -11360,6 +11360,15 @@ function runHoroscope() {
   /* moonLon: lt_moonLon はUT(世界時)で計算するため、JSTの場合は-9時間して渡す */
   var _moonHourUT = hasTime ? (birthHourDec - (cityData ? cityData.tz : 9)) : 12;
   var moonLon = lt_moonLon(y, mo, d, _moonHourUT);
+  /* 月は約2.5日でサインが変わるため、生まれた日のうちにサインが切り替わることがある。
+     出生時刻が分かっている場合は、日付だけで判定する lt_getMoonSign（不確実・遷移ロジック）
+     ではなく、正確な出生時刻から計算した moonLon（度数計算はこちらが正しい）を優先して
+     サイン名を決め直す。これをしないと「度数は獅子座なのにサイン名は蟹座のまま」のような
+     矛盾した表示になってしまう（2009/6/25 22:30のようなケースで実際に発生していた不具合） */
+  if (hasTime) {
+    var _moonSignIdx = Math.floor(((moonLon % 360) + 360) % 360 / 30);
+    moon = { sign: LT_SIGNS[_moonSignIdx], uncertain: false, alt: null, transition: null };
+  }
   var mercury = lt_getMercurySign(ymd);
   var venus   = lt_getVenusSign(ymd);   /* lt_getVenusSign は ymd(数値) を受け付ける */
   var mars    = lt_getMarsSign(bd);     /* lt_getMarsSign は birthdate(文字列) を受け付ける */
