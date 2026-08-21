@@ -2075,11 +2075,34 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
      目盛り自体のゴールド系の色と混同しないよう、マーカーはビビッドなピンクで統一し、
      ガイド線も太く長く伸ばして、実位置とシンボルの対応が一目で分かるようにする */
   var MARKER_COLOR = '#ff5fa8';
+  /* ASC/MC/DSC/ICの角度線と天体（シンボル・度数）が重なって読みにくくなるのを避けるため、
+     近い場合は線から少しだけ離す（サイン境界のクランプは維持する） */
+  function avoidAngleCusp(lon, baseLon, threshold, pushDist) {
+    if (!cusps || cusps.length !== 12) return lon;
+    var angleCusps = [cusps[0], cusps[3], cusps[6], cusps[9]];
+    for (var k = 0; k < 4; k++) {
+      var diff = ((lon - angleCusps[k] + 540) % 360) - 180;
+      if (Math.abs(diff) < threshold) {
+        var signStart = Math.floor(baseLon / 30) * 30;
+        lon = Math.max(signStart + 1, Math.min(signStart + 29, angleCusps[k] + (diff >= 0 ? pushDist : -pushDist)));
+      }
+    }
+    return lon;
+  }
   symBodies.forEach(function(b, i) {
     if (b.lon===null) return;
     var trueLon = b.lon;
     var myTier = tier[i] || 0;
-    var symR = labelR - myTier * 15; // 段違い：土星のような「ちょうどいい距離」を基準に、段の間隔を詰めて近くにとどめる
+    var symR = labelR; // 半径は全天体で統一し、高さを揃える
+
+    /* 段がある場合は角度方向に少しだけズラして扇形に広げる（サイン境界は越えない） */
+    var symLon = trueLon;
+    if (myTier > 0) {
+      var offsetDeg = Math.min(myTier * 6, 13);
+      var signStart = Math.floor(trueLon / 30) * 30;
+      symLon = Math.max(signStart + 1, Math.min(signStart + 29, trueLon + offsetDeg));
+    }
+    symLon = avoidAngleCusp(symLon, trueLon, 4, 6); // シンボル本体もASC等の線を避ける
 
     /* 実位置の目盛り線を強調（目盛りのゴールドとは全く違う色にして見分けやすくする） */
     var truTickOuter = pt(trueLon, zodiacInnerR + 3);
@@ -2089,16 +2112,33 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
     var truDot = pt(trueLon, zodiacInnerR);
     svg += '<circle cx="'+truDot.x+'" cy="'+truDot.y+'" r="3.2" fill="'+MARKER_COLOR+'" stroke="#0d0a18" stroke-width="1"/>';
 
-    /* 目盛りからシンボルまで、同じ角度のまっすぐな線でつなぐ（斜めにならないので迷わない） */
+    /* 目盛り（実位置）からシンボル（角度をズラした位置・同じ半径）まで、ほぼ垂直に近い線でつなぐ */
     var tickInner = pt(trueLon, zodiacInnerR - 14);
-    var tickOuter = pt(trueLon, symR + 13);
+    var tickOuter = pt(symLon, symR + 13);
     svg += '<line x1="'+tickInner.x+'" y1="'+tickInner.y+'" x2="'+tickOuter.x+'" y2="'+tickOuter.y+'" stroke="'+MARKER_COLOR+'" stroke-width="1" opacity="0.55" stroke-dasharray="2,2.5"/>';
 
+    /* シンボルは円の背景を持たせず、記号そのものだけを表示する */
     var sd = lonToSignDeg(trueLon);
-    svg += '<circle cx="'+pt(trueLon,symR).x+'" cy="'+pt(trueLon,symR).y+'" r="12" fill="#1a1730"/>';
-    var symPt = pt(trueLon, symR);
-    svg += '<text x="'+symPt.x+'" y="'+symPt.y+'" font-size="18" fill="#f4d98a" text-anchor="middle" dominant-baseline="middle">'+b.sym+'</text>';
-    var degPt = pt(trueLon, symR - 20);
+    var symPt = pt(symLon, symR);
+    svg += '<text x="'+symPt.x+'" y="'+symPt.y+'" font-size="20" fill="#f4d98a" text-anchor="middle" dominant-baseline="middle" style="paint-order:stroke;stroke:#0d0a18;stroke-width:3px;">'+b.sym+'</text>';
+    /* 度数の数字はシンボルと同じ方向に、シンボルより大きく広げて配置する。
+       （左右交互だとシンボルの広がる向きと逆になることがあり、かえって近づくケースがあったため、
+       常にシンボルと同じ方向・より大きい幅に統一する） */
+    var degLon = trueLon;
+    if (myTier > 0) {
+      var degOffsetDeg = Math.min(myTier * 16, 30);
+      var degSignStart = Math.floor(trueLon / 30) * 30;
+      degLon = Math.max(degSignStart + 1, Math.min(degSignStart + 29, trueLon + degOffsetDeg));
+    }
+    degLon = avoidAngleCusp(degLon, trueLon, 4, 12);
+    /* 最終チェック：それでもシンボルと度数が近すぎる場合は、同じ向きにさらに離す */
+    var symDegGap = ((degLon - symLon + 540) % 360) - 180;
+    if (Math.abs(symDegGap) < 6) {
+      var gapSignStart = Math.floor(trueLon / 30) * 30;
+      var gapDir = symDegGap >= 0 ? 1 : -1;
+      degLon = Math.max(gapSignStart + 1, Math.min(gapSignStart + 29, symLon + gapDir * 6));
+    }
+    var degPt = pt(degLon, symR - 20);
     svg += '<text x="'+degPt.x+'" y="'+degPt.y+'" font-size="9" fill="#c8ccd8" text-anchor="middle">'+sd.deg+"°"+('0'+sd.min).slice(-2)+"'"+(b.retro?' R':'')+'</text>';
   });
 
@@ -6228,22 +6268,30 @@ function buildSanmeiEnergyHTML(birthdate) {
 }
 
 /* 通常鑑定用：生年月日だけでアスペクト表を計算するための簡易p生成
-   window._normalBirthTime / window._normalCityData があればASC・MCも計算する */
-function buildNormalAspectBody(birthdate) {
+   isPartner=trueの場合はwindow._compatBirthTime / window._compatCityData（相手側）を使う */
+function buildNormalAspectBody(birthdate, isPartner) {
   var parts = birthdate.split('-');
   var y=+parts[0], mo=+parts[1], d=+parts[2];
-  var hasTime = !!window._normalBirthTime;
+  var _bTime = isPartner ? window._compatBirthTime : window._normalBirthTime;
+  var _cData = isPartner ? window._compatCityData : window._normalCityData;
+  var hasTime = !!_bTime;
   var birthHour=12, birthMin=0;
   if (hasTime) {
-    var tm = window._normalBirthTime.match(/^(\d{2}):(\d{2})$/);
+    var tm = _bTime.match(/^(\d{2}):(\d{2})$/);
     if (tm) { birthHour=+tm[1]; birthMin=+tm[2]; }
   }
   var birthHourDec = birthHour + birthMin/60;
-  var cityData = window._normalCityData || null;
+  var cityData = _cData || null;
 
   var moon = lt_getMoonSign(y, mo, d);
   var _moonHourUT = hasTime ? (birthHourDec - (cityData ? cityData.tz : 9)) : 12;
   var moonLonVal = lt_moonLon(y, mo, d, _moonHourUT);
+  /* 出生時刻が分かっている場合は、runHoroscope()と同様に精密経度からサイン名を決め直す
+     （日付のみで判定する簡易ロジックのままだと、月がサインを跨ぐ日に食い違いが生じるため） */
+  if (hasTime) {
+    var _moonSignIdx = Math.floor(((moonLonVal % 360) + 360) % 360 / 30);
+    moon = { sign: LT_SIGNS[_moonSignIdx], uncertain: false, alt: null, transition: null };
+  }
   function lonToDeg(lon) {
     var lon2=((lon%360)+360)%360;
     var s=Math.floor(lon2/30)%12;
@@ -6279,10 +6327,45 @@ function toggleAspectCard(id, cardId) {
 }
 function buildAspectCardHTML(birthdate, isPartner) {
   if (!birthdate) return '';
-  var body = buildNormalAspectBody(birthdate);
+  var body = buildNormalAspectBody(birthdate, isPartner);
   if (!body) return '';
   var suffix = birthdate.replace(/[^0-9]/g,'') + (isPartner ? '-p' : '');
-  return makeAccordion('aspect-'+suffix, 'アスペクト', body, true);
+  var hasCompat = !!window._compatBdB;
+  if (!hasCompat) {
+    return makeAccordion('aspect-'+suffix, 'アスペクト', body, true);
+  }
+  /* 相手データがある場合は、四柱推命・算命学カードと同じ見た目のあなた/相手タブを付ける */
+  var bodyId = 'aspect-tabbody-'+suffix;
+  var _actStyle = 'padding:2px 8px;border-radius:20px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:10px;font-weight:600;cursor:pointer;';
+  var _inactStyle = 'padding:2px 8px;border-radius:20px;border:1px solid rgba(168,154,255,.3);background:transparent;color:rgba(168,154,255,.4);font-size:10px;font-weight:600;cursor:pointer;';
+  var tabs = '<div style="display:flex;gap:6px;margin-bottom:10px;">'
+    + '<button id="asp-btn-me-'+suffix+'" onclick="switchAspectCard(&quot;me&quot;,&quot;'+suffix+'&quot;)" style="'+(isPartner?_inactStyle:_actStyle)+'">あなた</button>'
+    + '<button id="asp-btn-partner-'+suffix+'" onclick="switchAspectCard(&quot;partner&quot;,&quot;'+suffix+'&quot;)" style="'+(isPartner?_actStyle:_inactStyle)+'">相手</button>'
+    + '</div>';
+  var inner = tabs + '<div id="'+bodyId+'">'+body+'</div>';
+  return makeAccordion('aspect-'+suffix, 'アスペクト', inner, true);
+}
+
+/* あなた/相手タブの切り替え（四柱推命・算命学カードのswitchSanmeiCard等と同じパターン） */
+function switchAspectCard(view, suffix) {
+  var isPartner = (view === 'partner');
+  var bM = document.getElementById('asp-btn-me-'+suffix);
+  var bP = document.getElementById('asp-btn-partner-'+suffix);
+  if (!bM || !bP) return;
+  bM.style.background = isPartner ? 'transparent' : 'var(--accent)';
+  bM.style.color      = isPartner ? 'rgba(168,154,255,.4)' : '#fff';
+  bM.style.borderColor = isPartner ? 'rgba(168,154,255,.3)' : 'var(--accent)';
+  bM.style.fontWeight  = isPartner ? '600' : '700';
+  bP.style.background = isPartner ? 'var(--accent)' : 'transparent';
+  bP.style.color      = isPartner ? '#fff' : 'rgba(168,154,255,.4)';
+  bP.style.borderColor = isPartner ? 'var(--accent)' : 'rgba(168,154,255,.3)';
+  bP.style.fontWeight  = isPartner ? '700' : '600';
+
+  var bd = isPartner ? window._compatBdB : window._nyBirthdateMe;
+  if (!bd) return;
+  var container = document.getElementById('aspect-tabbody-'+suffix);
+  if (!container) return;
+  container.innerHTML = buildNormalAspectBody(bd, isPartner);
 }
 
 /* ── 吉日カレンダー（結婚・転職向き）：六星占術の年運＋九星気学の年運を組み合わせたスコア ──
