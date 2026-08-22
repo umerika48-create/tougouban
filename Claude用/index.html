@@ -1960,7 +1960,7 @@ function toggleAspectLinesVisibility(id, btnEl) {
 
 function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
   var size = 460, cx = size/2, cy = size/2;
-  var zodiacOuterR = 222, zodiacInnerR = 190, signR = 206, houseR = 172, tickR = 122, aspectR = 130, labelR = 158;
+  var zodiacOuterR = 222, zodiacInnerR = 190, signR = 206, houseR = 55, tickR = 122, aspectR = 130, labelR = 158;
   var ZODIAC_SYMS = ['♈','♉','♊','♋','♌','♍','♎','♏','♐','♑','♒','♓'];
 
   /* ハウスがある場合、ASC（1ハウスの始点）が必ず左（9時の位置）に来るよう盤全体を回転させる */
@@ -2098,36 +2098,24 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
   symBodies.forEach(function(b, i) {
     if (b.lon===null) return;
     var trueLon = b.lon;
-    var myTier = tier[i] || 0;
-    var symLon = trueLon;
-    if (myTier > 0) {
-      var offsetDeg = Math.min(myTier * 10, 20);
-      var signStart = Math.floor(trueLon / 30) * 30;
-      symLon = Math.max(signStart + 1, Math.min(signStart + 29, trueLon + offsetDeg));
-    }
-    symLon = avoidAngleCusp(symLon, trueLon, 4, 6);
-    symLonById[i] = symLon;
+    /* シンボルは常に自分自身の実位置（ピンクの目盛り線の真上）に置く。
+       密集していても角度をズラして扇形に広げず、線からできるだけ離れないようにする */
+    symLonById[i] = trueLon;
   });
 
-  /* 【2段階目】角度順に並べ、隣同士の間隔が狭すぎる場合は後ろの天体をさらに押し出す。
-     これで別々の密集グループ同士が隣接していても、最低限の間隔が必ず確保される */
-  var MIN_GAP = 9;
-  for (var si = 1; si < sortedIdx.length; si++) {
-    var curI = sortedIdx[si], prevI = sortedIdx[si-1];
-    if (symLonById[curI] === undefined || symLonById[prevI] === undefined) continue;
-    var gapNow = symLonById[curI] - symLonById[prevI];
-    if (gapNow < MIN_GAP) {
-      var pushSignStart = Math.floor(symBodies[curI].lon / 30) * 30;
-      symLonById[curI] = Math.max(pushSignStart + 1, Math.min(pushSignStart + 29, symLonById[prevI] + MIN_GAP));
-    }
-  }
+  /* 【2段階目】以前はここで隣同士の間隔を強制的に広げていたが、
+     「できるだけピンクの線から離れないように」という方針に変更したため、
+     この間隔強制は一旦オフにする（密集していても実位置のまま表示） */
+  var adjustedOrder = sortedIdx.slice().sort(function(a, b){
+    return symLonById[a] - symLonById[b];
+  });
 
   /* 【3段階目】確定した位置をもとに、隣接する天体をグループ分けする。
      3体以上が密集しているグループは、度数を個別に置くと狭すぎて読めなくなるため、
      グループでまとめて横並びのミニリストとして表示する（2体以下は今まで通り個別表示） */
   var groups = [];
-  for (var gi = 0; gi < sortedIdx.length; gi++) {
-    var gIdx = sortedIdx[gi];
+  for (var gi = 0; gi < adjustedOrder.length; gi++) {
+    var gIdx = adjustedOrder[gi];
     if (symLonById[gIdx] === undefined) continue;
     if (groups.length === 0) {
       groups.push([gIdx]);
@@ -2135,7 +2123,7 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
       var lastGroup = groups[groups.length - 1];
       var lastIdx = lastGroup[lastGroup.length - 1];
       var groupGap = symLonById[gIdx] - symLonById[lastIdx];
-      if (groupGap < 16) {
+      if (groupGap < 20) {
         lastGroup.push(gIdx);
       } else {
         groups.push([gIdx]);
@@ -2156,7 +2144,7 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
     group.forEach(function(i, memberIdx) {
       var b = symBodies[i];
       var trueLon = b.lon;
-      var symR = labelR; // 半径は全天体で統一し、高さを揃える
+      var symR = 172; // ピンク線(実位置の目盛り)にできるだけ近づける
       var symLon = symLonById[i];
 
       /* 実位置の目盛り線を強調（目盛りのゴールドとは全く違う色にして見分けやすくする） */
@@ -2167,10 +2155,7 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
       var truDot = pt(trueLon, zodiacInnerR);
       svg += '<circle cx="'+truDot.x+'" cy="'+truDot.y+'" r="3.2" fill="'+MARKER_COLOR+'" stroke="#0d0a18" stroke-width="1"/>';
 
-      /* 目盛り（実位置）からシンボル（角度をズラした位置・同じ半径）まで、ほぼ垂直に近い線でつなぐ */
-      var tickInner = pt(trueLon, zodiacInnerR - 14);
-      var tickOuter = pt(symLon, symR + 13);
-      svg += '<line x1="'+tickInner.x+'" y1="'+tickInner.y+'" x2="'+tickOuter.x+'" y2="'+tickOuter.y+'" stroke="'+MARKER_COLOR+'" stroke-width="1" opacity="0.55" stroke-dasharray="2,2.5"/>';
+      /* シンボルはピンクの線のすぐ近くに置くため、点線の連結線は不要 */
 
       /* シンボルは円の背景を持たせず、記号そのものだけを表示する。
          タップすると西洋占星術辞典のサイン・ハウス文言パネルを開く */
@@ -2179,28 +2164,43 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
       var _dictSignIdx = Math.floor(((trueLon % 360) + 360) % 360 / 30);
       var _dictSignName = LT_SIGNS[_dictSignIdx];
       var _dictHouseNum = lt_getHouseIndex(trueLon, cusps) || 1;
-      svg += '<text x="'+symPt.x+'" y="'+symPt.y+'" font-size="20" fill="#f4d98a" text-anchor="middle" dominant-baseline="middle" style="paint-order:stroke;stroke:#0d0a18;stroke-width:3px;cursor:pointer;" onclick="openPlanetDictPanel(&quot;'+b.name+'&quot;,&quot;'+_dictSignName+'&quot;,'+_dictHouseNum+')">'+b.sym+'</text>';
+      /* ♆(海王星)・♅(天王星)は同じfont-sizeでも他の天体より小さく見えるグリフのため、
+         この2つだけ少し大きく表示して見た目の大きさを揃える */
+      var _symFontSize = (b.sym === '♆' || b.sym === '♅') ? 24 : 20;
+      svg += '<text x="'+symPt.x+'" y="'+symPt.y+'" font-size="'+_symFontSize+'" fill="#f4d98a" text-anchor="middle" dominant-baseline="middle" style="paint-order:stroke;stroke:#0d0a18;stroke-width:3px;cursor:pointer;" onclick="openPlanetDictPanel(&quot;'+b.name+'&quot;,&quot;'+_dictSignName+'&quot;,'+_dictHouseNum+')">'+b.sym+'</text>';
+      /* 度数の表示は一旦なし（表示方法を再検討中）。シンボルのタップで詳細パネルから度数を確認できる */
+    });
+  });
 
-      if (isListMode) {
-        /* 密集グループ：度数はグループでまとめて横に並べるが、
-           「どの数字がどの天体のものか」が一目で分かるよう、シンボルから
-           自分の度数へ細い線を1本引く。度/分は個別表示と同じ上下2段表記に統一する */
-        var listItemW = 40;
-        var listStartX = midSymPt.x - (group.length - 1) * listItemW / 2;
-        var listX = listStartX + memberIdx * listItemW;
-        svg += '<line x1="'+symPt.x+'" y1="'+(symPt.y + groupVertDir*11)+'" x2="'+listX+'" y2="'+(listY - groupVertDir*13)+'" stroke="'+MARKER_COLOR+'" stroke-width="0.8" opacity="0.5"/>';
-        svg += '<text x="'+listX+'" y="'+(listY-5)+'" font-size="9" fill="#c8ccd8" text-anchor="middle">'+sd.deg+'°'+(b.retro?' R':'')+'</text>';
-        svg += '<text x="'+listX+'" y="'+(listY+7)+'" font-size="9" fill="#c8ccd8" text-anchor="middle">'+('0'+sd.min).slice(-2)+"'"+(b.retro?' R':'')+'</text>';
-      } else {
-        /* 度数は円盤の内側に、度と分を上下2段で表示する。
-           画面上のX座標をシンボルと揃え、Y座標だけずらして「真上/真下」にする。
-           円の中心より上半球（symPt.yが中心cyより小さい）ならこれまで通り下に、
-           下半球（中心より下）なら逆に上に出すことで、外側にはみ出さないようにする */
-        var vertDir = (symPt.y > cy) ? -1 : 1;
-        var degPt = { x: symPt.x, y: symPt.y + vertDir * 30 };
-        svg += '<text x="'+degPt.x+'" y="'+(degPt.y-5)+'" font-size="9" fill="#c8ccd8" text-anchor="middle">'+sd.deg+'°'+(b.retro?' R':'')+'</text>';
-        svg += '<text x="'+degPt.x+'" y="'+(degPt.y+7)+'" font-size="9" fill="#c8ccd8" text-anchor="middle">'+('0'+sd.min).slice(-2)+"'"+'</text>';
-      }
+  /* 【試験実装】ハウスごとに内側の円（アスペクト線の境界円）にも天体マークを重ねて表示する。
+     同じハウスに複数の天体がある場合は、実際の経度順（外側リングでの並びと同じ順番）に並べる */
+  var houseGroups = {};
+  symBodies.forEach(function(b){
+    if (b.lon===null) return;
+    var hNum = lt_getHouseIndex(b.lon, cusps);
+    if (!hNum) return;
+    if (!houseGroups[hNum]) houseGroups[hNum] = [];
+    houseGroups[hNum].push(b);
+  });
+  Object.keys(houseGroups).forEach(function(hNum){
+    if (!cusps || cusps.length !== 12) return;
+    var hIdx = (+hNum) - 1;
+    var cA = cusps[hIdx], cB = cusps[(hIdx+1)%12];
+    var houseSpan = ((cB - cA) % 360 + 360) % 360;
+    var houseMid = cA + houseSpan / 2;
+    var innerR = aspectR;
+    /* ハウス内での並び順を、実際の経度順（cAからの角度差）でソートする */
+    var members = houseGroups[hNum].slice().sort(function(m1, m2){
+      var d1 = ((m1.lon - cA) % 360 + 360) % 360;
+      var d2 = ((m2.lon - cA) % 360 + 360) % 360;
+      return d1 - d2;
+    });
+    var itemGap = Math.min(14, houseSpan / (members.length + 1));
+    var startLon = houseMid - itemGap * (members.length - 1) / 2;
+    members.forEach(function(b, mi){
+      var mp = pt(startLon + itemGap * mi, innerR);
+      var _innerFontSize = (b.sym === '♆' || b.sym === '♅') ? 16 : 13;
+      svg += '<text x="'+mp.x+'" y="'+mp.y+'" font-size="'+_innerFontSize+'" fill="#f4d98a" text-anchor="middle" dominant-baseline="middle" opacity="0.85" style="paint-order:stroke;stroke:#0d0a18;stroke-width:2.5px;">'+b.sym+'</text>';
     });
   });
 
