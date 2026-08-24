@@ -2131,6 +2131,87 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
     }
   }
 
+  /* コンジャンクション（合）のクラスタを検出する（Union-Find、2体以上・何体でも対応）。
+     クラスタ内の天体は、実際の黄経順に並べて中心から左右対称・均等に開く。
+     目盛り側は実位置のまま近くに残すので、天体数が増えても「ハの字」の形が保たれる */
+  var conjPairOffset = {}; // body index -> 角度オフセット(度)
+  (function(){
+    var parent = {};
+    function find(x){ if (parent[x]===undefined) parent[x]=x; if (parent[x]!==x) parent[x]=find(parent[x]); return parent[x]; }
+    function union(a,b){ var ra=find(a), rb=find(b); if (ra!==rb) parent[ra]=rb; }
+    var hasConj = {};
+    aspects.forEach(function(asp){
+      if (asp.name !== 'コンジャンクション') return;
+      var ia = symBodies.indexOf(asp.a), ib = symBodies.indexOf(asp.b);
+      if (ia < 0 || ib < 0) return;
+      hasConj[ia] = true; hasConj[ib] = true;
+      union(ia, ib);
+    });
+    var clusters = {}; // root -> [body index...]
+    Object.keys(hasConj).forEach(function(key){
+      var i = +key;
+      var root = find(i);
+      if (!clusters[root]) clusters[root] = [];
+      clusters[root].push(i);
+    });
+    Object.keys(clusters).forEach(function(root){
+      var members = clusters[root];
+      if (members.length < 2) return;
+      // 実際の黄経順に並べる
+      // 0度/360度の境界をまたぐクラスタ（例：金星355度とドラゴンヘッド3度）でも正しい順番になるよう、
+      // 最初のメンバーを基準に±180度以内に巻き戻してから並び替える
+      var sortAnchor = symBodies[members[0]].lon;
+      members.sort(function(a,b){
+        var la = sortAnchor + (((symBodies[a].lon - sortAnchor + 540) % 360) - 180);
+        var lb = sortAnchor + (((symBodies[b].lon - sortAnchor + 540) % 360) - 180);
+        return la - lb;
+      });
+      var n = members.length;
+      var baseStep = 8; // 天体1つあたりの基本の開き幅（度）
+      /* ♆(海王星)・♅(天王星)は文字を大きく表示している分、隣接すると重なりやすいため、
+         隣同士のどちらかがこの2つの場合だけ、その間隔を広めにする（他は今まで通り） */
+      var pos = [0];
+      for (var k = 1; k < n; k++) {
+        var symA = symBodies[members[k-1]].sym, symB = symBodies[members[k]].sym;
+        var isWide = (symA === '♆' || symA === '♅' || symB === '♆' || symB === '♅');
+        var gap = isWide ? baseStep + 4 : baseStep;
+        pos.push(pos[k-1] + gap);
+      }
+      var mean = pos.reduce(function(s,v){return s+v;}, 0) / n;
+      members.forEach(function(idx, k){
+        conjPairOffset[idx] = pos[k] - mean;
+      });
+    });
+
+    /* 合クラスタ同士が隣接して近すぎる場合、それぞれの扇の開き方はそのままに、
+       クラスタ全体をスライドさせて押し出す（コンジャンクションが隣接する場合のみ反応） */
+    var clusterList = Object.keys(clusters).map(function(root){
+      return clusters[root];
+    }).filter(function(m){ return m.length >= 2; });
+    /* 0度/360度の境界をまたぐクラスタ（例：金星355度とドラゴンヘッド3度が合になる場合）は、
+       そのままmin/maxを取ると「ほぼ円1周分」という誤った範囲になってしまうため、
+       クラスタの最初のメンバーを基準に、他のメンバーを±180度以内に「巻き戻して」から範囲を計算する */
+    clusterList.forEach(function(members){
+      var finalLons = members.map(function(idx){ return symBodies[idx].lon + conjPairOffset[idx]; });
+      var anchor = finalLons[0];
+      var unwrapped = finalLons.map(function(lon){ return anchor + (((lon - anchor + 540) % 360) - 180); });
+      members._minLon = Math.min.apply(null, unwrapped);
+      members._maxLon = Math.max.apply(null, unwrapped);
+    });
+    clusterList.sort(function(a,b){ return a._minLon - b._minLon; });
+    var CLUSTER_MIN_GAP = 6; // クラスタ同士の端の最低間隔（度）
+    for (var ci = 1; ci < clusterList.length; ci++) {
+      var prevCluster = clusterList[ci-1], curCluster = clusterList[ci];
+      var gap = curCluster._minLon - prevCluster._maxLon;
+      if (gap < CLUSTER_MIN_GAP) {
+        var push = CLUSTER_MIN_GAP - gap;
+        curCluster.forEach(function(idx){ conjPairOffset[idx] += push; });
+        curCluster._minLon += push;
+        curCluster._maxLon += push;
+      }
+    }
+  })();
+
   /* 【4段階目】確定した位置で実際に描画する */
   groups.forEach(function(group) {
     var isListMode = group.length >= 2;
@@ -2146,34 +2227,54 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
       var trueLon = b.lon;
       var symR = 172; // ピンク線(実位置の目盛り)にできるだけ近づける
       var symLon = symLonById[i];
+      var _conjOffset = conjPairOffset[i];
+      if (_conjOffset !== undefined) symLon = trueLon + _conjOffset;
+      /* コンジャンクションで扇状に開く天体は、線を長くして「まとまりよく」見せるため、
+         通常よりも少し中心寄りの半径にシンボルを置く */
+      var thisSymR = (_conjOffset !== undefined) ? 145 : symR;
 
-      /* 実位置の目盛り線を強調（目盛りのゴールドとは全く違う色にして見分けやすくする） */
-      var truTickOuter = pt(trueLon, zodiacInnerR + 3);
-      var truTickInner = pt(trueLon, zodiacInnerR - 14);
-      svg += '<line x1="'+truTickOuter.x+'" y1="'+truTickOuter.y+'" x2="'+truTickInner.x+'" y2="'+truTickInner.y+'" stroke="'+MARKER_COLOR+'" stroke-width="2.2"/>';
+      /* 実位置の目盛り線を強調（目盛りのゴールドとは全く違う色にして見分けやすくする）。
+         コンジャンクションで扇状に開く天体は、この短い放射状の目盛り線を描くと
+         斜めのガイド線と繋ぎ目でカクッと折れて見えてしまうため、省略する */
+      if (_conjOffset === undefined) {
+        var truTickOuter = pt(trueLon, zodiacInnerR + 3);
+        var truTickInner = pt(trueLon, zodiacInnerR - 14);
+        svg += '<line x1="'+truTickOuter.x+'" y1="'+truTickOuter.y+'" x2="'+truTickInner.x+'" y2="'+truTickInner.y+'" stroke="'+MARKER_COLOR+'" stroke-width="2.2"/>';
+      }
       /* 実位置そのものに丸印 */
       var truDot = pt(trueLon, zodiacInnerR);
       svg += '<circle cx="'+truDot.x+'" cy="'+truDot.y+'" r="3.2" fill="'+MARKER_COLOR+'" stroke="#0d0a18" stroke-width="1"/>';
+
+      /* コンジャンクション(合)の場合、丸印(実位置・近い)からシンボル(扇状に開いた・中心寄りの位置)まで、
+         1本の真っ直ぐな斜め線でつなぐ。目盛り側は近く、シンボル側は開いて中心寄りなので、
+         線が長くなり「ハの字」がまとまりよく見える */
+      if (_conjOffset !== undefined) {
+        var conjGuideInner = pt(trueLon, zodiacInnerR);
+        var conjGuideOuter = pt(symLon, thisSymR + 12);
+        svg += '<line x1="'+conjGuideInner.x+'" y1="'+conjGuideInner.y+'" x2="'+conjGuideOuter.x+'" y2="'+conjGuideOuter.y+'" stroke="'+MARKER_COLOR+'" stroke-width="2" opacity="0.8"/>';
+      }
 
       /* シンボルはピンクの線のすぐ近くに置くため、点線の連結線は不要 */
 
       /* シンボルは円の背景を持たせず、記号そのものだけを表示する。
          タップすると西洋占星術辞典のサイン・ハウス文言パネルを開く */
       var sd = lonToSignDeg(trueLon);
-      var symPt = pt(symLon, symR);
+      var symPt = pt(symLon, thisSymR);
       var _dictSignIdx = Math.floor(((trueLon % 360) + 360) % 360 / 30);
       var _dictSignName = LT_SIGNS[_dictSignIdx];
       var _dictHouseNum = lt_getHouseIndex(trueLon, cusps) || 1;
       /* ♆(海王星)・♅(天王星)は同じfont-sizeでも他の天体より小さく見えるグリフのため、
          この2つだけ少し大きく表示して見た目の大きさを揃える */
-      var _symFontSize = (b.sym === '♆' || b.sym === '♅') ? 24 : 20;
-      svg += '<text x="'+symPt.x+'" y="'+symPt.y+'" font-size="'+_symFontSize+'" fill="#f4d98a" text-anchor="middle" dominant-baseline="middle" style="paint-order:stroke;stroke:#0d0a18;stroke-width:3px;cursor:pointer;" onclick="openPlanetDictPanel(&quot;'+b.name+'&quot;,&quot;'+_dictSignName+'&quot;,'+_dictHouseNum+')">'+b.sym+'</text>';
+      var _symFontSize = (b.sym === '♆' || b.sym === '♅') ? 24 : (b.sym === '🌙' ? 17 : 20);
+      var _dictDegText = sd.deg + '°' + ('0'+sd.min).slice(-2) + "'";
+      svg += '<text x="'+symPt.x+'" y="'+symPt.y+'" font-size="'+_symFontSize+'" fill="#f4d98a" text-anchor="middle" dominant-baseline="middle" style="paint-order:stroke;stroke:#0d0a18;stroke-width:3px;cursor:pointer;" onclick="openPlanetDictPanel(&quot;'+b.name+'&quot;,&quot;'+_dictSignName+'&quot;,'+_dictHouseNum+',&quot;'+_dictDegText+'&quot;)">'+b.sym+'</text>';
       /* 度数の表示は一旦なし（表示方法を再検討中）。シンボルのタップで詳細パネルから度数を確認できる */
     });
   });
 
-  /* 【試験実装】ハウスごとに内側の円（アスペクト線の境界円）にも天体マークを重ねて表示する。
-     同じハウスに複数の天体がある場合は、実際の経度順（外側リングでの並びと同じ順番）に並べる */
+  /* ハウスごとに、内側の円（アスペクト線の境界円）をタップ可能にする。
+     タップすると、そのハウスに滞在する天体の一覧をポップアップ表示し、
+     さらにその中の天体をタップすると、サイン×ハウスの詳細パネル（辞典）が開く */
   var houseGroups = {};
   symBodies.forEach(function(b){
     if (b.lon===null) return;
@@ -2182,27 +2283,30 @@ function buildHoroscopeWheelSVG(bodies, aspects, cusps) {
     if (!houseGroups[hNum]) houseGroups[hNum] = [];
     houseGroups[hNum].push(b);
   });
-  Object.keys(houseGroups).forEach(function(hNum){
-    if (!cusps || cusps.length !== 12) return;
-    var hIdx = (+hNum) - 1;
-    var cA = cusps[hIdx], cB = cusps[(hIdx+1)%12];
-    var houseSpan = ((cB - cA) % 360 + 360) % 360;
-    var houseMid = cA + houseSpan / 2;
-    var innerR = aspectR;
-    /* ハウス内での並び順を、実際の経度順（cAからの角度差）でソートする */
-    var members = houseGroups[hNum].slice().sort(function(m1, m2){
-      var d1 = ((m1.lon - cA) % 360 + 360) % 360;
-      var d2 = ((m2.lon - cA) % 360 + 360) % 360;
-      return d1 - d2;
-    });
-    var itemGap = Math.min(14, houseSpan / (members.length + 1));
-    var startLon = houseMid - itemGap * (members.length - 1) / 2;
-    members.forEach(function(b, mi){
-      var mp = pt(startLon + itemGap * mi, innerR);
-      var _innerFontSize = (b.sym === '♆' || b.sym === '♅') ? 16 : 13;
-      svg += '<text x="'+mp.x+'" y="'+mp.y+'" font-size="'+_innerFontSize+'" fill="#f4d98a" text-anchor="middle" dominant-baseline="middle" opacity="0.85" style="paint-order:stroke;stroke:#0d0a18;stroke-width:2.5px;">'+b.sym+'</text>';
-    });
-  });
+  if (cusps && cusps.length === 12) {
+    for (var houseTapI = 0; houseTapI < 12; houseTapI++) {
+      var hNumTap = houseTapI + 1;
+      var cA = cusps[houseTapI], cB = cusps[(houseTapI+1)%12];
+      var members = (houseGroups[hNumTap] || []).slice().sort(function(m1, m2){
+        var d1 = ((m1.lon - cA) % 360 + 360) % 360;
+        var d2 = ((m2.lon - cA) % 360 + 360) % 360;
+        return d1 - d2;
+      });
+      /* タップ用データを "名前,記号,サイン,度数|名前,記号,サイン,度数..." の形式で埋め込む */
+      var houseListStr = members.map(function(b){
+        var sIdx = Math.floor(((b.lon % 360) + 360) % 360 / 30);
+        var sd2 = lonToSignDeg(b.lon);
+        var degText = sd2.deg + '°' + ('0'+sd2.min).slice(-2) + "'";
+        return b.name + ',' + b.sym + ',' + LT_SIGNS[sIdx] + ',' + degText;
+      }).join('|');
+      var wedgeInner = pt(cA, 0), wedgeA = pt(cA, tickR), wedgeB = pt(cB, tickR);
+      var wedgeLargeArc = ((( cB - cA) % 360 + 360) % 360) > 180 ? 1 : 0;
+      var wedgePath = 'M '+cx+' '+cy+' L '+wedgeA.x+' '+wedgeA.y+' A '+tickR+' '+tickR+' 0 '+wedgeLargeArc+' 1 '+wedgeB.x+' '+wedgeB.y+' Z';
+      var cuspSignIdx = Math.floor(((cA % 360) + 360) % 360 / 30);
+      var cuspSignName = LT_SIGNS[cuspSignIdx];
+      svg += '<path d="'+wedgePath+'" fill="transparent" style="cursor:pointer;" onclick="openHousePlanetsPanel('+hNumTap+',&quot;'+houseListStr+'&quot;,&quot;'+cuspSignName+'&quot;)"/>';
+    }
+  }
 
   /* アスペクト線はデフォルト非表示のため、凡例の代わりに表示/非表示を切り替えるボタンを置く。
      円盤をできるだけ大きく見せたいので、ボタンと凡例は控えめな1行のタブ風にまとめる */
@@ -2320,6 +2424,8 @@ function buildAspectHTML(p) {
     {name:'冥王星', sym:'♇',  lon:plon('PLUTO')},
     {name:'ドラゴンヘッド', sym:'☊', lon:_dragonHeadLon},
     {name:'ドラゴンテイル', sym:'☋', lon:((_dragonHeadLon+180)%360+360)%360},
+    {name:'キロン', sym:'⚷', lon: lt_chironLon(p.y,p.mo,p.d,_utH)},
+    {name:'リリス', sym:'⚸', lon: lt_lilithLon(p.y,p.mo,p.d,_utH)},
   ];
   /* 出生時刻・出生地が揃っている場合はASC・MCもアスペクト対象に追加 */
   if (p.ascmc) {
@@ -2331,6 +2437,13 @@ function buildAspectHTML(p) {
     }
   }
 
+  /* 全惑星/メイン/小惑星タブ用に、天体リストを絞り込む */
+  var MAIN_NAMES = ['太陽','月','水星','金星','火星','木星','土星','天王星','海王星','冥王星'];
+  var MINOR_NAMES = ['ドラゴンヘッド','ドラゴンテイル','キロン','リリス'];
+  var ANGLE_NAMES = ['ASC','MC'];
+  var mainBodies = bodies.filter(function(b){ return MAIN_NAMES.indexOf(b.name)>=0 || ANGLE_NAMES.indexOf(b.name)>=0; });
+  var minorBodies = bodies.filter(function(b){ return MINOR_NAMES.indexOf(b.name)>=0 || ANGLE_NAMES.indexOf(b.name)>=0; });
+
   /* アスペクト定義 [角度, 許容誤差, 名前, 記号, 色] */
   var ASPECTS = [
     [0,   8, 'コンジャンクション', '☌', '#e8c96a'],
@@ -2341,100 +2454,172 @@ function buildAspectHTML(p) {
     [180, 8, 'オポジション',       '☍', '#e8635a'],
   ];
 
-  var found = [];
-  for (var i=0; i<bodies.length; i++) {
-    for (var j=i+1; j<bodies.length; j++) {
-      if (bodies[i].lon===null || bodies[j].lon===null) continue;
-      var diff = Math.abs(bodies[i].lon - bodies[j].lon);
-      if (diff > 180) diff = 360 - diff;
-      for (var k=0; k<ASPECTS.length; k++) {
-        var orb = Math.abs(diff - ASPECTS[k][0]);
-        if (orb <= ASPECTS[k][1]) {
-          found.push({
-            a: bodies[i], b: bodies[j],
-            name: ASPECTS[k][2], sym: ASPECTS[k][3],
-            color: ASPECTS[k][4], orb: orb.toFixed(1),
-            angle: ASPECTS[k][0] + '°'
-          });
-          break;
+  /* 円盤・アスペクト表を1セット分まるごと生成する（全惑星/メイン/小惑星で使い回す） */
+  function buildAspectSection(bodiesArg) {
+    var found = [];
+    for (var i=0; i<bodiesArg.length; i++) {
+      for (var j=i+1; j<bodiesArg.length; j++) {
+        if (bodiesArg[i].lon===null || bodiesArg[j].lon===null) continue;
+        var diff = Math.abs(bodiesArg[i].lon - bodiesArg[j].lon);
+        if (diff > 180) diff = 360 - diff;
+        for (var k=0; k<ASPECTS.length; k++) {
+          var orb = Math.abs(diff - ASPECTS[k][0]);
+          if (orb <= ASPECTS[k][1]) {
+            found.push({
+              a: bodiesArg[i], b: bodiesArg[j],
+              name: ASPECTS[k][2], sym: ASPECTS[k][3],
+              color: ASPECTS[k][4], orb: orb.toFixed(1),
+              angle: ASPECTS[k][0] + '°'
+            });
+            break;
+          }
         }
       }
     }
+
+    if (!found.length && bodiesArg.filter(function(b){return b.lon!==null;}).length === 0) return '';
+
+    var cusps = (p.ascmc && p.ascmc.cusps) ? p.ascmc.cusps.map(function(c){return c.lon;}) : null;
+    var wheelSVG = buildHoroscopeWheelSVG(bodiesArg, found, cusps);
+    var dataTables = buildHoroscopeDataTables(bodiesArg, cusps);
+
+  /* アスペクト表は「5度以内」「8度以内」で切り替えられるようにする（デフォルトは5度以内）。
+     円盤（ホロスコープ）側のコンジャンクション扇形などは、これまで通り各アスペクトごとの
+     オーブ（コンジャンクション8度・クインカンクス3度など）で計算した'found'を使う */
+  function computeFoundByOrb(maxOrb) {
+    var arr = [];
+    for (var fi=0; fi<bodiesArg.length; fi++) {
+      for (var fj=fi+1; fj<bodiesArg.length; fj++) {
+        if (bodiesArg[fi].lon===null || bodiesArg[fj].lon===null) continue;
+        var fdiff = Math.abs(bodiesArg[fi].lon - bodiesArg[fj].lon);
+        if (fdiff > 180) fdiff = 360 - fdiff;
+        for (var fk=0; fk<ASPECTS.length; fk++) {
+          var forb = Math.abs(fdiff - ASPECTS[fk][0]);
+          if (forb <= maxOrb) {
+            arr.push({ a: bodiesArg[fi], b: bodiesArg[fj], name: ASPECTS[fk][2], sym: ASPECTS[fk][3], color: ASPECTS[fk][4], orb: forb.toFixed(1), angle: ASPECTS[fk][0] + '°' });
+            break;
+          }
+        }
+      }
+    }
+    return arr;
+  }
+  var found5 = computeFoundByOrb(5);
+  var found8 = computeFoundByOrb(8);
+
+  var n = bodiesArg.length;
+  var cellSz = '28px';
+  var aspTblSuffix = 'asp_' + Math.floor(Math.random() * 1e9);
+
+  function buildAspGridAndList(foundArr, suffixTag) {
+    var aspMap2 = {};
+    foundArr.forEach(function(asp) { aspMap2[asp.a.name + '_' + asp.b.name] = asp; });
+    var gh = '<div style="overflow-x:auto;display:flex;justify-content:center;">';
+    gh += '<table style="border-collapse:collapse;font-size:11px;">';
+    for (var gi = 0; gi < n; gi++) {
+      gh += '<tr>';
+      for (var gj = 0; gj < n; gj++) {
+        var cellStyle = 'width:'+cellSz+';height:'+cellSz+';text-align:center;vertical-align:middle;border:1px solid rgba(255,255,255,.08);';
+        if (gj >= gi) {
+          if (gj === gi) {
+            gh += '<td style="'+cellStyle+'background:rgba(255,255,255,.1);font-size:13px;">'+bodiesArg[gi].sym+'</td>';
+          } else {
+            gh += '<td style="'+cellStyle+'background:rgba(255,255,255,.03);"></td>';
+          }
+        } else {
+          var gkey = bodiesArg[gj].name + '_' + bodiesArg[gi].name;
+          var gasp = aspMap2[gkey];
+          if (gasp) {
+            gh += '<td style="'+cellStyle+'color:'+gasp.color+';font-weight:700;font-size:11px;cursor:default;" title="'+bodiesArg[gj].name+' '+gasp.name+'（'+gasp.angle+'） '+bodiesArg[gi].name+'">'+gasp.angle.replace('°','')+'</td>';
+          } else {
+            gh += '<td style="'+cellStyle+'background:rgba(255,255,255,.02);"></td>';
+          }
+        }
+      }
+      gh += '</tr>';
+    }
+    gh += '</table></div>';
+
+    var listId2 = 'asplist_' + suffixTag;
+    gh += '<div onclick="toggleShichuuDetail(\''+listId2+'\')" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:11px 16px;cursor:pointer;">'
+      + '<span style="font-size:11px;letter-spacing:.1em;color:var(--gold);">アスペクト一覧</span>'
+      + '<span id="'+listId2+'-arrow" style="font-size:10px;color:var(--muted);">▼</span>'
+      + '</div>';
+    gh += '<div id="'+listId2+'" style="display:none;margin-top:10px;padding-top:8px;">';
+    foundArr.forEach(function(asp) {
+      gh += '<div style="display:flex;align-items:center;padding:3px 0;gap:5px;">';
+      gh += '<span style="font-size:11px;min-width:18px;">' + asp.a.sym + '</span>';
+      gh += '<span style="font-size:10px;color:var(--muted);min-width:36px;">' + asp.a.name + '</span>';
+      gh += '<span style="font-size:13px;color:' + asp.color + ';font-weight:700;min-width:18px;text-align:center;">' + asp.sym + '</span>';
+      gh += '<span style="font-size:10px;color:var(--muted);min-width:36px;">' + asp.b.name + '</span>';
+      gh += '<span style="font-size:11px;min-width:18px;">' + asp.b.sym + '</span>';
+      gh += '<span style="font-size:10px;color:' + asp.color + ';margin-left:4px;">' + asp.name + '<span style="color:var(--text);">（' + asp.angle + '）</span></span>';
+      gh += '<span style="font-size:10px;color:var(--muted);margin-left:auto;">±' + asp.orb + '°</span>';
+      gh += '</div>';
+    });
+    gh += '</div>';
+    return gh;
   }
 
-  if (!found.length && bodies.filter(function(b){return b.lon!==null;}).length === 0) return '';
-
-  var cusps = (p.ascmc && p.ascmc.cusps) ? p.ascmc.cusps.map(function(c){return c.lon;}) : null;
-  var wheelSVG = buildHoroscopeWheelSVG(bodies, found, cusps);
-  var dataTables = buildHoroscopeDataTables(bodies, cusps);
-
-  /* アスペクトマップ生成（天体ペア → アスペクト） */
-  var aspMap = {};
-  found.forEach(function(asp) {
-    aspMap[asp.a.name + '_' + asp.b.name] = asp;
-  });
-
-  var n = bodies.length;
-  var cellSz = '28px';
   var h = wheelSVG;
   h += '<div style="padding:12px;border-radius:10px;background:transparent;margin-top:8px;">';
-  h += '<div style="font-size:11px;color:var(--muted);margin-bottom:10px;">アスペクト表</div>';
-
-  /* グリッド表（三角形） */
-  h += '<div style="overflow-x:auto;display:flex;justify-content:center;">';
-  h += '<table style="border-collapse:collapse;font-size:11px;">';
-  for (var i = 0; i < n; i++) {
-    h += '<tr>';
-    for (var j = 0; j < n; j++) {
-      var cellStyle = 'width:'+cellSz+';height:'+cellSz+';text-align:center;vertical-align:middle;border:1px solid rgba(255,255,255,.08);';
-      if (j >= i) {
-        /* 対角線以上は天体シンボルまたは空白 */
-        if (j === i) {
-          /* 対角（天体名） */
-          h += '<td style="'+cellStyle+'background:rgba(255,255,255,.1);font-size:13px;">'+bodies[i].sym+'</td>';
-        } else {
-          h += '<td style="'+cellStyle+'background:rgba(255,255,255,.03);"></td>';
-        }
-      } else {
-        /* 下三角にアスペクト表示 */
-        var key = bodies[j].name + '_' + bodies[i].name;
-        var asp = aspMap[key];
-        if (asp) {
-          var isHard = (asp.angle==='90°'||asp.angle==='180°');
-          var clr = asp.color;
-          h += '<td style="'+cellStyle+'color:'+clr+';font-weight:700;font-size:11px;cursor:default;" title="'+bodies[j].name+' '+asp.name+'（'+asp.angle+'） '+bodies[i].name+'">'+asp.angle.replace('°','')+'</td>';
-        } else {
-          h += '<td style="'+cellStyle+'background:rgba(255,255,255,.02);"></td>';
-        }
-      }
-    }
-    h += '</tr>';
-  }
-  h += '</table>';
-  h += '</div>';
-  h += '</div>'; // アスペクト表を囲む余白ラッパーをここで閉じる（下のボタン類が他の展開ボタンと同じ幅になるように）
-
-  /* リスト表示（展開式） */
-  var listId = 'asplist_' + Math.floor(Math.random() * 1e9);
-  h += '<div onclick="toggleShichuuDetail(\''+listId+'\')" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:11px 16px;cursor:pointer;">'
-    + '<span style="font-size:11px;letter-spacing:.1em;color:var(--gold);">アスペクト一覧</span>'
-    + '<span id="'+listId+'-arrow" style="font-size:10px;color:var(--muted);">▼</span>'
+  h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
+  h += '<span style="font-size:11px;color:var(--muted);">アスペクト表</span>';
+  var _orbAct = 'padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;background:var(--accent);color:#fff;border-color:var(--accent);';
+  var _orbInact = 'padding:3px 10px;border-radius:10px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid;background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);';
+  h += '<div style="display:flex;gap:4px;">'
+    + '<button id="'+aspTblSuffix+'-5" onclick="switchAspectOrb(\''+aspTblSuffix+'\',5)" style="'+_orbAct+'">5度以内</button>'
+    + '<button id="'+aspTblSuffix+'-8" onclick="switchAspectOrb(\''+aspTblSuffix+'\',8)" style="'+_orbInact+'">8度以内</button>'
     + '</div>';
-  h += '<div id="'+listId+'" style="display:none;margin-top:10px;padding-top:8px;">';
-  found.forEach(function(asp) {
-    h += '<div style="display:flex;align-items:center;padding:3px 0;gap:5px;">';
-    h += '<span style="font-size:11px;min-width:18px;">' + asp.a.sym + '</span>';
-    h += '<span style="font-size:10px;color:var(--muted);min-width:36px;">' + asp.a.name + '</span>';
-    h += '<span style="font-size:13px;color:' + asp.color + ';font-weight:700;min-width:18px;text-align:center;">' + asp.sym + '</span>';
-    h += '<span style="font-size:10px;color:var(--muted);min-width:36px;">' + asp.b.name + '</span>';
-    h += '<span style="font-size:11px;min-width:18px;">' + asp.b.sym + '</span>';
-    h += '<span style="font-size:10px;color:' + asp.color + ';margin-left:4px;">' + asp.name + '<span style="color:var(--text);">（' + asp.angle + '）</span></span>';
-    h += '<span style="font-size:10px;color:var(--muted);margin-left:auto;">±' + asp.orb + '°</span>';
-    h += '</div>';
-  });
   h += '</div>';
-  h += dataTables;
-  return h;
+  h += '<div id="'+aspTblSuffix+'-view5">' + buildAspGridAndList(found5, aspTblSuffix+'_5') + '</div>';
+  h += '<div id="'+aspTblSuffix+'-view8" style="display:none;">' + buildAspGridAndList(found8, aspTblSuffix+'_8') + '</div>';
+  h += '</div>'; // アスペクト表を囲む余白ラッパーをここで閉じる（下のボタン類が他の展開ボタンと同じ幅になるように）
+    h += dataTables;
+    return h;
+  }
+
+  /* 全惑星/メイン/小惑星タブを切り替えられるようにする（デフォルトは全惑星） */
+  var bodyTabSuffix = 'bodytab_' + Math.floor(Math.random() * 1e9);
+  var sectionAll = buildAspectSection(bodies);
+  var sectionMain = buildAspectSection(mainBodies);
+  var sectionMinor = buildAspectSection(minorBodies);
+
+  var _bAct = 'padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;background:var(--accent);color:#fff;border-color:var(--accent);';
+  var _bInact = 'padding:3px 10px;border-radius:10px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid;background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);';
+  var topH = '<div style="display:flex;gap:4px;justify-content:center;margin-bottom:8px;">'
+    + '<button id="'+bodyTabSuffix+'-all" onclick="switchBodyTab(\''+bodyTabSuffix+'\',&quot;all&quot;)" style="'+_bAct+'">全惑星</button>'
+    + '<button id="'+bodyTabSuffix+'-main" onclick="switchBodyTab(\''+bodyTabSuffix+'\',&quot;main&quot;)" style="'+_bInact+'">メイン</button>'
+    + '<button id="'+bodyTabSuffix+'-minor" onclick="switchBodyTab(\''+bodyTabSuffix+'\',&quot;minor&quot;)" style="'+_bInact+'">小惑星</button>'
+    + '</div>';
+  topH += '<div id="'+bodyTabSuffix+'-view-all">' + sectionAll + '</div>';
+  topH += '<div id="'+bodyTabSuffix+'-view-main" style="display:none;">' + sectionMain + '</div>';
+  topH += '<div id="'+bodyTabSuffix+'-view-minor" style="display:none;">' + sectionMinor + '</div>';
+  return topH;
+}
+
+function switchBodyTab(suffixTag, mode) {
+  var modes = ['all','main','minor'];
+  var act = 'padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;background:var(--accent);color:#fff;border-color:var(--accent);';
+  var inact = 'padding:3px 10px;border-radius:10px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid;background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);';
+  modes.forEach(function(m){
+    var btn = document.getElementById(suffixTag+'-'+m);
+    var view = document.getElementById(suffixTag+'-view-'+m);
+    if (btn) btn.setAttribute('style', (m===mode) ? act : inact);
+    if (view) view.style.display = (m===mode) ? '' : 'none';
+  });
+}
+
+function switchAspectOrb(suffixTag, orb) {
+  var b5 = document.getElementById(suffixTag+'-5'), b8 = document.getElementById(suffixTag+'-8');
+  var v5 = document.getElementById(suffixTag+'-view5'), v8 = document.getElementById(suffixTag+'-view8');
+  var isFive = (orb === 5);
+  var act = 'padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;background:var(--accent);color:#fff;border-color:var(--accent);';
+  var inact = 'padding:3px 10px;border-radius:10px;font-size:10px;font-weight:600;cursor:pointer;border:1px solid;background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);';
+  if (b5) b5.setAttribute('style', isFive ? act : inact);
+  if (b8) b8.setAttribute('style', isFive ? inact : act);
+  if (v5) v5.style.display = isFive ? '' : 'none';
+  if (v8) v8.style.display = isFive ? 'none' : '';
 }
 
 
@@ -6397,7 +6582,7 @@ function buildAspectCardHTML(birthdate, isPartner) {
   var suffix = birthdate.replace(/[^0-9]/g,'') + (isPartner ? '-p' : '');
   var hasCompat = !!window._compatBdB;
   if (!hasCompat) {
-    return makeAccordion('aspect-'+suffix, 'アスペクト', body, false); // 算命学エネルギー値と同じサイズに揃える
+    return makeAccordion('aspect-'+suffix, 'ホロスコープ', body, false); // 算命学エネルギー値と同じサイズに揃える
   }
   /* あなた/相手タブは、四柱推命・算命学カードと全く同じ構造・同じ小さいピルサイズにする
      （バーの見出しの中に埋め込み、画面が狭い時は自動で折り返して下の行に表示される） */
@@ -6410,7 +6595,7 @@ function buildAspectCardHTML(birthdate, isPartner) {
     + '<button id="asp-btn-partner-'+suffix+'" onclick="event.stopPropagation();switchAspectCard(&quot;partner&quot;,&quot;'+suffix+'&quot;)" style="'+(isPartner?_smAct:_smInact)+'">相手</button>'
     + '</div>';
   var label = '<span style="display:flex;align-items:center;justify-content:space-between;width:100%;">'
-    + '<span>アスペクト</span>' + tabBtnHTML + '</span>';
+    + '<span>ホロスコープ</span>' + tabBtnHTML + '</span>';
   return makeAccordion('aspect-'+suffix, label, '<div id="'+bodyId+'">'+body+'</div>', false); // 算命学エネルギー値と同じサイズに揃える
 }
 
@@ -12960,7 +13145,10 @@ function calculate() {
    サイン・ハウス解説文（通常版・恋愛版）。ホロスコープの天体タップ時に表示するために埲め込む。
    出典データを軽量化（サイン12種・ハウス12種の解釈文のみ）してあり、辞典側の元データ更新時は
    このオブジェクトも合わせて更新が必要 */
-var LT_DICT = {"太陽": {"glyph": "☉", "signs": {"牡羊座": "太陽が高められる位置（エグザルテーション）。自分らしさをまっすぐ発揮し、リーダーシップや行動力が自然に発揮される。開拓者気質で、自ら道を切り拓くことに強い充実感を覚える。", "牡牛座": "特筆すべき強弱のない配置（無格）。安定志向で、着実に自分の価値観を確立していくタイプ。焦らずマイペースに、五感を通じて自分らしさを表現する。", "双子座": "特筆すべき強弱のない配置（無格）。知的好奇心が自己表現の核となり、多方面への興味・会話を通じて自分らしさを発揮する。多面的な自分を楽しめるタイプ。", "蟹座": "太陽にとって本拠地（ドミサイル）。家庭や身近な人との情緒的なつながりを通じて自分らしさを発揮する。面倒見が良く、守り育てることに存在意義を感じやすい。", "獅子座": "太陽にとって本拠地（ドミサイル）。太陽本来の輝きが最も自然に発揮される配置で、自己表現・創造性・堂々とした存在感が魅力。注目される場面で本領を発揮する。", "乙女座": "特筆すべき強弱のない配置（無格）。分析力や実務能力を通じて自分の役割を果たすことに自己表現を見出すタイプ。誠実さと丁寧さが自分らしさの核になる。", "天秤座": "太陽にとって力が弱まる位置（フォール）。周囲との調和や他者からの評価を意識するあまり、自分自身の芯が見えにくくなりやすい面も。他者と比較せず、自分軸を持つ意識ができると、本来の社交性・美的センスという魅力が活きる。", "蠍座": "特筆すべき強弱のない配置（無格）。深く物事に没頭し、本質を見極めることに自己表現の核があるタイプ。表面的なつながりよりも、深い信頼関係の中で本領を発揮する。", "射手座": "特筆すべき強弱のない配置（無格）。自由や成長、探求を通じて自分らしさを発揮するタイプ。広い視野と楽観性で、人生を冒険として捉える。", "山羊座": "特筆すべき強弱のない配置（無格）。責任感と忍耐力を通じて自分の存在意義を確立するタイプ。時間をかけて社会的な達成を積み重ねることに自己表現を見出す。", "水瓶座": "太陽にとって力が弱まる位置（デトリメント）。個性や独自性を大切にするあまり、集団や周囲との協調が難しく感じられやすい面も。自分らしさと他者とのつながりのバランスを意識できると、本来の先見性・独創性という魅力が活きる。", "魚座": "特筆すべき強弱のない配置（無格）。共感力や感受性の豊かさを通じて自分らしさを表現するタイプ。境界線が曖昧になりやすいが、その分他者に寄り添う力に長けている。"}, "houses": {"1": "自己表現がストレートに表に出るタイプ。第一印象や存在感そのものが、その人らしさとして周囲に伝わる。角（アンギュラー）の配置で、自分らしさが人生全体を通じて前面に出やすい。", "2": "自分の価値観や所有物を通じて自己表現をするタイプ。着実に資産や才能を築き上げることに自己実現を見出しやすい。継続（サクシーデント）の配置で、じっくりと自分の土台を固めていく。", "3": "日常のコミュニケーションや学びを通じて自己表現をするタイプ。断絶（ケーダント）の配置のため、自己表現がやや断片的・表面的になりやすく、1つのテーマをじっくり深める意識が本来の知性を活かす助けになる。", "4": "家庭や内面的な基盤の中で自己表現をするタイプ。プライベートな領域でこそ本来の自分を発揮できる。角（アンギュラー）の配置で、家族や心の拠り所が自己実現の中心になりやすい。", "5": "創造性や自己表現の喜びを通じて自分らしさを発揮するタイプ。人前に立つこと、表現すること自体に充実感を覚える。継続（サクシーデント）の配置で、才能をじっくりと育てながら花開かせる。", "6": "日々の仕事や健康管理、奉仕を通じて自己表現をするタイプ。断絶（ケーダント）の配置のため、自己主張よりも実務に埋没しやすく、日常業務の中で自分の存在意義を見失いがちなこともあるが、丁寧な仕事ぶりそのものが自己表現になり得る。", "7": "パートナーシップや対人関係を通じて自己表現をするタイプ。相手との関わりの中で自分らしさが際立つ。角（アンギュラー）の配置で、人間関係や結婚が人生の重要なテーマとして自己実現に直結しやすい。", "8": "深い精神的な変容や、他者との価値観の共有を通じて自己表現をするタイプ。継続（サクシーデント）の配置で、時間をかけて深い自己理解・自己変容を遂げていく。", "9": "太陽が最も自然に機能するとされる伝統的な『喜びの座』。哲学・学問・旅・精神性の探求を通じて自分の世界観を拡大し、人生の意味を追求することに強い充実感を覚える。この配置全体の中でも特に自己成長・自己実現のテーマが輝きやすい。", "10": "社会的な地位やキャリアを通じて自己表現をするタイプ。角（アンギュラー）の配置で、社会的な成功や評価、天職と呼べるものを見つけることが人生の中心テーマになりやすい。", "11": "友人関係やコミュニティ、理想の実現を通じて自己表現をするタイプ。継続（サクシーデント）の配置で、仲間との繋がりの中でじっくりと自分の役割を見出していく。", "12": "潜在意識や精神性、目に見えない領域を通じて自己表現をするタイプ。断絶（ケーダント）の配置のため、自己表現が表に出にくく、自分自身のあり方を見失いやすい面もあるが、内面を深く見つめることで独自の強さや精神的な深みを育てられる。"}, "signs_love": {"牡羊座": "恋愛でも『自分から積極的にリードしたい』という気持ちが強いタイプ。パートナーには対等に渡り合ってくれる、自立した相手を求める。", "牡牛座": "恋愛において安定と誠実さを大切にするタイプ。パートナーには変わらぬ愛情と、五感で感じられる心地よさを求める。", "双子座": "恋愛において知的な刺激や会話を大切にするタイプ。パートナーには話していて飽きない、多面的な魅力を求める。", "蟹座": "恋愛において家庭的な温かさを大切にするタイプ。パートナーには守ってあげたい、あるいは守ってもらいたいという情緒的なつながりを求める。", "獅子座": "恋愛において自分が主役でありたいタイプ。パートナーには自分を称賛し、輝かせてくれる相手を求める。", "乙女座": "恋愛において誠実さと気配りを大切にするタイプ。パートナーには真面目に向き合ってくれる、信頼できる相手を求める。", "天秤座": "恋愛において調和とパートナーシップそのものを大切にするタイプ。二人でいることで自分が完成すると感じやすい。", "蠍座": "恋愛において深く濃密な結びつきを大切にするタイプ。パートナーには表面的でない、本音で向き合える相手を求める。", "射手座": "恋愛において自由と成長を大切にするタイプ。パートナーには一緒に冒険や学びを楽しめる相手を求める。", "山羊座": "恋愛において誠実さと将来性を大切にするタイプ。パートナーには責任を持って向き合ってくれる、現実的な相手を求める。", "水瓶座": "恋愛において自由さと対等さを大切にするタイプ。パートナーには友達のような、束縛のない関係を求める。", "魚座": "恋愛において共感とロマンティックなつながりを大切にするタイプ。パートナーには深く共感し合える、精神的な結びつきを求める。"}, "houses_love": {"1": "恋愛においても自分らしさをそのまま出せる相手を求めるタイプ。", "2": "恋愛においても安定した価値観を共有できる相手を求めるタイプ。", "3": "恋愛においても会話が弾む、知的なやり取りを楽しめる相手を求めるタイプ。", "4": "恋愛においても家庭的な安心感を築ける相手を求めるタイプ。", "5": "恋愛そのものを人生の喜びとして重視するタイプ。", "6": "恋愛においても日常を支え合える、実務的なパートナーシップを求めるタイプ。", "7": "恋愛・結婚そのものが人生の大きなテーマになるタイプ。パートナーを通じて自己実現を果たす。", "8": "恋愛においても深い精神的な結びつきを求めるタイプ。", "9": "太陽にとって伝統的な喜びの座。価値観や世界観を共有できる相手との恋愛に、最も自然に充実感を覚える。", "10": "恋愛が社会的な立場やキャリアと結びつきやすいタイプ。", "11": "恋愛が友情の延長として発展しやすいタイプ。", "12": "秘めた恋愛や、精神的なつながりを重視するタイプ。"}}, "月": {"glyph": "☽", "signs": {"牡羊座": "感情表現がストレートで、思ったことをすぐ感じて反応するタイプ。特筆すべき強弱のない配置（無格）で、安心感よりもまず動くことで気持ちを消化する傾向がある。", "牡牛座": "月にとって力が高められる位置（エグザルテーション）。感情が最も安定し、穏やかで着実な情緒的基盤を持つ。五感を通じた心地よさ（美味しいもの、快適な環境）が安心感に直結する、月にとって最も落ち着ける配置の一つ。", "双子座": "感情を言葉にして整理するタイプ。特筆すべき強弱のない配置（無格）で、気持ちの変化が速く、多様な刺激を通じて心が満たされる。", "蟹座": "月にとって本拠地（ドミサイル）。感受性が非常に豊かで、家庭的な安心感や身近な人とのつながりを通じて情緒が満たされる、最も月らしい配置。", "獅子座": "感情表現がドラマチックで、認められること・愛されることを通じて心が満たされるタイプ。特筆すべき強弱のない配置（無格）だが、注目される場面で情緒が生き生きとする。", "乙女座": "感情を分析し、整理してから表に出すタイプ。特筆すべき強弱のない配置（無格）で、役に立つこと・物事を整えることを通じて安心感を得る。", "天秤座": "人間関係の調和を通じて情緒が安定するタイプ。特筆すべき強弱のない配置（無格）で、一人でいるより誰かとの関わりの中で心が満たされる。", "蠍座": "月にとって力が弱まる位置（フォール）とされるが、実際には感受性が非常に深く強いタイプ。ただ感情を表に出しにくく、内側にため込みやすい面がある。信頼できる相手にだけ本音を見せられると、深く濃密な情緒的絆が育つ。", "射手座": "自由や冒険を通じて心が満たされるタイプ。特筆すべき強弱のない配置（無格）で、束縛されると情緒が不安定になりやすい。", "山羊座": "月にとって力が弱まる位置（デトリメント）。感情を抑え、理性でコントロールしようとする傾向が強い。感受性そのものが弱いわけではなく、責任感の強さから感情表現を後回しにしやすい。安心して弱さを見せられる関係を持てると、内面の豊かさが活きる。", "水瓶座": "感情を客観的・理知的に扱うタイプ。特筆すべき強弱のない配置（無格）で、仲間や理想を通じて心が満たされる、やや個人主義的な情緒スタイル。", "魚座": "感受性が非常に豊かで、共感力の高いタイプ。特筆すべき強弱のない配置（無格）だが、他者の感情を自分のことのように感じ取りやすく、境界線が曖昧になりやすい。"}, "houses": {"1": "感情がそのまま表情や態度に表れやすいタイプ。第一印象がその時々の気分に左右されやすい。角（アンギュラー）の配置で、感情の動きが人生全体に色濃く影響する。", "2": "所有物や安定した収入を通じて情緒的な安心を得るタイプ。継続（サクシーデント）の配置で、じっくりと経済的・情緒的基盤を築いていく。", "3": "月にとって伝統的な『喜びの座』。日常会話や身近な人との交流を通じて心が満たされる、最も月らしく機能する場所。兄弟姉妹や近所との関係が情緒的な安定に大きく影響する。", "4": "家庭や心の拠り所を通じて情緒が安定するタイプ。角（アンギュラー）の配置で、家族・住まいが人生の中でも特に重要な情緒的テーマになる。", "5": "恋愛や創造的な自己表現を通じて心が満たされるタイプ。継続（サクシーデント）の配置で、楽しみや喜びをじっくりと味わうことに情緒的な充足を見出す。", "6": "日々のルーティンや健康管理を通じて情緒が安定するタイプ。断絶（ケーダント）の配置のため、感情が日常業務に埋もれやすく、自分の気持ちに気づく余裕を意識的に作ることが助けになる。", "7": "パートナーとの関係を通じて情緒が安定するタイプ。角（アンギュラー）の配置で、人間関係・結婚が情緒的な安定に強く影響する。", "8": "深い精神的な結びつきや、他者との共有を通じて情緒が満たされるタイプ。継続（サクシーデント）の配置で、時間をかけて深い信頼関係を築いていく。", "9": "学びや旅、新しい価値観との出会いを通じて心が満たされるタイプ。断絶（ケーダント）の配置のため、日常的な安心感よりも刺激や変化を求める傾向があり、時に落ち着きのなさとして表れることも。", "10": "社会的な評価や役割を通じて情緒が安定するタイプ。角（アンギュラー）の配置で、キャリアや社会的立場が情緒的な安心感に直結しやすい。", "11": "友人やコミュニティとの繋がりを通じて心が満たされるタイプ。継続（サクシーデント）の配置で、仲間との関係をじっくりと育てていく。", "12": "内面の静けさや精神性、一人の時間を通じて情緒が安定するタイプ。断絶（ケーダント）の配置のため、感情が表に出にくく、自分でも気づかないうちに感受性を抑え込んでしまうことがあるが、内省を通じて深い癒しを得られる。"}, "signs_love": {"牡羊座": "恋愛において感情がストレートに出るタイプ。好きという気持ちをすぐに行動で示さないと落ち着かない。", "牡牛座": "恋愛において安定した安心感を求めるタイプ。変わらない愛情表現やスキンシップで満たされる。", "双子座": "恋愛において会話や刺激を通じて心が満たされるタイプ。マンネリを嫌う。", "蟹座": "恋愛において深い情緒的なつながりを求めるタイプ。守り、守られる関係に安心感を覚える、月にとって最も自然な恋愛スタイル。", "獅子座": "恋愛において愛されている実感、認められることを通じて心が満たされるタイプ。", "乙女座": "恋愛において相手の役に立つことで安心感を得るタイプ。", "天秤座": "恋愛において調和のとれた関係性そのものが心の安定につながるタイプ。", "蠍座": "恋愛において深く強い結びつきを求めるタイプ。表面的な関係では満たされない。", "射手座": "恋愛において自由や刺激を通じて心が満たされるタイプ。束縛を感じると不安定になりやすい。", "山羊座": "恋愛において責任感や将来性のある関係に安心感を覚えるタイプ。感情表現は控えめ。", "水瓶座": "恋愛において自由でフラットな関係性に安心感を覚えるタイプ。", "魚座": "恋愛において深い共感やロマンティックなつながりを通じて心が満たされるタイプ。"}, "houses_love": {"1": "恋愛での気分がそのまま態度に出やすいタイプ。", "2": "恋愛においても安定と安心を求め、じっくりと関係を築くタイプ。", "3": "日常の会話や身近なやり取りを通じて恋愛の安心感を得るタイプ。月にとって伝統的な喜びの座。", "4": "恋愛においても家庭的な安心感を最も重視するタイプ。", "5": "恋愛そのものを楽しみ、喜びとして享受するタイプ。", "6": "恋愛においても日常のサポートを通じて安心感を得るタイプ。", "7": "パートナーとの関係そのものが情緒的な安定に直結するタイプ。", "8": "恋愛において深い精神的結びつきを通じて安心感を得るタイプ。", "9": "恋愛にも刺激や成長を求めるタイプ。日常的な安定よりも変化を好む。", "10": "恋愛が社会的な安定・評価と結びつくタイプ。", "11": "友情の延長としての恋愛に安心感を覚えるタイプ。", "12": "恋愛においても内面的な安らぎを求めるタイプ。表に出さない情緒を抱えやすい。"}}, "水星": {"glyph": "☿", "signs": {"牡羊座": "思考のスピードが速く、考えるよりも先に発言・行動するタイプ。特筆すべき強弱のない配置（無格）で、ストレートで率直なコミュニケーションを好む。", "牡牛座": "じっくりと考え、実用的で着実な思考をするタイプ。特筆すべき強弱のない配置（無格）で、一度理解したことは深く定着し、簡単には意見を変えない。", "双子座": "水星にとって本拠地（ドミサイル）。好奇心旺盛で多方面に関心を持ち、会話や情報のやり取りを通じて最も自然に力を発揮する、水星らしい配置。", "蟹座": "感情を交えた、共感的なコミュニケーションをするタイプ。特筆すべき強弱のない配置（無格）で、論理よりも直感や気持ちを大切にする。", "獅子座": "自信を持って堂々と自分の考えを表現するタイプ。特筆すべき強弱のない配置（無格）で、ドラマチックで説得力のある話し方をする。", "乙女座": "水星にとって本拠地であり、かつ高揚（エグザルテーション）の位置でもある、最も洗練された形で力を発揮する配置。分析力・実務的な思考力に優れ、細部まで正確に物事を捉える。", "天秤座": "バランスの取れた、客観的な思考をするタイプ。特筆すべき強弱のない配置（無格）で、相手の立場を考慮しながら会話を進める外交的なコミュニケーション。", "蠍座": "物事の本質を深く探求する、鋭い洞察力を持つタイプ。特筆すべき強弱のない配置（無格）で、表面的な会話よりも核心に触れる話を好む。", "射手座": "水星にとって力が弱まる位置（デトリメント）。大きな視点で物事を捉えるが、細部への注意が散漫になりやすい。率直すぎる発言で誤解を招くこともあるが、広い視野と楽観的な発想力が強み。", "山羊座": "実務的で計画的な思考をするタイプ。特筆すべき強弱のない配置（無格）で、感情より結果を重視した効率的なコミュニケーションを好む。", "水瓶座": "独創的で理論的な思考をするタイプ。特筆すべき強弱のない配置（無格）で、既存の枠にとらわれない革新的なアイデアを生み出す。", "魚座": "水星にとって力が弱まる位置（デトリメントかつフォール）、水星にとって最も力が発揮しにくい配置。論理よりも直感・イメージで物事を捉えるため、言葉での説明がやや苦手に感じられやすいが、言葉にならない感覚を汲み取る繊細な感受性を持つ。"}, "houses": {"1": "水星にとって伝統的な『喜びの座』。コミュニケーション能力・知性そのものが第一印象になりやすい、水星が最も自然に機能する場所。角（アンギュラー）かつジョイという、この惑星にとって最も力の出やすい配置。", "2": "金銭感覚や所有物について、実務的・論理的に考えるタイプ。継続（サクシーデント）の配置で、じっくりと合理的な判断を積み重ねていく。", "3": "水星の自然な対応ハウス。日常のやり取りや近距離の移動を通じてコミュニケーション能力を発揮する。断絶（ケーダント）の配置のため、内容が広く浅くなりやすい面もある。", "4": "家庭内での対話や、心の内面についてじっくり考えるタイプ。角（アンギュラー）の配置で、身近な人との対話が思考の重要な土台になる。", "5": "創造的なアイデアや遊び心のあるコミュニケーションを好むタイプ。継続（サクシーデント）の配置で、楽しみながらアイデアを育てていく。", "6": "実務的な情報処理や日々の業務連絡を通じて力を発揮するタイプ。断絶（ケーダント）の配置のため、目先の作業に集中しすぎて大局を見失いやすい面もある。", "7": "対人関係における対話や交渉能力を通じて力を発揮するタイプ。角（アンギュラー）の配置で、パートナーとの意思疎通が人生の重要なテーマになりやすい。", "8": "深いテーマ、他者の秘密や共有資源について深く考察するタイプ。継続（サクシーデント）の配置で、時間をかけて本質に迫る思考を育てる。", "9": "学問や哲学、海外の知識を吸収することに関心を持つタイプ。断絶（ケーダント）の配置のため、一つのテーマを掘り下げず広く浅くなりやすい面もある。", "10": "知的な発信やコミュニケーション能力がキャリア・社会的評価に直結するタイプ。角（アンギュラー）の配置で、発言力や情報発信が社会的立場に大きく影響する。", "11": "友人やコミュニティとの情報交換を通じて力を発揮するタイプ。継続（サクシーデント）の配置で、仲間との知的な繋がりをじっくり育てる。", "12": "潜在意識や、言葉にならない直感的な理解力を持つタイプ。断絶（ケーダント）の配置のため、考えを表に出すことが苦手になりやすいが、内面の深い洞察力を秘めている。"}, "signs_love": {"牡羊座": "恋愛でのコミュニケーションがストレートなタイプ。好きという気持ちも不満も、思ったことをすぐ口にする。", "牡牛座": "恋愛での会話はゆっくりで着実なタイプ。一度決めた気持ちや約束は簡単には変えない。", "双子座": "恋愛での会話そのものを楽しむタイプ。LINEや電話でのやり取りが多いほど安心する。", "蟹座": "恋愛での会話に共感や優しさを求めるタイプ。論理よりも気持ちを汲み取ってほしいと感じやすい。", "獅子座": "恋愛での会話にドラマや盛り上がりを求めるタイプ。褒め言葉や称賛の言葉に弱い。", "乙女座": "恋愛での会話が実務的・具体的になりやすいタイプ。相手のために役立つ情報や気配りの言葉を大切にする。", "天秤座": "恋愛での会話にバランスや心地よさを求めるタイプ。喧嘩や対立を避け、穏やかなやり取りを好む。", "蠍座": "恋愛での会話が少なくても、深い部分で通じ合うことを重視するタイプ。表面的な会話では満たされない。", "射手座": "恋愛での会話に率直さと自由さを求めるタイプ。細かい詮索より、大らかなやり取りを好む。", "山羊座": "恋愛での会話が現実的・計画的になりやすいタイプ。将来の話や具体的な約束を大切にする。", "水瓶座": "恋愛での会話に独自性や知的な刺激を求めるタイプ。友達のような対等な会話を好む。", "魚座": "恋愛での会話に言葉以上の察し合いを求めるタイプ。雰囲気やニュアンスを大切にする。"}, "houses_love": {"1": "恋愛での会話のテンポや話し方が第一印象に直結しやすいタイプ。", "2": "恋愛での会話でも、実利的な話題（お金や将来設計）を自然に取り入れるタイプ。", "3": "水星の自然な対応ハウス。日常的なやり取り・LINEやメッセージのこまめさが恋愛の安心感に直結しやすい。", "4": "恋愛での会話に家庭的な安心感を求めるタイプ。落ち着いて話せる関係を好む。", "5": "恋愛での会話を楽しみながら、遊び心のあるやり取りを好むタイプ。", "6": "恋愛での会話が実務的なサポートやアドバイスになりやすいタイプ。", "7": "パートナーとの対話そのものを重視するタイプ。話し合いで関係を築いていく。", "8": "恋愛での会話が深いテーマや秘密の共有に及びやすいタイプ。", "9": "恋愛での会話が価値観や将来のビジョンについての話に発展しやすいタイプ。", "10": "恋愛での発言力や伝え方が、関係の中での立場や評価に影響しやすいタイプ。", "11": "友人のような対等な会話を恋愛にも求めるタイプ。", "12": "恋愛での本音を言葉にするのが苦手で、察してほしいと感じやすいタイプ。"}}, "木星": {"glyph": "♃", "signs": {"牡羊座": "直感的に飛び込む形で成長のチャンスをつかむタイプ。特筆すべき強弱のない配置（無格）で、新しいことへの挑戦が幸運を引き寄せる。", "牡牛座": "着実に豊かさを積み上げるタイプ。特筆すべき強弱のない配置（無格）で、物質的な安定や心地よさを通じて成長を実感する。", "双子座": "木星にとって力が弱まる位置（デトリメント）。知識や情報を幅広く集めるが、一つのことを深めるより広く浅くなりやすい。焦点を絞る意識ができると、本来の学習欲・発信力という強みが活きる。", "蟹座": "木星が高められる位置（エグザルテーション）。家庭的な温かさや身近な人への思いやりを通じて、精神的な豊かさが最大限に発揮される。", "獅子座": "自己表現や創造性を通じて成長するタイプ。特筆すべき強弱のない配置（無格）で、堂々とした姿勢が幸運を引き寄せる。", "乙女座": "木星にとって力が弱まる位置（デトリメント）。細部にこだわりすぎて、大きな視野で物事を捉えることが難しく感じられやすい。完璧を求めすぎず大局を見る意識ができると、本来の実務的な知恵という強みが活きる。", "天秤座": "人間関係やパートナーシップを通じて成長するタイプ。特筆すべき強弱のない配置（無格）で、調和の中で幸運を見出す。", "蠍座": "深い探求や変容を通じて成長するタイプ。特筆すべき強弱のない配置（無格）で、表面的な成功より本質的な豊かさを求める。", "射手座": "木星にとって本拠地（ドミサイル）。冒険や学び、異文化との出会いを通じて、最も自然に幸運と成長を引き寄せる、木星らしい配置。", "山羊座": "木星にとって力が弱まる位置（フォール）。楽観性よりも慎重さが先立ち、成長のチャンスを自分で制限してしまいやすい。リスクを取る勇気を持てると、着実な成功という本来の強みが活きる。", "水瓶座": "理想やコミュニティを通じて成長するタイプ。特筆すべき強弱のない配置（無格）で、独自の信念に基づいた発展を遂げる。", "魚座": "木星にとってもう一つの本拠地（ドミサイル）。共感力や精神性を通じて、深い豊かさと幸運を引き寄せる。"}, "houses": {"1": "楽観的で前向きな性格がそのまま第一印象になりやすいタイプ。角（アンギュラー）の配置で、恵まれた雰囲気が人生全体に表れやすい。", "2": "経済的な豊かさや資産形成において幸運に恵まれやすいタイプ。継続（サクシーデント）の配置で、じっくりと富を築いていく。", "3": "学びや会話を通じて成長するタイプ。断絶（ケーダント）の配置のため、興味が広がりやすい反面、内容が浅くなりやすい面もある。", "4": "家庭や心の安定を通じて豊かさを実感するタイプ。角（アンギュラー）の配置で、家族との関係が幸運の重要な源になりやすい。", "5": "創造性や恋愛において幸運や喜びを引き寄せるタイプ。継続（サクシーデント）の配置で、楽しみをじっくりと味わいながら豊かさを育てる。", "6": "日々の仕事や健康管理を通じて成長するタイプ。断絶（ケーダント）の配置のため、過信や気の緩みから健康や仕事の管理がおろそかになりやすい面もある。", "7": "パートナーシップを通じて大きな幸運を得やすいタイプ。角（アンギュラー）の配置で、結婚や協力関係が人生の発展に強く影響する。", "8": "他者との共有資産や深い変容を通じて豊かさを得るタイプ。継続（サクシーデント）の配置で、時間をかけて大きな恵みを受け取る。", "9": "木星にとって伝統的な『喜びの座』。哲学・学問・海外との関わりを通じて、最も自然に幸運と成長を引き寄せる場所。この配置全体の中でも特に人生観の拡大というテーマが輝きやすい。", "10": "キャリアや社会的地位において大きな成功や幸運を得やすいタイプ。角（アンギュラー）の配置で、社会的な評価や達成が人生の中心テーマになりやすい。", "11": "友人やコミュニティ、理想の実現を通じて豊かさを得るタイプ。継続（サクシーデント）の配置で、仲間との繋がりの中でじっくりと恵みを育てる。", "12": "精神性や潜在意識を通じて豊かさを得るタイプ。断絶（ケーダント）の配置のため、幸運が表に出にくく、静かな形で恵みを受け取ることが多い。"}, "signs_love": {"牡羊座": "恋愛にも直感的に飛び込むタイプ。新しい出会いへの挑戦が、そのまま幸運な恋につながりやすい。", "牡牛座": "恋愛でも着実に豊かな関係を育てるタイプ。安定と心地よさの中で愛情が育つ。", "双子座": "恋愛にも知識や会話の幅広さを求めるタイプ。複数の可能性を楽しむ柔軟さがある。", "蟹座": "恋愛において家庭的な温かさを通じて、精神的な豊かさが最大限に発揮されるタイプ。", "獅子座": "恋愛でも自己表現や創造性を通じて、幸運を引き寄せるタイプ。堂々とした姿勢が魅力になる。", "乙女座": "恋愛にも誠実さや実務的な支えを持ち込むタイプ。ただし大局を見る意識が幸運を広げる鍵になる。", "天秤座": "恋愛や人間関係そのものを通じて成長するタイプ。調和の中で幸運を見出す。", "蠍座": "恋愛において深い探求や変容を求めるタイプ。表面的な関係より本質的な豊かさを求める。", "射手座": "恋愛にも冒険や異文化との出会いを求めるタイプ。最も自然に幸運と成長を恋愛に引き寄せる。", "山羊座": "恋愛でも慎重さが先立ちやすいタイプ。リスクを取る勇気を持てると、着実な恋愛の成功につながる。", "水瓶座": "恋愛にも理想やコミュニティを重ねるタイプ。独自の信念に基づいた関係を発展させる。", "魚座": "恋愛において共感力や精神性を通じて、深い豊かさと幸運を引き寄せるタイプ。"}, "houses_love": {"1": "恋愛でも楽観的で前向きな性格がそのまま第一印象になりやすいタイプ。", "2": "恋愛においても経済的な豊かさや安心感が関係の満足度に影響しやすいタイプ。", "3": "恋愛での学びや会話を通じて関係が成長するタイプ。", "4": "恋愛においても家庭や心の安定を通じて豊かさを実感するタイプ。", "5": "恋愛そのものに幸運や喜びを強く引き寄せるタイプ。", "6": "恋愛でも日々の支え合いを通じて成長するタイプ。", "7": "パートナーシップを通じて大きな幸運を得やすいタイプ。恋愛・結婚が人生の発展に直結する。", "8": "恋愛での深い共有や変容を通じて豊かさを得るタイプ。", "9": "木星にとって伝統的な喜びの座。価値観を共有できる相手との恋愛に、最も自然に幸運を感じる。", "10": "恋愛が社会的な成功と結びつきやすいタイプ。", "11": "友人やコミュニティを通じた恋愛に豊かさを見出すタイプ。", "12": "恋愛での豊かさが静かな形で表れるタイプ。表に出にくいが深い恵みを受け取る。"}}, "土星": {"glyph": "♄", "signs": {"牡羊座": "土星にとって力が弱まる位置（フォール）。行動を起こす勇気に自信が持てず、慎重になりすぎて機会を逃しやすい。少しずつ挑戦を重ねることで、着実な自信という本来の強みが育つ。", "牡牛座": "着実に物事を積み上げる、忍耐強いタイプ。特筆すべき強弱のない配置（無格）で、時間をかけて安定した基盤を築く。", "双子座": "情報や知識を体系的に整理する、慎重な思考を持つタイプ。特筆すべき強弱のない配置（無格）。", "蟹座": "土星にとって力が弱まる位置（デトリメント）。感情を表に出すことに臆病になりやすく、家庭的な温かさを素直に受け取れないことがある。安心できる環境で少しずつ心を開くことで、責任感の強さという本来の魅力が活きる。", "獅子座": "土星にとって力が弱まる位置（デトリメント）。自己表現に自信が持てず、注目される場面を避けたくなることがある。小さな成功体験を積み重ねることで、本来のリーダーシップという強みが育つ。", "乙女座": "実務能力と責任感が結びついた、堅実なタイプ。特筆すべき強弱のない配置（無格）で、細部への配慮を怠らない。", "天秤座": "土星が高められる位置（エグザルテーション）。公正さとバランス感覚を持って責任ある判断を下せる、最も成熟した形で力を発揮する配置。", "蠍座": "深く粘り強く物事に取り組むタイプ。特筆すべき強弱のない配置（無格）で、困難を乗り越える強い忍耐力を持つ。", "射手座": "信念や哲学を、責任を持って実践していくタイプ。特筆すべき強弱のない配置（無格）で、理想を現実に落とし込む力がある。", "山羊座": "土星にとって本拠地（ドミサイル）。責任感・忍耐力・目標達成能力が最も自然に発揮される、土星らしい配置。", "水瓶座": "土星にとってもう一つの本拠地（ドミサイル）。既存の枠組みを尊重しつつ、独自の理論やルールを構築する力を持つ。", "魚座": "目に見えない領域に、責任と忍耐をもって向き合うタイプ。特筆すべき強弱のない配置（無格）で、精神的な成熟を通じて力を発揮する。"}, "houses": {"1": "慎重で真面目な性格がそのまま第一印象になりやすいタイプ。角（アンギュラー）の配置で、責任感の強さが人生全体に色濃く表れる。", "2": "経済的な安定を、時間をかけて着実に築くタイプ。継続（サクシーデント）の配置で、堅実な資産形成を得意とする。", "3": "慎重で計画的なコミュニケーションを好むタイプ。断絶（ケーダント）の配置のため、発言に自信が持てず、口数が少なくなりやすい面もある。", "4": "家庭内での責任感が強く、家族の支えとなる役割を担いやすいタイプ。角（アンギュラー）の配置で、家庭が人生の重要な責任の場になりやすい。", "5": "恋愛や自己表現に慎重で、真剣な関係を求めるタイプ。継続（サクシーデント）の配置で、時間をかけて信頼できる関係を育てる。", "6": "日々の仕事に真面目に取り組むタイプ。断絶（ケーダント）の配置のため、自分を追い込みすぎたり、完璧主義に陥りやすい面もある。", "7": "パートナーシップにおいて責任感を持ち、真剣な関係を築こうとするタイプ。角（アンギュラー）の配置で、結婚や協力関係が人生の中心テーマになりやすい。", "8": "他者との深い信頼関係を、時間をかけて築くタイプ。継続（サクシーデント）の配置で、じっくりと責任ある関わりを育てる。", "9": "学問や信念を、体系的かつ慎重に追求するタイプ。断絶（ケーダント）の配置のため、新しい価値観への抵抗感が強く出やすい面もある。", "10": "キャリアにおいて着実に地位を築き上げる、社会的な達成に強いタイプ。角（アンギュラー）の配置で、責任ある立場が人生の中心テーマになりやすい。", "11": "友人関係やコミュニティにおいて、責任ある役割を担うタイプ。継続（サクシーデント）の配置で、じっくりと信頼される立場を築く。", "12": "土星にとって伝統的な『喜びの座』。孤独や内省、精神的な鍛錬を通じて、最も自然に成熟と強さを得る場所。一人の時間の中で自分自身と向き合う力が育つ。"}, "signs_love": {"牡羊座": "恋愛において行動を起こす勇気に自信が持てず、慎重になりすぎて機会を逃しやすいタイプ。少しずつ挑戦を重ねることで、着実な自信が育つ。", "牡牛座": "恋愛でも着実に信頼を積み上げる、忍耐強いタイプ。時間をかけて安定した関係を築く。", "双子座": "恋愛でも情報や言葉を慎重に整理して伝えるタイプ。", "蟹座": "恋愛において感情を表に出すことに臆病になりやすいタイプ。安心できる関係の中で少しずつ心を開くことで、責任感の強さという魅力が活きる。", "獅子座": "恋愛での自己表現に自信が持てず、積極的なアプローチを避けたくなるタイプ。小さな成功体験を重ねることで自信が育つ。", "乙女座": "恋愛でも実務的な支えと責任感が結びついた、堅実なタイプ。", "天秤座": "恋愛において公正さとバランス感覚を持って、責任ある関係を築けるタイプ。", "蠍座": "恋愛でも深く粘り強く向き合う、強い忍耐力を持つタイプ。", "射手座": "恋愛の理想を、責任を持って実践していくタイプ。", "山羊座": "恋愛において責任感・忍耐力が最も自然に発揮される、真剣な関係を築くタイプ。", "水瓶座": "恋愛でも既存の枠組みを尊重しつつ、独自のルールで関係を築くタイプ。", "魚座": "恋愛においても責任と忍耐をもって向き合う、精神的な成熟を通じて力を発揮するタイプ。"}, "houses_love": {"1": "恋愛でも慎重で真面目な性格がそのまま第一印象になりやすいタイプ。", "2": "恋愛での安定を、時間をかけて着実に築くタイプ。", "3": "恋愛での会話も慎重で計画的、自信が持てず口数が少なくなりやすいタイプ。", "4": "恋愛においても家庭内での責任感が強く、家族的な支えとなる関係を築くタイプ。", "5": "恋愛に慎重で、真剣な関係を求めるタイプ。", "6": "恋愛でも真面目に向き合うが、自分を追い込みすぎる面もあるタイプ。", "7": "恋愛・結婚において責任感を持ち、真剣な関係を築こうとするタイプ。", "8": "恋愛での深い信頼関係を、時間をかけて築くタイプ。", "9": "恋愛での価値観を、慎重に見極めていくタイプ。", "10": "恋愛が社会的な地位や責任と結びつきやすいタイプ。", "11": "友人関係の中で、恋愛にも責任ある役割を担うタイプ。", "12": "土星にとって伝統的な喜びの座。一人の時間を大切にしながら、恋愛でも精神的な成熟を育むタイプ。"}}, "天王星": {"glyph": "⛢", "signs": {"牡羊座": "独立心が非常に強く、自分のやり方を貫くために大胆な行動に出るタイプ。改革者としての気質が強い。", "牡牛座": "変化を嫌う星座に位置するため、価値観や所有物への執着と自由への欲求の間で葛藤しやすいが、一度変わると決めたら価値観を根本から刷新する力を持つ。", "双子座": "新しいアイデアや情報を通じて自由を求めるタイプ。知的な独創性に優れる。", "蟹座": "感情や家庭という保守的な領域に、独自の価値観や変化をもたらそうとするタイプ。伝統的でない家族観を持つことも。", "獅子座": "自己表現において独自性を強く求めるタイプ。型にはまらない個性的な自己表現をする。", "乙女座": "実務や日常のシステムに、独創的な改善や効率化をもたらすタイプ。", "天秤座": "人間関係や社会的な仕組みに、平等・自由という新しい価値観を持ち込むタイプ。", "蠍座": "深層心理や社会の裏側にあるテーマに、革命的な変化をもたらすタイプ。", "射手座": "既存の思想や信念体系に対して、独自の哲学を打ち立てるタイプ。", "山羊座": "伝統や権威という保守的な構造に対して、静かに、しかし着実に変革をもたらすタイプ。", "水瓶座": "天王星にとって現代的な支配星座（副支配星座）。自由・平等・革新というテーマが最も自然に発揮される、天王星らしい配置。", "魚座": "精神性や集合的無意識の領域に、新しい理解や気づきをもたらすタイプ。"}, "houses": {"1": "独自性や個性がそのまま第一印象になりやすいタイプ。角（アンギュラー）の配置で、型にはまらない生き方が人生全体に表れやすい。", "2": "独自の方法でお金を稼いだり、型にはまらない価値観を持つタイプ。継続（サクシーデント）の配置で、独創的な形で資産や才能を育てる。", "3": "独創的な考え方を日常会話で表現するタイプ。断絶（ケーダント）の配置のため、発言が唐突に聞こえたり、周囲を驚かせやすい面もある。", "4": "家庭に対して独自の価値観を持ち、伝統的でない家族のあり方を築くタイプ。角（アンギュラー）の配置で、家庭のあり方そのものが人生の重要な変革テーマになりやすい。", "5": "恋愛や創造性において型破りな表現を好むタイプ。継続（サクシーデント）の配置で、独自のスタイルをじっくりと育てていく。", "6": "仕事のやり方に独自の効率化や改革をもたらすタイプ。断絶（ケーダント）の配置のため、独自のやり方が周囲との摩擦を生みやすい面もある。", "7": "パートナーシップにおいて自由や対等さを強く求めるタイプ。角（アンギュラー）の配置で、型にはまらない関係性が人生の中心テーマになりやすい。", "8": "他者との関わりの中で、根本的な変容をもたらすタイプ。継続（サクシーデント）の配置で、深いレベルでの変化をじっくりと受け入れていく。", "9": "独自の思想や哲学を追求するタイプ。断絶（ケーダント）の配置のため、極端な考えに偏ったり、既存の学問体系から逸脱しやすい面もある。", "10": "キャリアにおいて革新的な役割を担う、改革者としての立場を築きやすいタイプ。角（アンギュラー）の配置で、独自性がそのまま社会的な立場に結びつきやすい。", "11": "天王星にとって現代的な『喜びの座』。理想やコミュニティ、仲間との繋がりを通じて、最も自然に自由と革新を発揮する場所。この配置全体の中でも特に仲間との理想の共有というテーマが輝きやすい。", "12": "潜在意識レベルで大きな変容をもたらすタイプ。断絶（ケーダント）の配置のため、その力が表に出にくく、本人も気づかないうちに内面で大きな変化が進んでいることがある。"}, "signs_love": {"牡羊座": "恋愛でも独立心が強く、自分のやり方を貫くために大胆に動くタイプ。", "牡牛座": "恋愛での変化を嫌う面と自由への欲求の間で葛藤しやすいが、変わると決めたら価値観を根本から刷新するタイプ。", "双子座": "恋愛でも新しい刺激や会話を通じて自由を求めるタイプ。", "蟹座": "恋愛や家庭という保守的な領域に、独自の価値観を持ち込もうとするタイプ。", "獅子座": "恋愛での自己表現に独自性を強く求めるタイプ。型にはまらない恋愛スタイルを好む。", "乙女座": "恋愛の日常に、独創的な工夫や改善をもたらすタイプ。", "天秤座": "恋愛関係に、平等・自由という新しい価値観を持ち込むタイプ。", "蠍座": "恋愛の深層心理的なテーマに、革命的な変化をもたらすタイプ。", "射手座": "恋愛観そのものに、独自の哲学を打ち立てるタイプ。", "山羊座": "恋愛という保守的な構造に対して、静かに、しかし着実に変革をもたらすタイプ。", "水瓶座": "天王星にとって現代的な支配星座。恋愛においても自由・平等・革新が最も自然に発揮されるタイプ。", "魚座": "恋愛の精神性の領域に、新しい理解や気づきをもたらすタイプ。"}, "houses_love": {"1": "恋愛でも独自性や個性がそのまま第一印象になりやすいタイプ。", "2": "恋愛でも独自の価値観でお金や資源と向き合うタイプ。", "3": "恋愛での独創的な考え方が唐突に聞こえやすいタイプ。", "4": "恋愛でも伝統的でない家族のあり方を築くタイプ。", "5": "恋愛において型破りな表現を好むタイプ。", "6": "恋愛の日常に、独自の効率化や改革をもたらすタイプ。", "7": "パートナーシップにおいて自由や対等さを強く求めるタイプ。", "8": "恋愛での深い関わりの中で、根本的な変容をもたらすタイプ。", "9": "恋愛観に、独自の思想や哲学を持ち込むタイプ。", "10": "恋愛が社会的な立場における革新的な役割と結びつくタイプ。", "11": "天王星にとって現代的な喜びの座。理想を共有する仲間のような恋愛関係に、最も自然に自由を感じる。", "12": "恋愛での深いレベルの変容が、表に出にくい形で進むタイプ。"}}, "海王星": {"glyph": "♆", "signs": {"牡羊座": "理想を追い求めるエネルギーが行動力に直結するタイプ。情熱と夢が結びつきやすい。", "牡牛座": "美や快適さの中に理想を見出すタイプ。物質と精神の調和を求める。", "双子座": "言葉や情報を通じて理想やインスピレーションを伝えるタイプ。", "蟹座": "家庭や身近な人への深い共感と理想を重ねるタイプ。感情と理想が強く結びつく。", "獅子座": "創造性や自己表現の中に理想を見出すタイプ。芸術的な表現力に長ける。", "乙女座": "日常の奉仕や実務の中に、静かな理想主義を見出すタイプ。", "天秤座": "人間関係の中に理想的な調和や美を求めるタイプ。", "蠍座": "深い精神的な変容や神秘的なテーマに惹かれるタイプ。", "射手座": "壮大な理想や信念を追求するタイプ。精神的な探求心が強い。", "山羊座": "現実的な形で理想を実現しようとするタイプ。理想と責任感が結びつく。", "水瓶座": "人類全体や社会という大きな理想に共感するタイプ。", "魚座": "海王星にとって現代的な支配星座（副支配星座）。共感力・直感・霊性が最も自然に発揮される、海王星らしい配置。"}, "houses": {"1": "夢見がちで感受性豊かな雰囲気がそのまま第一印象になりやすいタイプ。角（アンギュラー）の配置で、理想主義的な生き方が人生全体に表れやすい。", "2": "お金や所有物に対して、理想主義的あるいは無頓着な態度を持つタイプ。継続（サクシーデント）の配置で、直感を頼りに資産と向き合う。", "3": "直感的で詩的なコミュニケーションを好むタイプ。断絶（ケーダント）の配置のため、伝えたいことが曖昧になり相手に伝わりにくい面もある。", "4": "家庭に理想を投影しやすいタイプ。角（アンギュラー）の配置で、時に現実と理想のギャップに悩むこともあるが、深い癒しの場ともなる。", "5": "創造性や恋愛にロマンティックな理想を重ねるタイプ。継続（サクシーデント）の配置で、夢を育みながら表現していく。", "6": "奉仕や癒しの仕事に惹かれるタイプ。断絶（ケーダント）の配置のため、現実的な管理や体調管理が苦手になりやすい面もある。", "7": "パートナーに理想を投影しやすいタイプ。角（アンギュラー）の配置で、理想化からの幻滅に注意しつつも、深い共感で結ばれる関係を築ける。", "8": "精神的な変容や、目に見えない繋がりを重視するタイプ。継続（サクシーデント）の配置で、深いレベルでの癒しをじっくりと得る。", "9": "宗教や精神性への探求心が強いタイプ。断絶（ケーダント）の配置のため、現実からの逃避として理想を追いすぎる面もある。", "10": "キャリアにおいて理想やビジョンを追求するタイプ。角（アンギュラー）の配置で、芸術的・スピリチュアルな分野で才能を発揮しやすい。", "11": "理想的なコミュニティや人類愛を追求するタイプ。継続（サクシーデント）の配置で、仲間との理想をじっくりと育てる。", "12": "海王星にとって現代的な『喜びの座』。精神性・潜在意識・スピリチュアリティが最も自然に発揮される場所。内面の静けさの中で深い直感や癒しを得やすい。"}, "signs_love": {"牡羊座": "恋愛の理想を追い求めるエネルギーが、そのまま情熱的な行動力に直結するタイプ。", "牡牛座": "恋愛において美や快適さの中に理想を見出すタイプ。", "双子座": "言葉を通じて恋愛の理想やインスピレーションを伝えるタイプ。", "蟹座": "恋愛相手への深い共感と理想を重ねるタイプ。感情と理想が強く結びつく。", "獅子座": "恋愛の中の創造性や自己表現に理想を見出すタイプ。", "乙女座": "恋愛での奉仕や気配りの中に、静かな理想主義を見出すタイプ。", "天秤座": "恋愛関係の中に理想的な調和や美を求めるタイプ。", "蠍座": "恋愛における深い精神的な変容や神秘的なつながりに惹かれるタイプ。", "射手座": "恋愛にも壮大な理想や信念を重ねるタイプ。", "山羊座": "恋愛においても現実的な形で理想を実現しようとするタイプ。", "水瓶座": "恋愛にも人類愛的な理想を重ねるタイプ。", "魚座": "海王星にとって現代的な支配星座。恋愛において共感力・直感・ロマンティシズムが最も自然に発揮されるタイプ。"}, "houses_love": {"1": "恋愛でも夢見がちで感受性豊かな雰囲気がそのまま第一印象になりやすいタイプ。", "2": "恋愛での安心感に、理想主義的あるいは無頓着な態度を持つタイプ。", "3": "恋愛での会話に直感的で詩的な表現を好むタイプ。", "4": "恋愛相手に理想を投影しやすいタイプ。時に現実とのギャップに悩むことも。", "5": "恋愛にロマンティックな理想を重ねるタイプ。", "6": "恋愛でも奉仕や癒しを通じたつながりに惹かれるタイプ。", "7": "パートナーに理想を投影しやすいタイプ。理想化からの幻滅に注意しつつも、深い共感で結ばれる。", "8": "恋愛での精神的な変容や、目に見えない繋がりを重視するタイプ。", "9": "恋愛にも精神性への探求心を重ねるタイプ。", "10": "恋愛における理想やビジョンが、社会的な自己実現と結びつくタイプ。", "11": "理想的な関係やコミュニティを恋愛にも重ねるタイプ。", "12": "海王星にとって現代的な喜びの座。恋愛における深い共感や癒しが、最も自然に発揮される。"}}, "冥王星": {"glyph": "♇", "signs": {"牡羊座": "強い意志と行動力で、根本的な変化を自ら引き起こすタイプ。", "牡牛座": "価値観や所有物に対する執着が強いが、一度手放すと決めたら徹底的に変容するタイプ。", "双子座": "思考や情報のレベルで、深く根本的な変化をもたらすタイプ。", "蟹座": "家庭や感情の根底にある、深いテーマの変容に関わるタイプ。", "獅子座": "自己表現において、強烈な存在感とカリスマ性を発揮するタイプ。", "乙女座": "日常やシステムを、根本から作り変える力を持つタイプ。", "天秤座": "人間関係における力関係やバランスを、根本から変容させるタイプ。", "蠍座": "冥王星にとって現代的な支配星座（副支配星座）。変容・再生・強い意志が最も自然に発揮される、冥王星らしい配置。", "射手座": "信念や思想を、根本から揺るがすような変容をもたらすタイプ。", "山羊座": "社会構造や権威のあり方を、根本から作り変える力を持つタイプ。", "水瓶座": "集団や社会全体の変革に関わるタイプ。", "魚座": "精神性や集合的無意識の深いレベルで、変容をもたらすタイプ。"}, "houses": {"1": "強い存在感やカリスマ性がそのまま第一印象になりやすいタイプ。角（アンギュラー）の配置で、強烈な自己変容が人生全体に表れやすい。", "2": "お金や資産に対する強い執着、あるいは大きな変容を経験しやすいタイプ。継続（サクシーデント）の配置で、時間をかけて価値観の根本的な変化を遂げる。", "3": "会話や考え方において、鋭く核心を突く傾向があるタイプ。断絶（ケーダント）の配置のため、強すぎる言葉として受け取られやすい面もある。", "4": "家庭に深い変容や秘密を抱えやすいタイプ。角（アンギュラー）の配置で、家族との関係が人生の重要な変容のテーマになりやすい。", "5": "恋愛や創造性において、強烈で深い情熱を注ぐタイプ。継続（サクシーデント）の配置で、時間をかけて強い絆を育てる。", "6": "仕事や健康において、大きな変容や危機を経験しやすいタイプ。断絶（ケーダント）の配置のため、その変化が突然訪れるように感じられることもある。", "7": "パートナーシップにおいて、強い結びつきや支配・被支配のテーマを経験しやすいタイプ。角（アンギュラー）の配置で、関係性が人生の中心的な変容テーマになりやすい。", "8": "冥王星にとって伝統的な『喜びの座』。死と再生、深い変容というテーマが最も自然に発揮される場所。この配置全体の中でも特に精神的な深まりというテーマが輝きやすい。", "9": "信念や思想において、根本的な変容を経験しやすいタイプ。断絶（ケーダント）の配置のため、価値観が極端に転換することもある。", "10": "キャリアにおいて大きな影響力や権力を得やすいタイプ。角（アンギュラー）の配置で、社会的な立場が強い変容の舞台になりやすい。", "11": "友人関係やコミュニティにおいて、深い変容をもたらすタイプ。継続（サクシーデント）の配置で、仲間との関係を通じてじっくりと変化を遂げる。", "12": "潜在意識レベルで深い変容を経験するタイプ。断絶（ケーダント）の配置のため、その力が表に出にくく、静かに内面で進行する。"}, "signs_love": {"牡羊座": "恋愛でも強い意志と行動力で、根本的な変化を自ら引き起こすタイプ。", "牡牛座": "恋愛相手への執着が強いが、一度手放すと決めたら徹底的に変容するタイプ。", "双子座": "恋愛の思考レベルで、深く根本的な変化をもたらすタイプ。", "蟹座": "恋愛や感情の根底にある、深いテーマの変容に関わるタイプ。", "獅子座": "恋愛での自己表現において、強烈な存在感とカリスマ性を発揮するタイプ。", "乙女座": "恋愛の日常を、根本から作り変える力を持つタイプ。", "天秤座": "恋愛関係における力関係やバランスを、根本から変容させるタイプ。", "蠍座": "冥王星にとって現代的な支配星座。恋愛において変容・再生・強い意志が最も自然に発揮されるタイプ。", "射手座": "恋愛観を、根本から揺るがすような変容をもたらすタイプ。", "山羊座": "恋愛関係の構造やあり方を、根本から作り変える力を持つタイプ。", "水瓶座": "恋愛にも社会全体の変革のような視点を持ち込むタイプ。", "魚座": "恋愛の精神性の深いレベルで、変容をもたらすタイプ。"}, "houses_love": {"1": "恋愛でも強い存在感やカリスマ性がそのまま第一印象になりやすいタイプ。", "2": "恋愛関係における執着、あるいは大きな変容を経験しやすいタイプ。", "3": "恋愛での会話が、鋭く核心を突く傾向があるタイプ。", "4": "恋愛相手との関係に深い変容や秘密を抱えやすいタイプ。", "5": "恋愛において、強烈で深い情熱を注ぐタイプ。", "6": "恋愛関係において、大きな変容や危機を経験しやすいタイプ。", "7": "パートナーシップにおいて、強い結びつきや支配・被支配のテーマを経験しやすいタイプ。", "8": "冥王星にとって伝統的な喜びの座。恋愛における死と再生、深い変容というテーマが最も自然に発揮される。", "9": "恋愛観において、根本的な変容を経験しやすいタイプ。", "10": "恋愛が社会的な影響力や立場と結びつきやすいタイプ。", "11": "友人関係から発展する恋愛において、深い変容をもたらすタイプ。", "12": "恋愛における深いレベルの変容を、静かに内面で経験するタイプ。"}}, "金星": {"glyph": "♀", "signs": {"牡羊座": "情熱的でストレートな愛情表現をし、自分から積極的にアプローチできるタイプ。ただし牡羊座は金星にとって少し勢いが強すぎる位置（デトリメント）でもあり、気持ちが先走って独りよがりな愛情表現になりやすい面も。焦らず相手のペースも意識できると、本来の魅力がより活きる。", "牡牛座": "五感を大切にし、じっくりと愛情を育てるタイプ。金星が最も自然に力を発揮する本拠地（ドミサイル）の配置で、安定した愛情表現・心地よい関係づくりが得意。一途で長続きしやすい恋愛スタイル。", "双子座": "会話や知的な刺激を通じて愛情を育むタイプ。軽やかで多面的な魅力を持ち、恋愛にも柔軟さと好奇心を持ち込める。特筆すべき強弱のない配置（無格）のため、相手や状況によって表現の幅が変わりやすい。", "蟹座": "情緒的な安心感を大切にし、相手を包み込むような愛情表現をするタイプ。家庭的な温かさが魅力。特筆すべき強弱のない配置（無格）のため、安心できる環境や関係性の中でこそ本来の愛情深さが発揮される。", "獅子座": "華やかでドラマチックな愛情表現を好み、愛することにも愛されることにも全力を注ぐタイプ。特筆すべき強弱のない配置（無格）だが、賞賛や注目を受けることで愛情表現がより生き生きとする。", "乙女座": "献身的で気配り上手、相手のために尽くすタイプ。ただし金星にとって力が弱まる位置（フォール）のため、完璧を求めすぎたり、自己評価の低さから愛情表現に自信を持てない面も。ありのままの自分を受け入れる練習ができると、本来の献身の美しさが活きる。", "天秤座": "バランス感覚に優れ、洗練された魅力と社交性で人を惹きつけるタイプ。金星のもう一つの本拠地（ドミサイル）で、調和的なパートナーシップを築くのが得意。八方美人になりすぎず、自分の意思も大切にすることを意識すると良い。", "蠍座": "一途で深く強い愛情を注ぐタイプ。ただし金星にとって力が弱まる位置（デトリメント）のため、独占欲や嫉妬心が強く出やすい面も。信頼をベースにした関係づくりを意識できると、深い絆を築けるという本来の魅力が活きる。", "射手座": "自由と冒険を愛し、束縛のない関係を好むタイプ。楽観的でおおらかな愛情表現が魅力。特筆すべき強弱のない配置（無格）で、成長や刺激を共有できる相手との相性が良い。", "山羊座": "誠実で責任感のある愛情表現をするタイプ。将来を見据えた現実的な関係づくりが得意。特筆すべき強弱のない配置（無格）で、時間をかけてじっくりと信頼を築いていく恋愛スタイル。", "水瓶座": "友情の延長のような、自由でフラットな関係性を好むタイプ。個性やユニークさを大切にする愛情表現が特徴。特筆すべき強弱のない配置（無格）で、束縛を嫌い、対等な関係を望む。", "魚座": "無条件の愛や共感力の高い愛情表現が魅力。金星が高められる位置（エグザルテーション）で、ロマンティックで献身的な愛のかたちが自然に発揮されやすい。ただし自己犠牲になりすぎないよう、自分自身も大切にすることを意識すると良い。"}, "houses": {"1": "愛されることや魅力そのものが自己肯定感に直結しやすいタイプ。外見や雰囲気そのものに愛嬌があり、恋愛が自己表現の一部になる。角（アンギュラー）の配置で、恋愛面での自分らしさが前面に出やすい。", "2": "恋愛に安定・安心を求めるタイプ。所有物や金銭感覚と愛情表現が結びつきやすく、贈り物や物質的な豊かさを通じて愛情を示したり受け取ったりすることを好む。継続（サクシーデント）の配置で、じっくりと関係を育てていく。", "3": "会話や日常のやり取りを通じて愛情を育むタイプ。近所や学校・職場など身近な場所での出会いが多い。断絶（ケーダント）の配置のため、恋愛が軽やかな距離感にとどまりやすく、深める意識を持つとより関係が育つ。", "4": "家庭的な愛情表現が得意で、居心地の良い空間づくりを通じてパートナーとの絆を深めるタイプ。家族との関係性が恋愛観の土台になりやすい。角（アンギュラー）の配置で、家庭・プライベートの領域で愛情がしっかりと発揮される。", "5": "恋愛そのものを楽しむことに長けたタイプ。情熱的でロマンティックな表現を自然に行い、恋も遊びも創造性も謳歌できる。金星にとって最も自然に力を発揮する『ジョイ（喜びの座）』の配置で、この配置全体の中でも特に恋愛面の輝きが強い。", "6": "日常のサポートや気配りを通じて愛情を表現するタイプ。職場や日課の中で育まれる恋愛の可能性もある。断絶（ケーダント）の配置のため、ロマンスよりも実務的な献身に寄りやすく、意識的にときめきを取り入れると関係に彩りが増す。", "7": "パートナーシップそのものを大切にするタイプ。結婚や対等な関係性を重視し、社交的な魅力で相手との調和を築くのが得意。角（アンギュラー）の配置で、恋愛・結婚というテーマが人生の中で強く前面に出やすい。", "8": "精神的にも肉体的にも深く結びつく、濃密な愛情を求めるタイプ。共有の資産や価値観を通じて絆を深める一方、独占欲や執着が出やすい面もある。継続（サクシーデント）の配置で、時間をかけて関係の深さが増していく。", "9": "価値観や世界観を共有できる相手に惹かれるタイプ。国際的、哲学的、あるいは遠方の相手との恋愛に発展しやすい。断絶（ケーダント）の配置のため、日常的な安定よりも刺激や成長を恋愛に求める傾向がある。", "10": "恋愛や結婚が社会的な立場やキャリアと結びつきやすいタイプ。人前でも堂々とした関係を築き、パートナーの存在が評判や評価に影響することも。角（アンギュラー）の配置で、恋愛が人生の重要なテーマとして表面化しやすい。", "11": "友情の延長として恋愛が発展しやすいタイプ。グループやコミュニティの中での出会いが多く、対等な仲間のような関係を好む。継続（サクシーデント）の配置で、じっくりと信頼を積み重ねながら関係が育つ。", "12": "秘めた愛情や、自己犠牲的な献身を伴う恋愛をしやすいタイプ。無意識レベルでの強い結びつきを感じる相手に惹かれることも。断絶（ケーダント）の配置のため、表に出しにくい恋愛や、報われにくいと感じやすい愛のかたちになることもある。"}, "signs_love": {"牡羊座": "情熱的でストレートな愛情表現をし、自分から積極的にアプローチできるタイプ。ただし牡羊座は金星にとって少し勢いが強すぎる位置（デトリメント）でもあり、気持ちが先走って独りよがりな愛情表現になりやすい面も。焦らず相手のペースも意識できると、本来の魅力がより活きる。", "牡牛座": "五感を大切にし、じっくりと愛情を育てるタイプ。金星が最も自然に力を発揮する本拠地（ドミサイル）の配置で、安定した愛情表現・心地よい関係づくりが得意。一途で長続きしやすい恋愛スタイル。", "双子座": "会話や知的な刺激を通じて愛情を育むタイプ。軽やかで多面的な魅力を持ち、恋愛にも柔軟さと好奇心を持ち込める。特筆すべき強弱のない配置（無格）のため、相手や状況によって表現の幅が変わりやすい。", "蟹座": "情緒的な安心感を大切にし、相手を包み込むような愛情表現をするタイプ。家庭的な温かさが魅力。特筆すべき強弱のない配置（無格）のため、安心できる環境や関係性の中でこそ本来の愛情深さが発揮される。", "獅子座": "華やかでドラマチックな愛情表現を好み、愛することにも愛されることにも全力を注ぐタイプ。特筆すべき強弱のない配置（無格）だが、賞賛や注目を受けることで愛情表現がより生き生きとする。", "乙女座": "献身的で気配り上手、相手のために尽くすタイプ。ただし金星にとって力が弱まる位置（フォール）のため、完璧を求めすぎたり、自己評価の低さから愛情表現に自信を持てない面も。ありのままの自分を受け入れる練習ができると、本来の献身の美しさが活きる。", "天秤座": "バランス感覚に優れ、洗練された魅力と社交性で人を惹きつけるタイプ。金星のもう一つの本拠地（ドミサイル）で、調和的なパートナーシップを築くのが得意。八方美人になりすぎず、自分の意思も大切にすることを意識すると良い。", "蠍座": "一途で深く強い愛情を注ぐタイプ。ただし金星にとって力が弱まる位置（デトリメント）のため、独占欲や嫉妬心が強く出やすい面も。信頼をベースにした関係づくりを意識できると、深い絆を築けるという本来の魅力が活きる。", "射手座": "自由と冒険を愛し、束縛のない関係を好むタイプ。楽観的でおおらかな愛情表現が魅力。特筆すべき強弱のない配置（無格）で、成長や刺激を共有できる相手との相性が良い。", "山羊座": "誠実で責任感のある愛情表現をするタイプ。将来を見据えた現実的な関係づくりが得意。特筆すべき強弱のない配置（無格）で、時間をかけてじっくりと信頼を築いていく恋愛スタイル。", "水瓶座": "友情の延長のような、自由でフラットな関係性を好むタイプ。個性やユニークさを大切にする愛情表現が特徴。特筆すべき強弱のない配置（無格）で、束縛を嫌い、対等な関係を望む。", "魚座": "無条件の愛や共感力の高い愛情表現が魅力。金星が高められる位置（エグザルテーション）で、ロマンティックで献身的な愛のかたちが自然に発揮されやすい。ただし自己犠牲になりすぎないよう、自分自身も大切にすることを意識すると良い。"}, "houses_love": {"1": "愛されることや魅力そのものが自己肯定感に直結しやすいタイプ。外見や雰囲気そのものに愛嬌があり、恋愛が自己表現の一部になる。角（アンギュラー）の配置で、恋愛面での自分らしさが前面に出やすい。", "2": "恋愛に安定・安心を求めるタイプ。所有物や金銭感覚と愛情表現が結びつきやすく、贈り物や物質的な豊かさを通じて愛情を示したり受け取ったりすることを好む。継続（サクシーデント）の配置で、じっくりと関係を育てていく。", "3": "会話や日常のやり取りを通じて愛情を育むタイプ。近所や学校・職場など身近な場所での出会いが多い。断絶（ケーダント）の配置のため、恋愛が軽やかな距離感にとどまりやすく、深める意識を持つとより関係が育つ。", "4": "家庭的な愛情表現が得意で、居心地の良い空間づくりを通じてパートナーとの絆を深めるタイプ。家族との関係性が恋愛観の土台になりやすい。角（アンギュラー）の配置で、家庭・プライベートの領域で愛情がしっかりと発揮される。", "5": "恋愛そのものを楽しむことに長けたタイプ。情熱的でロマンティックな表現を自然に行い、恋も遊びも創造性も謳歌できる。金星にとって最も自然に力を発揮する『ジョイ（喜びの座）』の配置で、この配置全体の中でも特に恋愛面の輝きが強い。", "6": "日常のサポートや気配りを通じて愛情を表現するタイプ。職場や日課の中で育まれる恋愛の可能性もある。断絶（ケーダント）の配置のため、ロマンスよりも実務的な献身に寄りやすく、意識的にときめきを取り入れると関係に彩りが増す。", "7": "パートナーシップそのものを大切にするタイプ。結婚や対等な関係性を重視し、社交的な魅力で相手との調和を築くのが得意。角（アンギュラー）の配置で、恋愛・結婚というテーマが人生の中で強く前面に出やすい。", "8": "精神的にも肉体的にも深く結びつく、濃密な愛情を求めるタイプ。共有の資産や価値観を通じて絆を深める一方、独占欲や執着が出やすい面もある。継続（サクシーデント）の配置で、時間をかけて関係の深さが増していく。", "9": "価値観や世界観を共有できる相手に惹かれるタイプ。国際的、哲学的、あるいは遠方の相手との恋愛に発展しやすい。断絶（ケーダント）の配置のため、日常的な安定よりも刺激や成長を恋愛に求める傾向がある。", "10": "恋愛や結婚が社会的な立場やキャリアと結びつきやすいタイプ。人前でも堂々とした関係を築き、パートナーの存在が評判や評価に影響することも。角（アンギュラー）の配置で、恋愛が人生の重要なテーマとして表面化しやすい。", "11": "友情の延長として恋愛が発展しやすいタイプ。グループやコミュニティの中での出会いが多く、対等な仲間のような関係を好む。継続（サクシーデント）の配置で、じっくりと信頼を積み重ねながら関係が育つ。", "12": "秘めた愛情や、自己犠牲的な献身を伴う恋愛をしやすいタイプ。無意識レベルでの強い結びつきを感じる相手に惹かれることも。断絶（ケーダント）の配置のため、表に出しにくい恋愛や、報われにくいと感じやすい愛のかたちになることもある。"}}, "火星": {"glyph": "♂", "signs": {"牡羊座": "火星にとって本拠地（ドミサイル）。まっすぐに行動し、迷わず目標に向かって突き進む強い推進力を持つ、最も火星らしい配置。", "牡牛座": "火星にとって力が弱まる位置（デトリメント）。行動力そのものよりも、じっくりと物事を進める着実さが持ち味になる。無理に急がず自分のペースを保つことで、本来の粘り強さが活きる。", "双子座": "頭の回転の速さがそのまま行動力に結びつくタイプ。特筆すべき強弱のない配置（無格）で、複数のことを同時にこなす器用さがある。", "蟹座": "火星にとって最も力が弱まる位置（フォール）。感情が絡むと行動をためらいやすく、直接的な対立を避けようとする傾向がある。安心できる環境が整うと、大切なものを守るための強さという本来の力が発揮される。", "獅子座": "堂々とした自信を持って行動するタイプ。特筆すべき強弱のない配置（無格）で、注目される場面で最も力を発揮する。", "乙女座": "効率的で正確な行動を好むタイプ。特筆すべき強弱のない配置（無格）で、細部への配慮を怠らない丁寧な実行力を持つ。", "天秤座": "火星にとって力が弱まる位置（デトリメント）。行動を起こす前に周囲との調和を優先しすぎて、決断が遅れやすい。自分の意志をはっきり示す練習ができると、本来の交渉力・調整力が活きる。", "蠍座": "火星にとってもう一つの本拠地（ドミサイル）。一度決めたら揺るがない強い意志と持続力を持ち、深く集中して物事に取り組む力がある。", "射手座": "冒険心と行動力が結びつくタイプ。特筆すべき強弱のない配置（無格）で、新しい挑戦に向かって迷わず飛び込む。", "山羊座": "火星が高められる位置（エグザルテーション）。目標に向かって計画的かつ着実に行動する、忍耐強い実行力を持つ。", "水瓶座": "独自の方法で行動するタイプ。特筆すべき強弱のない配置（無格）で、集団のためというより自分の信念に基づいて動く。", "魚座": "直感に従って行動するタイプ。特筆すべき強弱のない配置（無格）で、行動の動機が理屈よりも感覚的なものであることが多い。"}, "houses": {"1": "行動力・意志の強さがそのまま第一印象になりやすいタイプ。角（アンギュラー）の配置で、積極性やエネルギーが人生全体に色濃く表れる。", "2": "お金や資産形成に対して積極的に行動するタイプ。継続（サクシーデント）の配置で、じっくりと物質的な基盤を築いていく。", "3": "会話や日常のやり取りにおいて競争心や率直さが出やすいタイプ。断絶（ケーダント）の配置のため、衝動的な発言や近距離でのトラブルに注意が必要。", "4": "家庭内での自己主張や、大切なものを守るための行動力が強く出るタイプ。角（アンギュラー）の配置で、家庭が行動力を発揮する重要な場になりやすい。", "5": "恋愛や趣味において積極的にアプローチするタイプ。継続（サクシーデント）の配置で、情熱をじっくりと楽しみながら注いでいく。", "6": "火星にとって伝統的な『喜びの座』。日々の仕事や鍛錬において最も自然に行動力を発揮する場所。勤勉さと体力を活かした実務的な達成を得意とする。", "7": "パートナーとの関係において主導権を握ろうとする、あるいは競争的な関係になりやすいタイプ。角（アンギュラー）の配置で、対人関係が行動力の重要な発揮どころになる。", "8": "危機的な状況や深い変容の場面で、強い行動力を発揮するタイプ。継続（サクシーデント）の配置で、時間をかけて粘り強く困難に立ち向かう。", "9": "信念や理想のために戦う姿勢を持つタイプ。断絶（ケーダント）の配置のため、情熱が一貫性を欠きやすく、時に極端な行動に走ることもある。", "10": "キャリアにおいて積極的に行動し、競争や達成を通じて社会的地位を築くタイプ。角（アンギュラー）の配置で、行動力がそのまま社会的評価に直結しやすい。", "11": "仲間や理想の実現のために行動するタイプ。継続（サクシーデント）の配置で、コミュニティの中でじっくりとリーダーシップを発揮する。", "12": "隠れた場所や、目に見えない領域で力を発揮するタイプ。断絶（ケーダント）の配置のため、行動力が表に出にくく、内側にエネルギーをため込みやすい面もある。"}, "signs_love": {"牡羊座": "恋愛においてもっとも情熱的でストレートなタイプ。好きになったら即行動、追いかけることに喜びを感じる。駆け引きより直球勝負を好む。", "牡牛座": "恋愛においてもじっくりと時間をかけて口説くタイプ。焦らず、五感に訴えるアプローチ（食事やスキンシップ）を好む。ただし火星本来の勢いはやや発揮しにくく、行動に移すまで時間がかかることも。", "双子座": "恋愛において会話や駆け引きを楽しむタイプ。追いかける過程そのものを楽しむ、頭脳的なアプローチを好む。", "蟹座": "恋愛において慎重になりすぎ、自分から積極的にアプローチすることを躊躇しやすいタイプ。傷つくことを恐れて一歩引いてしまうが、安心できる関係だと分かれば守るための強い情熱を発揮する。", "獅子座": "恋愛において堂々とアプローチし、情熱的に口説くタイプ。ドラマチックなアプローチや、贈り物・サプライズを好む。", "乙女座": "恋愛において相手のために気配りをすることで気持ちを示すタイプ。ストレートな告白より、行動で示す誠実なアプローチを好む。", "天秤座": "恋愛において駆け引きに慎重で、相手に合わせようとしすぎて自分から動けなくなりやすいタイプ。相手に選ばれるのを待つ傾向が強く出ることも。", "蠍座": "恋愛において非常に情熱的で一途、一度好きになったら深く強く追いかけるタイプ。駆け引きより本気度で勝負する。", "射手座": "恋愛においてオープンでカジュアルなアプローチを好むタイプ。追いかけることを恋の冒険として楽しむ。", "山羊座": "恋愛において計画的かつ着実にアプローチするタイプ。時間をかけてでも本気で口説き落とす、忍耐強い追跡力を持つ。", "水瓶座": "恋愛において型にはまらない、友達のようなアプローチを好むタイプ。束縛を感じさせない距離感を大切にする。", "魚座": "恋愛において直感的でロマンチックなアプローチをするタイプ。押しの強さより、雰囲気やタイミングを大切にする。"}, "houses_love": {"1": "恋愛においても自分から積極的にアプローチするタイプ。情熱がそのまま第一印象になり、出会ってすぐに好意を示すことが多い。", "2": "恋愛においても安定した関係を求めて着実にアプローチするタイプ。時間をかけて信頼を積み重ねながら距離を縮める。", "3": "会話や日常のやり取りを通じて恋愛感情を育てるタイプ。身近な人や近所での出会いから恋が生まれやすい。", "4": "家庭的な安心感を求めて、真剣な恋愛関係を築こうとするタイプ。将来を見据えた相手にこそ情熱を注ぐ。", "5": "恋愛そのものを情熱的に楽しむタイプ。火星が最も自然にロマンスで力を発揮する場所で、追いかけること自体を楽しめる。", "6": "日常のサポートを通じて愛情を示すタイプ。職場や日課の中で育まれる恋愛の可能性もある。", "7": "パートナーシップにおいて主導権を握ろうとする、情熱的で競争的な関係を築くタイプ。", "8": "深く濃密な、肉体的にも精神的にも強く結びつく恋愛を求めるタイプ。", "9": "刺激や成長を恋愛にも求めるタイプ。遠距離や異文化の相手にも情熱を燃やしやすい。", "10": "恋愛が社会的な立場やキャリアと結びつきやすいタイプ。人前でも堂々とアプローチする。", "11": "友情から発展する恋愛、グループの中での情熱的な出会いを好むタイプ。", "12": "秘めた情熱を抱きやすい、あるいは自己犠牲的な恋愛にのめり込みやすいタイプ。"}}};
+/* 西洋占星術辞典から抜き出した「ハウスカスプ×サイン」の解釈文（12ハウス×12サイン=144パターン）。
+   ホロスコープの内側の円にある「ハウスカスプ」タップ項目から参照する */
+var LT_HOUSE_CUSP_TEXTS = {"1": {"牡羊座": "周囲からストレートで行動力のある第一印象を持たれやすい。初対面から自分らしさをまっすぐ出せ、開拓者のような存在感がある。", "牡牛座": "穏やかで落ち着いた、安定感のある第一印象を持たれやすい。焦らずマイペースな雰囲気が、周囲に安心感を与える。", "双子座": "知的で会話上手な、軽やかな第一印象を持たれやすい。多面的な魅力があり、話していて飽きさせない存在。", "蟹座": "親しみやすく、面倒見の良い第一印象を持たれやすい。情に厚く、身近な人を自然に気にかけるタイプに見られる。", "獅子座": "堂々として華やかな、存在感のある第一印象を持たれやすい。自然と人の視線を集める、主役のような雰囲気を持つ。", "乙女座": "誠実で几帳面な、丁寧な第一印象を持たれやすい。控えめだが、細やかな気配りが伝わるタイプ。", "天秤座": "洗練されていて社交的な、バランスの良い第一印象を持たれやすい。誰とでも自然に打ち解けられる魅力がある。", "蠍座": "ミステリアスで深みのある第一印象を持たれやすい。簡単には本心を見せない、静かな存在感がある。", "射手座": "明るく自由な、おおらかな第一印象を持たれやすい。束縛を感じさせない、開放的な雰囲気を持つ。", "山羊座": "落ち着いていて責任感のある、しっかり者の第一印象を持たれやすい。年齢より大人びて見られることも多い。", "水瓶座": "個性的でユニークな、独特の第一印象を持たれやすい。人と違う視点を持つ人だと、すぐに伝わるタイプ。", "魚座": "柔らかく共感力の高い、優しい第一印象を持たれやすい。境界線が緩やかで、包み込むような雰囲気を持つ。"}, "2": {"牡羊座": "お金を稼ぐ姿勢も積極的で、直感的にチャンスへ飛び込むタイプ。欲しいものはすぐ手に入れたい衝動が強い。", "牡牛座": "着実にコツコツと財産を築くタイプ。安定した所有物や心地よい暮らしに価値を置く。", "双子座": "情報や人脈を活かして収入源を増やすタイプ。1つの収入源に頼らず、複数の可能性を持ちたがる。", "蟹座": "家族の安心のためにお金を大切にするタイプ。将来への備えや、身近な人を守るための蓄えを重視する。", "獅子座": "見栄えの良いもの、質の高いものにお金を使いたがるタイプ。稼ぐことも使うことも、堂々とした姿勢で行う。", "乙女座": "堅実に家計や資産を管理するタイプ。無駄遣いを嫌い、実用性を重視した価値観を持つ。", "天秤座": "美しいもの、バランスの取れた暮らしにお金を使いたがるタイプ。パートナーとの共有財産にも自然な感覚を持つ。", "蠍座": "深く価値を見極めてから投資するタイプ。他人に依存しない、自分だけの経済的基盤を築こうとする。", "射手座": "経験や学びにお金を使いたがるタイプ。旅行や自己投資を惜しまない、拡大志向の金銭感覚を持つ。", "山羊座": "将来を見据えて計画的に資産を築くタイプ。地位や信用と結びついた、堅実な価値観を持つ。", "水瓶座": "独自の価値観でお金を使うタイプ。物質的な所有よりも、理想やコミュニティへの貢献にお金を使いたがる。", "魚座": "お金に対してやや無頓着で、直感的な使い方をするタイプ。困っている人のために惜しみなく使うこともある。"}, "3": {"牡羊座": "ストレートで率直な話し方をするタイプ。近所づきあいや兄弟姉妹との関係も、思ったことをすぐ口にする。", "牡牛座": "ゆっくりとした、着実なコミュニケーションを好むタイプ。一度築いた身近な人間関係を大切に長く保つ。", "双子座": "会話や情報のやり取りそのものを楽しむタイプ。第3ハウスの本来の性質が最も自然に発揮される、社交的な配置。", "蟹座": "感情を交えた、温かいコミュニケーションを好むタイプ。近所や兄弟姉妹との関係に情緒的な絆を求める。", "獅子座": "堂々と自分の意見を語るタイプ。身近な人間関係の中でも、注目される存在になりやすい。", "乙女座": "正確で丁寧なコミュニケーションを好むタイプ。細部への配慮が行き届いた会話を心がける。", "天秤座": "調和を大切にした、感じの良いコミュニケーションを好むタイプ。近所づきあいも円滑にこなす。", "蠍座": "表面的な会話より、深い話を好むタイプ。近しい人にしか本音を見せない、慎重なコミュニケーションスタイル。", "射手座": "率直でおおらかなコミュニケーションを好むタイプ。学びや知的な話題を楽しむ、広い視野を持つ。", "山羊座": "実務的で目的のあるコミュニケーションを好むタイプ。近所づきあいも礼儀正しく、きちんとこなす。", "水瓶座": "独自の視点で語る、個性的なコミュニケーションを好むタイプ。型にはまらない考え方を身近な人に伝える。", "魚座": "言葉より雰囲気やニュアンスを大切にするタイプ。近しい人の気持ちを察する、繊細なコミュニケーションスタイル。"}, "4": {"牡羊座": "家庭内でも自分の意見をはっきり主張するタイプ。家族の中でリーダー的な役割を担いやすい。", "牡牛座": "居心地の良い、安定した家庭環境を大切にするタイプ。物理的な快適さが心の安定に直結する。", "双子座": "家庭内でも会話や知的な刺激を大切にするタイプ。家族との関係が、時とともに変化しやすい。", "蟹座": "家庭的な温かさが最も自然に発揮される配置。家族との情緒的な絆を、人生の中心に置きやすい。", "獅子座": "家庭内でも堂々とした存在感を放つタイプ。家族に誇りを持ってもらえるような生き方を目指す。", "乙女座": "家庭を整え、丁寧に管理することに安心感を覚えるタイプ。実務的な役割を家庭内で担いやすい。", "天秤座": "調和の取れた、心地よい家庭環境を大切にするタイプ。家族間のバランスを取る役割を担いやすい。", "蠍座": "家庭内に深いテーマ（秘密や強い絆）を抱えやすいタイプ。表面的でない、濃密な家族関係を求める。", "射手座": "自由でおおらかな家庭環境を好むタイプ。家族であっても、束縛のない関係を大切にする。", "山羊座": "責任感を持って家庭を支えるタイプ。伝統や家系を重んじる、堅実な家庭観を持つ。", "水瓶座": "型にはまらない、独自の家庭のあり方を築くタイプ。伝統的な家族像にとらわれない自由さがある。", "魚座": "家庭に情緒的な安らぎや、時に曖昧さを持ち込みやすいタイプ。境界線の緩やかな、包み込むような家庭を築く。"}, "5": {"牡羊座": "情熱的でストレートな恋愛表現、遊びや趣味にも積極的に飛び込むタイプ。", "牡牛座": "じっくりと愛情を育て、五感で楽しむ趣味を好むタイプ。安定した恋愛関係を築きやすい。", "双子座": "会話や知的な刺激を楽しむ恋愛スタイル。趣味や創造性も多岐にわたりやすい。", "蟹座": "情緒的な絆を大切にする恋愛スタイル。家庭的な温かさを恋愛にも求める。", "獅子座": "第5ハウス本来の性質が最も自然に発揮される、華やかで情熱的な恋愛・創造性の配置。", "乙女座": "相手のために尽くす、誠実な恋愛スタイル。趣味や創作にも丁寧さが表れる。", "天秤座": "調和とロマンスを大切にする恋愛スタイル。美的センスを活かした創造性を発揮しやすい。", "蠍座": "深く一途な恋愛スタイル。趣味や創作にも、強い情熱と集中力を注ぐ。", "射手座": "自由でおおらかな恋愛スタイル。冒険や新しい経験を、恋愛にも創造性にも求める。", "山羊座": "誠実で将来を見据えた恋愛スタイル。趣味や創作活動にも、着実な積み重ねを大切にする。", "水瓶座": "友達のような、自由な恋愛スタイル。独創的な趣味や創作活動に惹かれやすい。", "魚座": "ロマンティックで共感力の高い恋愛スタイル。夢見るような創造性を発揮しやすい。"}, "6": {"牡羊座": "素早く行動的に仕事をこなすタイプ。健康面ではエネルギッシュだが、無理をしすぎないよう注意。", "牡牛座": "着実で丁寧な仕事ぶりのタイプ。安定したペースを保つことが、健康維持にもつながる。", "双子座": "多方面の業務を器用にこなすタイプ。頭を使う仕事に向いているが、気分転換も大切にしたい。", "蟹座": "面倒見の良い、人をサポートする仕事ぶりのタイプ。感情面のストレスが健康に影響しやすい。", "獅子座": "堂々とした姿勢で仕事に取り組むタイプ。評価されることがモチベーションになりやすい。", "乙女座": "第6ハウス本来の性質が最も自然に発揮される、緻密で実務的な仕事・健康管理の配置。", "天秤座": "協調性を大切にした仕事ぶりのタイプ。人間関係のバランスが、仕事の満足度に直結する。", "蠍座": "深く集中して取り組む仕事ぶりのタイプ。ストレスをため込みやすいので、発散する習慣が大切。", "射手座": "自由度の高い仕事や、学びのある業務を好むタイプ。ルーティンワークにはやや不向き。", "山羊座": "責任感を持って着実に仕事に取り組むタイプ。真面目さゆえに、無理をしすぎないよう注意。", "水瓶座": "独自のやり方で仕事を進めるタイプ。型にはまった業務よりも、革新的な仕事に向く。", "魚座": "直感やイメージを活かした仕事ぶりのタイプ。心身の境界が曖昧になりやすく、休息を意識的に取る必要がある。"}, "7": {"牡羊座": "情熱的でストレートなパートナーシップを築くタイプ。対等な相手との刺激的な関係を求める。", "牡牛座": "安定志向で、じっくりと信頼関係を築くパートナーシップスタイル。", "双子座": "会話が弾む、知的な刺激のあるパートナーシップを求めるタイプ。", "蟹座": "情緒的な絆を大切にする、家庭的なパートナーシップを築きやすいタイプ。", "獅子座": "華やかで堂々とした関係性を築くタイプ。お互いを称え合えるパートナーシップを求める。", "乙女座": "誠実で献身的なパートナーシップを築くタイプ。相手を支える役割を自然に担う。", "天秤座": "第7ハウス本来の性質が最も自然に発揮される、調和の取れたパートナーシップの配置。", "蠍座": "深く濃密な結びつきを求めるパートナーシップスタイル。表面的な関係では満たされない。", "射手座": "自由でおおらかなパートナーシップを求めるタイプ。束縛のない、対等な関係を好む。", "山羊座": "誠実で将来を見据えたパートナーシップを築くタイプ。責任感を持って関係にコミットする。", "水瓶座": "友達のような、対等なパートナーシップを求めるタイプ。自由と個性を尊重し合える関係を好む。", "魚座": "ロマンティックで共感力の高いパートナーシップを築くタイプ。相手と一体化するような深い結びつきを求める。"}, "8": {"牡羊座": "情熱的に深く関わるタイプ。危機的な状況でも、迷わず行動する力を持つ。", "牡牛座": "じっくりと信頼を積み重ね、深い結びつきを築くタイプ。共有財産の扱いに安定感を求める。", "双子座": "深いテーマについても、言葉にして整理しようとするタイプ。", "蟹座": "情緒的な深い結びつきを求めるタイプ。喪失や変容のテーマに敏感に反応する。", "獅子座": "深い関係の中でも、堂々とした自己を保とうとするタイプ。", "乙女座": "危機的な状況にも、実務的・冷静に対処するタイプ。", "天秤座": "深い結びつきにおいても、バランスや公平さを大切にするタイプ。", "蠍座": "第8ハウス本来の性質が最も自然に発揮される、深く濃密な変容・結びつきの配置。", "射手座": "深いテーマにも、楽観的な視点で向き合おうとするタイプ。", "山羊座": "危機や変容に対して、責任感を持って着実に対処するタイプ。", "水瓶座": "深いテーマに、独自の視点や距離感を持って向き合うタイプ。", "魚座": "深い結びつきに、強い共感と自己犠牲的な献身を注ぐタイプ。"}, "9": {"牡羊座": "積極的に新しい価値観や学びに飛び込むタイプ。信念を行動で示そうとする。", "牡牛座": "じっくりと時間をかけて、自分の哲学を築くタイプ。", "双子座": "幅広い知識や情報を通じて視野を広げるタイプ。", "蟹座": "家族や身近な人から受け継いだ価値観を大切にするタイプ。", "獅子座": "自分の信念を堂々と語り、周囲に影響を与えるタイプ。", "乙女座": "実践を通じて学びを深めるタイプ。理論より実用性を重視する。", "天秤座": "異なる価値観の間でバランスを取ろうとするタイプ。", "蠍座": "物事の本質を深く探求するタイプ。表面的な学びでは満足しない。", "射手座": "第9ハウス本来の性質が最も自然に発揮される、広い視野と探求心の配置。", "山羊座": "伝統的な価値観や、体系立った学問を重視するタイプ。", "水瓶座": "既存の枠にとらわれない、独自の哲学を築くタイプ。", "魚座": "直感やスピリチュアリティを通じて信念を深めるタイプ。"}, "10": {"牡羊座": "積極的にキャリアを切り拓くタイプ。開拓者的な役割で社会的評価を得やすい。", "牡牛座": "着実にキャリアを積み上げるタイプ。安定した地位を長期的に築く。", "双子座": "多方面のスキルを活かしたキャリアを築くタイプ。", "蟹座": "人を育てる、支えるような役割でキャリアを築くタイプ。", "獅子座": "堂々とした存在感で、社会的に注目される立場を築くタイプ。", "乙女座": "緻密で実務的な働きぶりで、信頼を積み重ねるタイプ。", "天秤座": "調整役・橋渡し役としてキャリアを築くタイプ。", "蠍座": "深く専門的な分野で、強い影響力を持つキャリアを築くタイプ。", "射手座": "広い視野を活かした、国際的・教育的なキャリアを築くタイプ。", "山羊座": "第10ハウス本来の性質が最も自然に発揮される、着実な社会的達成の配置。", "水瓶座": "革新的な役割で、社会に新しい風を吹き込むキャリアを築くタイプ。", "魚座": "共感力や創造性を活かした、人の心に寄り添うキャリアを築くタイプ。"}, "11": {"牡羊座": "積極的に仲間を率いる、リーダー的な役割を担うタイプ。", "牡牛座": "長く安定した友人関係を大切にするタイプ。", "双子座": "幅広い交友関係を楽しむタイプ。", "蟹座": "家族のような、情緒的に深い友人関係を求めるタイプ。", "獅子座": "仲間の中でも、堂々とした存在感を放つタイプ。", "乙女座": "友人のために実務的にサポートするタイプ。", "天秤座": "第11ハウス本来の性質が最も自然に発揮される、調和的な仲間関係・理想追求の配置。", "蠍座": "少数の、深く信頼できる友人関係を求めるタイプ。", "射手座": "自由で開放的な、多様な仲間との関係を楽しむタイプ。", "山羊座": "目的を共有する、実利的な仲間関係を築くタイプ。", "水瓶座": "理想や信念を共有する、独自のコミュニティを大切にするタイプ。", "魚座": "共感でつながる、境界線の緩やかな友人関係を築くタイプ。"}, "12": {"牡羊座": "無意識の中に、抑えきれない衝動や情熱を抱えやすいタイプ。", "牡牛座": "無意識の中に、安定への強い欲求を抱えやすいタイプ。", "双子座": "無意識の中に、言葉にならない考えや情報を抱えやすいタイプ。", "蟹座": "無意識の中に、深い感情的な記憶を抱えやすいタイプ。", "獅子座": "無意識の中に、認められたいという強い欲求を抱えやすいタイプ。", "乙女座": "無意識の中に、完璧でありたいという強迫観念を抱えやすいタイプ。", "天秤座": "無意識の中に、対立を避けたいという強い欲求を抱えやすいタイプ。", "蠍座": "無意識の中に、深い執着や変容への衝動を抱えやすいタイプ。", "射手座": "無意識の中に、自由への強い渇望を抱えやすいタイプ。", "山羊座": "無意識の中に、責任や制約への恐れを抱えやすいタイプ。", "水瓶座": "無意識の中に、孤立への恐れと自由への欲求を抱えやすいタイプ。", "魚座": "第12ハウス本来の性質が最も自然に発揮される、深い精神性・潜在意識の配置。"}};
+var LT_DICT = {"太陽": {"glyph": "☉", "signs": {"牡羊座": "太陽が高められる位置（エグザルテーション）。自分らしさをまっすぐ発揮し、リーダーシップや行動力が自然に発揮される。開拓者気質で、自ら道を切り拓くことに強い充実感を覚える。", "牡牛座": "特筆すべき強弱のない配置（無格）。安定志向で、着実に自分の価値観を確立していくタイプ。焦らずマイペースに、五感を通じて自分らしさを表現する。", "双子座": "特筆すべき強弱のない配置（無格）。知的好奇心が自己表現の核となり、多方面への興味・会話を通じて自分らしさを発揮する。多面的な自分を楽しめるタイプ。", "蟹座": "太陽にとって本拠地（ドミサイル）。家庭や身近な人との情緒的なつながりを通じて自分らしさを発揮する。面倒見が良く、守り育てることに存在意義を感じやすい。", "獅子座": "太陽にとって本拠地（ドミサイル）。太陽本来の輝きが最も自然に発揮される配置で、自己表現・創造性・堂々とした存在感が魅力。注目される場面で本領を発揮する。", "乙女座": "特筆すべき強弱のない配置（無格）。分析力や実務能力を通じて自分の役割を果たすことに自己表現を見出すタイプ。誠実さと丁寧さが自分らしさの核になる。", "天秤座": "太陽にとって力が弱まる位置（フォール）。周囲との調和や他者からの評価を意識するあまり、自分自身の芯が見えにくくなりやすい面も。他者と比較せず、自分軸を持つ意識ができると、本来の社交性・美的センスという魅力が活きる。", "蠍座": "特筆すべき強弱のない配置（無格）。深く物事に没頭し、本質を見極めることに自己表現の核があるタイプ。表面的なつながりよりも、深い信頼関係の中で本領を発揮する。", "射手座": "特筆すべき強弱のない配置（無格）。自由や成長、探求を通じて自分らしさを発揮するタイプ。広い視野と楽観性で、人生を冒険として捉える。", "山羊座": "特筆すべき強弱のない配置（無格）。責任感と忍耐力を通じて自分の存在意義を確立するタイプ。時間をかけて社会的な達成を積み重ねることに自己表現を見出す。", "水瓶座": "太陽にとって力が弱まる位置（デトリメント）。個性や独自性を大切にするあまり、集団や周囲との協調が難しく感じられやすい面も。自分らしさと他者とのつながりのバランスを意識できると、本来の先見性・独創性という魅力が活きる。", "魚座": "特筆すべき強弱のない配置（無格）。共感力や感受性の豊かさを通じて自分らしさを表現するタイプ。境界線が曖昧になりやすいが、その分他者に寄り添う力に長けている。"}, "houses": {"1": "自己表現がストレートに表に出るタイプ。第一印象や存在感そのものが、その人らしさとして周囲に伝わる。角（アンギュラー）の配置で、自分らしさが人生全体を通じて前面に出やすい。", "2": "自分の価値観や所有物を通じて自己表現をするタイプ。着実に資産や才能を築き上げることに自己実現を見出しやすい。継続（サクシーデント）の配置で、じっくりと自分の土台を固めていく。", "3": "日常のコミュニケーションや学びを通じて自己表現をするタイプ。断絶（ケーダント）の配置のため、自己表現がやや断片的・表面的になりやすく、1つのテーマをじっくり深める意識が本来の知性を活かす助けになる。", "4": "家庭や内面的な基盤の中で自己表現をするタイプ。プライベートな領域でこそ本来の自分を発揮できる。角（アンギュラー）の配置で、家族や心の拠り所が自己実現の中心になりやすい。", "5": "創造性や自己表現の喜びを通じて自分らしさを発揮するタイプ。人前に立つこと、表現すること自体に充実感を覚える。継続（サクシーデント）の配置で、才能をじっくりと育てながら花開かせる。", "6": "日々の仕事や健康管理、奉仕を通じて自己表現をするタイプ。断絶（ケーダント）の配置のため、自己主張よりも実務に埋没しやすく、日常業務の中で自分の存在意義を見失いがちなこともあるが、丁寧な仕事ぶりそのものが自己表現になり得る。", "7": "パートナーシップや対人関係を通じて自己表現をするタイプ。相手との関わりの中で自分らしさが際立つ。角（アンギュラー）の配置で、人間関係や結婚が人生の重要なテーマとして自己実現に直結しやすい。", "8": "深い精神的な変容や、他者との価値観の共有を通じて自己表現をするタイプ。継続（サクシーデント）の配置で、時間をかけて深い自己理解・自己変容を遂げていく。", "9": "太陽が最も自然に機能するとされる伝統的な『喜びの座』。哲学・学問・旅・精神性の探求を通じて自分の世界観を拡大し、人生の意味を追求することに強い充実感を覚える。この配置全体の中でも特に自己成長・自己実現のテーマが輝きやすい。", "10": "社会的な地位やキャリアを通じて自己表現をするタイプ。角（アンギュラー）の配置で、社会的な成功や評価、天職と呼べるものを見つけることが人生の中心テーマになりやすい。", "11": "友人関係やコミュニティ、理想の実現を通じて自己表現をするタイプ。継続（サクシーデント）の配置で、仲間との繋がりの中でじっくりと自分の役割を見出していく。", "12": "潜在意識や精神性、目に見えない領域を通じて自己表現をするタイプ。断絶（ケーダント）の配置のため、自己表現が表に出にくく、自分自身のあり方を見失いやすい面もあるが、内面を深く見つめることで独自の強さや精神的な深みを育てられる。"}, "signs_love": {"牡羊座": "恋愛でも『自分から積極的にリードしたい』という気持ちが強いタイプ。パートナーには対等に渡り合ってくれる、自立した相手を求める。", "牡牛座": "恋愛において安定と誠実さを大切にするタイプ。パートナーには変わらぬ愛情と、五感で感じられる心地よさを求める。", "双子座": "恋愛において知的な刺激や会話を大切にするタイプ。パートナーには話していて飽きない、多面的な魅力を求める。", "蟹座": "恋愛において家庭的な温かさを大切にするタイプ。パートナーには守ってあげたい、あるいは守ってもらいたいという情緒的なつながりを求める。", "獅子座": "恋愛において自分が主役でありたいタイプ。パートナーには自分を称賛し、輝かせてくれる相手を求める。", "乙女座": "恋愛において誠実さと気配りを大切にするタイプ。パートナーには真面目に向き合ってくれる、信頼できる相手を求める。", "天秤座": "恋愛において調和とパートナーシップそのものを大切にするタイプ。二人でいることで自分が完成すると感じやすい。", "蠍座": "恋愛において深く濃密な結びつきを大切にするタイプ。パートナーには表面的でない、本音で向き合える相手を求める。", "射手座": "恋愛において自由と成長を大切にするタイプ。パートナーには一緒に冒険や学びを楽しめる相手を求める。", "山羊座": "恋愛において誠実さと将来性を大切にするタイプ。パートナーには責任を持って向き合ってくれる、現実的な相手を求める。", "水瓶座": "恋愛において自由さと対等さを大切にするタイプ。パートナーには友達のような、束縛のない関係を求める。", "魚座": "恋愛において共感とロマンティックなつながりを大切にするタイプ。パートナーには深く共感し合える、精神的な結びつきを求める。"}, "houses_love": {"1": "恋愛においても自分らしさをそのまま出せる相手を求めるタイプ。", "2": "恋愛においても安定した価値観を共有できる相手を求めるタイプ。", "3": "恋愛においても会話が弾む、知的なやり取りを楽しめる相手を求めるタイプ。", "4": "恋愛においても家庭的な安心感を築ける相手を求めるタイプ。", "5": "恋愛そのものを人生の喜びとして重視するタイプ。", "6": "恋愛においても日常を支え合える、実務的なパートナーシップを求めるタイプ。", "7": "恋愛・結婚そのものが人生の大きなテーマになるタイプ。パートナーを通じて自己実現を果たす。", "8": "恋愛においても深い精神的な結びつきを求めるタイプ。", "9": "太陽にとって伝統的な喜びの座。価値観や世界観を共有できる相手との恋愛に、最も自然に充実感を覚える。", "10": "恋愛が社会的な立場やキャリアと結びつきやすいタイプ。", "11": "恋愛が友情の延長として発展しやすいタイプ。", "12": "秘めた恋愛や、精神的なつながりを重視するタイプ。"}}, "月": {"glyph": "☽", "signs": {"牡羊座": "感情表現がストレートで、思ったことをすぐ感じて反応するタイプ。特筆すべき強弱のない配置（無格）で、安心感よりもまず動くことで気持ちを消化する傾向がある。", "牡牛座": "月にとって力が高められる位置（エグザルテーション）。感情が最も安定し、穏やかで着実な情緒的基盤を持つ。五感を通じた心地よさ（美味しいもの、快適な環境）が安心感に直結する、月にとって最も落ち着ける配置の一つ。", "双子座": "感情を言葉にして整理するタイプ。特筆すべき強弱のない配置（無格）で、気持ちの変化が速く、多様な刺激を通じて心が満たされる。", "蟹座": "月にとって本拠地（ドミサイル）。感受性が非常に豊かで、家庭的な安心感や身近な人とのつながりを通じて情緒が満たされる、最も月らしい配置。", "獅子座": "感情表現がドラマチックで、認められること・愛されることを通じて心が満たされるタイプ。特筆すべき強弱のない配置（無格）だが、注目される場面で情緒が生き生きとする。", "乙女座": "感情を分析し、整理してから表に出すタイプ。特筆すべき強弱のない配置（無格）で、役に立つこと・物事を整えることを通じて安心感を得る。", "天秤座": "人間関係の調和を通じて情緒が安定するタイプ。特筆すべき強弱のない配置（無格）で、一人でいるより誰かとの関わりの中で心が満たされる。", "蠍座": "月にとって力が弱まる位置（フォール）とされるが、実際には感受性が非常に深く強いタイプ。ただ感情を表に出しにくく、内側にため込みやすい面がある。信頼できる相手にだけ本音を見せられると、深く濃密な情緒的絆が育つ。", "射手座": "自由や冒険を通じて心が満たされるタイプ。特筆すべき強弱のない配置（無格）で、束縛されると情緒が不安定になりやすい。", "山羊座": "月にとって力が弱まる位置（デトリメント）。感情を抑え、理性でコントロールしようとする傾向が強い。感受性そのものが弱いわけではなく、責任感の強さから感情表現を後回しにしやすい。安心して弱さを見せられる関係を持てると、内面の豊かさが活きる。", "水瓶座": "感情を客観的・理知的に扱うタイプ。特筆すべき強弱のない配置（無格）で、仲間や理想を通じて心が満たされる、やや個人主義的な情緒スタイル。", "魚座": "感受性が非常に豊かで、共感力の高いタイプ。特筆すべき強弱のない配置（無格）だが、他者の感情を自分のことのように感じ取りやすく、境界線が曖昧になりやすい。"}, "houses": {"1": "感情がそのまま表情や態度に表れやすいタイプ。第一印象がその時々の気分に左右されやすい。角（アンギュラー）の配置で、感情の動きが人生全体に色濃く影響する。", "2": "所有物や安定した収入を通じて情緒的な安心を得るタイプ。継続（サクシーデント）の配置で、じっくりと経済的・情緒的基盤を築いていく。", "3": "月にとって伝統的な『喜びの座』。日常会話や身近な人との交流を通じて心が満たされる、最も月らしく機能する場所。兄弟姉妹や近所との関係が情緒的な安定に大きく影響する。", "4": "家庭や心の拠り所を通じて情緒が安定するタイプ。角（アンギュラー）の配置で、家族・住まいが人生の中でも特に重要な情緒的テーマになる。", "5": "恋愛や創造的な自己表現を通じて心が満たされるタイプ。継続（サクシーデント）の配置で、楽しみや喜びをじっくりと味わうことに情緒的な充足を見出す。", "6": "日々のルーティンや健康管理を通じて情緒が安定するタイプ。断絶（ケーダント）の配置のため、感情が日常業務に埋もれやすく、自分の気持ちに気づく余裕を意識的に作ることが助けになる。", "7": "パートナーとの関係を通じて情緒が安定するタイプ。角（アンギュラー）の配置で、人間関係・結婚が情緒的な安定に強く影響する。", "8": "深い精神的な結びつきや、他者との共有を通じて情緒が満たされるタイプ。継続（サクシーデント）の配置で、時間をかけて深い信頼関係を築いていく。", "9": "学びや旅、新しい価値観との出会いを通じて心が満たされるタイプ。断絶（ケーダント）の配置のため、日常的な安心感よりも刺激や変化を求める傾向があり、時に落ち着きのなさとして表れることも。", "10": "社会的な評価や役割を通じて情緒が安定するタイプ。角（アンギュラー）の配置で、キャリアや社会的立場が情緒的な安心感に直結しやすい。", "11": "友人やコミュニティとの繋がりを通じて心が満たされるタイプ。継続（サクシーデント）の配置で、仲間との関係をじっくりと育てていく。", "12": "内面の静けさや精神性、一人の時間を通じて情緒が安定するタイプ。断絶（ケーダント）の配置のため、感情が表に出にくく、自分でも気づかないうちに感受性を抑え込んでしまうことがあるが、内省を通じて深い癒しを得られる。"}, "signs_love": {"牡羊座": "恋愛において感情がストレートに出るタイプ。好きという気持ちをすぐに行動で示さないと落ち着かない。", "牡牛座": "恋愛において安定した安心感を求めるタイプ。変わらない愛情表現やスキンシップで満たされる。", "双子座": "恋愛において会話や刺激を通じて心が満たされるタイプ。マンネリを嫌う。", "蟹座": "恋愛において深い情緒的なつながりを求めるタイプ。守り、守られる関係に安心感を覚える、月にとって最も自然な恋愛スタイル。", "獅子座": "恋愛において愛されている実感、認められることを通じて心が満たされるタイプ。", "乙女座": "恋愛において相手の役に立つことで安心感を得るタイプ。", "天秤座": "恋愛において調和のとれた関係性そのものが心の安定につながるタイプ。", "蠍座": "恋愛において深く強い結びつきを求めるタイプ。表面的な関係では満たされない。", "射手座": "恋愛において自由や刺激を通じて心が満たされるタイプ。束縛を感じると不安定になりやすい。", "山羊座": "恋愛において責任感や将来性のある関係に安心感を覚えるタイプ。感情表現は控えめ。", "水瓶座": "恋愛において自由でフラットな関係性に安心感を覚えるタイプ。", "魚座": "恋愛において深い共感やロマンティックなつながりを通じて心が満たされるタイプ。"}, "houses_love": {"1": "恋愛での気分がそのまま態度に出やすいタイプ。", "2": "恋愛においても安定と安心を求め、じっくりと関係を築くタイプ。", "3": "日常の会話や身近なやり取りを通じて恋愛の安心感を得るタイプ。月にとって伝統的な喜びの座。", "4": "恋愛においても家庭的な安心感を最も重視するタイプ。", "5": "恋愛そのものを楽しみ、喜びとして享受するタイプ。", "6": "恋愛においても日常のサポートを通じて安心感を得るタイプ。", "7": "パートナーとの関係そのものが情緒的な安定に直結するタイプ。", "8": "恋愛において深い精神的結びつきを通じて安心感を得るタイプ。", "9": "恋愛にも刺激や成長を求めるタイプ。日常的な安定よりも変化を好む。", "10": "恋愛が社会的な安定・評価と結びつくタイプ。", "11": "友情の延長としての恋愛に安心感を覚えるタイプ。", "12": "恋愛においても内面的な安らぎを求めるタイプ。表に出さない情緒を抱えやすい。"}}, "水星": {"glyph": "☿", "signs": {"牡羊座": "思考のスピードが速く、考えるよりも先に発言・行動するタイプ。特筆すべき強弱のない配置（無格）で、ストレートで率直なコミュニケーションを好む。", "牡牛座": "じっくりと考え、実用的で着実な思考をするタイプ。特筆すべき強弱のない配置（無格）で、一度理解したことは深く定着し、簡単には意見を変えない。", "双子座": "水星にとって本拠地（ドミサイル）。好奇心旺盛で多方面に関心を持ち、会話や情報のやり取りを通じて最も自然に力を発揮する、水星らしい配置。", "蟹座": "感情を交えた、共感的なコミュニケーションをするタイプ。特筆すべき強弱のない配置（無格）で、論理よりも直感や気持ちを大切にする。", "獅子座": "自信を持って堂々と自分の考えを表現するタイプ。特筆すべき強弱のない配置（無格）で、ドラマチックで説得力のある話し方をする。", "乙女座": "水星にとって本拠地であり、かつ高揚（エグザルテーション）の位置でもある、最も洗練された形で力を発揮する配置。分析力・実務的な思考力に優れ、細部まで正確に物事を捉える。", "天秤座": "バランスの取れた、客観的な思考をするタイプ。特筆すべき強弱のない配置（無格）で、相手の立場を考慮しながら会話を進める外交的なコミュニケーション。", "蠍座": "物事の本質を深く探求する、鋭い洞察力を持つタイプ。特筆すべき強弱のない配置（無格）で、表面的な会話よりも核心に触れる話を好む。", "射手座": "水星にとって力が弱まる位置（デトリメント）。大きな視点で物事を捉えるが、細部への注意が散漫になりやすい。率直すぎる発言で誤解を招くこともあるが、広い視野と楽観的な発想力が強み。", "山羊座": "実務的で計画的な思考をするタイプ。特筆すべき強弱のない配置（無格）で、感情より結果を重視した効率的なコミュニケーションを好む。", "水瓶座": "独創的で理論的な思考をするタイプ。特筆すべき強弱のない配置（無格）で、既存の枠にとらわれない革新的なアイデアを生み出す。", "魚座": "水星にとって力が弱まる位置（デトリメントかつフォール）、水星にとって最も力が発揮しにくい配置。論理よりも直感・イメージで物事を捉えるため、言葉での説明がやや苦手に感じられやすいが、言葉にならない感覚を汲み取る繊細な感受性を持つ。"}, "houses": {"1": "水星にとって伝統的な『喜びの座』。コミュニケーション能力・知性そのものが第一印象になりやすい、水星が最も自然に機能する場所。角（アンギュラー）かつジョイという、この惑星にとって最も力の出やすい配置。", "2": "金銭感覚や所有物について、実務的・論理的に考えるタイプ。継続（サクシーデント）の配置で、じっくりと合理的な判断を積み重ねていく。", "3": "水星の自然な対応ハウス。日常のやり取りや近距離の移動を通じてコミュニケーション能力を発揮する。断絶（ケーダント）の配置のため、内容が広く浅くなりやすい面もある。", "4": "家庭内での対話や、心の内面についてじっくり考えるタイプ。角（アンギュラー）の配置で、身近な人との対話が思考の重要な土台になる。", "5": "創造的なアイデアや遊び心のあるコミュニケーションを好むタイプ。継続（サクシーデント）の配置で、楽しみながらアイデアを育てていく。", "6": "実務的な情報処理や日々の業務連絡を通じて力を発揮するタイプ。断絶（ケーダント）の配置のため、目先の作業に集中しすぎて大局を見失いやすい面もある。", "7": "対人関係における対話や交渉能力を通じて力を発揮するタイプ。角（アンギュラー）の配置で、パートナーとの意思疎通が人生の重要なテーマになりやすい。", "8": "深いテーマ、他者の秘密や共有資源について深く考察するタイプ。継続（サクシーデント）の配置で、時間をかけて本質に迫る思考を育てる。", "9": "学問や哲学、海外の知識を吸収することに関心を持つタイプ。断絶（ケーダント）の配置のため、一つのテーマを掘り下げず広く浅くなりやすい面もある。", "10": "知的な発信やコミュニケーション能力がキャリア・社会的評価に直結するタイプ。角（アンギュラー）の配置で、発言力や情報発信が社会的立場に大きく影響する。", "11": "友人やコミュニティとの情報交換を通じて力を発揮するタイプ。継続（サクシーデント）の配置で、仲間との知的な繋がりをじっくり育てる。", "12": "潜在意識や、言葉にならない直感的な理解力を持つタイプ。断絶（ケーダント）の配置のため、考えを表に出すことが苦手になりやすいが、内面の深い洞察力を秘めている。"}, "signs_love": {"牡羊座": "恋愛でのコミュニケーションがストレートなタイプ。好きという気持ちも不満も、思ったことをすぐ口にする。", "牡牛座": "恋愛での会話はゆっくりで着実なタイプ。一度決めた気持ちや約束は簡単には変えない。", "双子座": "恋愛での会話そのものを楽しむタイプ。LINEや電話でのやり取りが多いほど安心する。", "蟹座": "恋愛での会話に共感や優しさを求めるタイプ。論理よりも気持ちを汲み取ってほしいと感じやすい。", "獅子座": "恋愛での会話にドラマや盛り上がりを求めるタイプ。褒め言葉や称賛の言葉に弱い。", "乙女座": "恋愛での会話が実務的・具体的になりやすいタイプ。相手のために役立つ情報や気配りの言葉を大切にする。", "天秤座": "恋愛での会話にバランスや心地よさを求めるタイプ。喧嘩や対立を避け、穏やかなやり取りを好む。", "蠍座": "恋愛での会話が少なくても、深い部分で通じ合うことを重視するタイプ。表面的な会話では満たされない。", "射手座": "恋愛での会話に率直さと自由さを求めるタイプ。細かい詮索より、大らかなやり取りを好む。", "山羊座": "恋愛での会話が現実的・計画的になりやすいタイプ。将来の話や具体的な約束を大切にする。", "水瓶座": "恋愛での会話に独自性や知的な刺激を求めるタイプ。友達のような対等な会話を好む。", "魚座": "恋愛での会話に言葉以上の察し合いを求めるタイプ。雰囲気やニュアンスを大切にする。"}, "houses_love": {"1": "恋愛での会話のテンポや話し方が第一印象に直結しやすいタイプ。", "2": "恋愛での会話でも、実利的な話題（お金や将来設計）を自然に取り入れるタイプ。", "3": "水星の自然な対応ハウス。日常的なやり取り・LINEやメッセージのこまめさが恋愛の安心感に直結しやすい。", "4": "恋愛での会話に家庭的な安心感を求めるタイプ。落ち着いて話せる関係を好む。", "5": "恋愛での会話を楽しみながら、遊び心のあるやり取りを好むタイプ。", "6": "恋愛での会話が実務的なサポートやアドバイスになりやすいタイプ。", "7": "パートナーとの対話そのものを重視するタイプ。話し合いで関係を築いていく。", "8": "恋愛での会話が深いテーマや秘密の共有に及びやすいタイプ。", "9": "恋愛での会話が価値観や将来のビジョンについての話に発展しやすいタイプ。", "10": "恋愛での発言力や伝え方が、関係の中での立場や評価に影響しやすいタイプ。", "11": "友人のような対等な会話を恋愛にも求めるタイプ。", "12": "恋愛での本音を言葉にするのが苦手で、察してほしいと感じやすいタイプ。"}}, "木星": {"glyph": "♃", "signs": {"牡羊座": "直感的に飛び込む形で成長のチャンスをつかむタイプ。特筆すべき強弱のない配置（無格）で、新しいことへの挑戦が幸運を引き寄せる。", "牡牛座": "着実に豊かさを積み上げるタイプ。特筆すべき強弱のない配置（無格）で、物質的な安定や心地よさを通じて成長を実感する。", "双子座": "木星にとって力が弱まる位置（デトリメント）。知識や情報を幅広く集めるが、一つのことを深めるより広く浅くなりやすい。焦点を絞る意識ができると、本来の学習欲・発信力という強みが活きる。", "蟹座": "木星が高められる位置（エグザルテーション）。家庭的な温かさや身近な人への思いやりを通じて、精神的な豊かさが最大限に発揮される。", "獅子座": "自己表現や創造性を通じて成長するタイプ。特筆すべき強弱のない配置（無格）で、堂々とした姿勢が幸運を引き寄せる。", "乙女座": "木星にとって力が弱まる位置（デトリメント）。細部にこだわりすぎて、大きな視野で物事を捉えることが難しく感じられやすい。完璧を求めすぎず大局を見る意識ができると、本来の実務的な知恵という強みが活きる。", "天秤座": "人間関係やパートナーシップを通じて成長するタイプ。特筆すべき強弱のない配置（無格）で、調和の中で幸運を見出す。", "蠍座": "深い探求や変容を通じて成長するタイプ。特筆すべき強弱のない配置（無格）で、表面的な成功より本質的な豊かさを求める。", "射手座": "木星にとって本拠地（ドミサイル）。冒険や学び、異文化との出会いを通じて、最も自然に幸運と成長を引き寄せる、木星らしい配置。", "山羊座": "木星にとって力が弱まる位置（フォール）。楽観性よりも慎重さが先立ち、成長のチャンスを自分で制限してしまいやすい。リスクを取る勇気を持てると、着実な成功という本来の強みが活きる。", "水瓶座": "理想やコミュニティを通じて成長するタイプ。特筆すべき強弱のない配置（無格）で、独自の信念に基づいた発展を遂げる。", "魚座": "木星にとってもう一つの本拠地（ドミサイル）。共感力や精神性を通じて、深い豊かさと幸運を引き寄せる。"}, "houses": {"1": "楽観的で前向きな性格がそのまま第一印象になりやすいタイプ。角（アンギュラー）の配置で、恵まれた雰囲気が人生全体に表れやすい。", "2": "経済的な豊かさや資産形成において幸運に恵まれやすいタイプ。継続（サクシーデント）の配置で、じっくりと富を築いていく。", "3": "学びや会話を通じて成長するタイプ。断絶（ケーダント）の配置のため、興味が広がりやすい反面、内容が浅くなりやすい面もある。", "4": "家庭や心の安定を通じて豊かさを実感するタイプ。角（アンギュラー）の配置で、家族との関係が幸運の重要な源になりやすい。", "5": "創造性や恋愛において幸運や喜びを引き寄せるタイプ。継続（サクシーデント）の配置で、楽しみをじっくりと味わいながら豊かさを育てる。", "6": "日々の仕事や健康管理を通じて成長するタイプ。断絶（ケーダント）の配置のため、過信や気の緩みから健康や仕事の管理がおろそかになりやすい面もある。", "7": "パートナーシップを通じて大きな幸運を得やすいタイプ。角（アンギュラー）の配置で、結婚や協力関係が人生の発展に強く影響する。", "8": "他者との共有資産や深い変容を通じて豊かさを得るタイプ。継続（サクシーデント）の配置で、時間をかけて大きな恵みを受け取る。", "9": "木星にとって伝統的な『喜びの座』。哲学・学問・海外との関わりを通じて、最も自然に幸運と成長を引き寄せる場所。この配置全体の中でも特に人生観の拡大というテーマが輝きやすい。", "10": "キャリアや社会的地位において大きな成功や幸運を得やすいタイプ。角（アンギュラー）の配置で、社会的な評価や達成が人生の中心テーマになりやすい。", "11": "友人やコミュニティ、理想の実現を通じて豊かさを得るタイプ。継続（サクシーデント）の配置で、仲間との繋がりの中でじっくりと恵みを育てる。", "12": "精神性や潜在意識を通じて豊かさを得るタイプ。断絶（ケーダント）の配置のため、幸運が表に出にくく、静かな形で恵みを受け取ることが多い。"}, "signs_love": {"牡羊座": "恋愛にも直感的に飛び込むタイプ。新しい出会いへの挑戦が、そのまま幸運な恋につながりやすい。", "牡牛座": "恋愛でも着実に豊かな関係を育てるタイプ。安定と心地よさの中で愛情が育つ。", "双子座": "恋愛にも知識や会話の幅広さを求めるタイプ。複数の可能性を楽しむ柔軟さがある。", "蟹座": "恋愛において家庭的な温かさを通じて、精神的な豊かさが最大限に発揮されるタイプ。", "獅子座": "恋愛でも自己表現や創造性を通じて、幸運を引き寄せるタイプ。堂々とした姿勢が魅力になる。", "乙女座": "恋愛にも誠実さや実務的な支えを持ち込むタイプ。ただし大局を見る意識が幸運を広げる鍵になる。", "天秤座": "恋愛や人間関係そのものを通じて成長するタイプ。調和の中で幸運を見出す。", "蠍座": "恋愛において深い探求や変容を求めるタイプ。表面的な関係より本質的な豊かさを求める。", "射手座": "恋愛にも冒険や異文化との出会いを求めるタイプ。最も自然に幸運と成長を恋愛に引き寄せる。", "山羊座": "恋愛でも慎重さが先立ちやすいタイプ。リスクを取る勇気を持てると、着実な恋愛の成功につながる。", "水瓶座": "恋愛にも理想やコミュニティを重ねるタイプ。独自の信念に基づいた関係を発展させる。", "魚座": "恋愛において共感力や精神性を通じて、深い豊かさと幸運を引き寄せるタイプ。"}, "houses_love": {"1": "恋愛でも楽観的で前向きな性格がそのまま第一印象になりやすいタイプ。", "2": "恋愛においても経済的な豊かさや安心感が関係の満足度に影響しやすいタイプ。", "3": "恋愛での学びや会話を通じて関係が成長するタイプ。", "4": "恋愛においても家庭や心の安定を通じて豊かさを実感するタイプ。", "5": "恋愛そのものに幸運や喜びを強く引き寄せるタイプ。", "6": "恋愛でも日々の支え合いを通じて成長するタイプ。", "7": "パートナーシップを通じて大きな幸運を得やすいタイプ。恋愛・結婚が人生の発展に直結する。", "8": "恋愛での深い共有や変容を通じて豊かさを得るタイプ。", "9": "木星にとって伝統的な喜びの座。価値観を共有できる相手との恋愛に、最も自然に幸運を感じる。", "10": "恋愛が社会的な成功と結びつきやすいタイプ。", "11": "友人やコミュニティを通じた恋愛に豊かさを見出すタイプ。", "12": "恋愛での豊かさが静かな形で表れるタイプ。表に出にくいが深い恵みを受け取る。"}}, "土星": {"glyph": "♄", "signs": {"牡羊座": "土星にとって力が弱まる位置（フォール）。行動を起こす勇気に自信が持てず、慎重になりすぎて機会を逃しやすい。少しずつ挑戦を重ねることで、着実な自信という本来の強みが育つ。", "牡牛座": "着実に物事を積み上げる、忍耐強いタイプ。特筆すべき強弱のない配置（無格）で、時間をかけて安定した基盤を築く。", "双子座": "情報や知識を体系的に整理する、慎重な思考を持つタイプ。特筆すべき強弱のない配置（無格）。", "蟹座": "土星にとって力が弱まる位置（デトリメント）。感情を表に出すことに臆病になりやすく、家庭的な温かさを素直に受け取れないことがある。安心できる環境で少しずつ心を開くことで、責任感の強さという本来の魅力が活きる。", "獅子座": "土星にとって力が弱まる位置（デトリメント）。自己表現に自信が持てず、注目される場面を避けたくなることがある。小さな成功体験を積み重ねることで、本来のリーダーシップという強みが育つ。", "乙女座": "実務能力と責任感が結びついた、堅実なタイプ。特筆すべき強弱のない配置（無格）で、細部への配慮を怠らない。", "天秤座": "土星が高められる位置（エグザルテーション）。公正さとバランス感覚を持って責任ある判断を下せる、最も成熟した形で力を発揮する配置。", "蠍座": "深く粘り強く物事に取り組むタイプ。特筆すべき強弱のない配置（無格）で、困難を乗り越える強い忍耐力を持つ。", "射手座": "信念や哲学を、責任を持って実践していくタイプ。特筆すべき強弱のない配置（無格）で、理想を現実に落とし込む力がある。", "山羊座": "土星にとって本拠地（ドミサイル）。責任感・忍耐力・目標達成能力が最も自然に発揮される、土星らしい配置。", "水瓶座": "土星にとってもう一つの本拠地（ドミサイル）。既存の枠組みを尊重しつつ、独自の理論やルールを構築する力を持つ。", "魚座": "目に見えない領域に、責任と忍耐をもって向き合うタイプ。特筆すべき強弱のない配置（無格）で、精神的な成熟を通じて力を発揮する。"}, "houses": {"1": "慎重で真面目な性格がそのまま第一印象になりやすいタイプ。角（アンギュラー）の配置で、責任感の強さが人生全体に色濃く表れる。", "2": "経済的な安定を、時間をかけて着実に築くタイプ。継続（サクシーデント）の配置で、堅実な資産形成を得意とする。", "3": "慎重で計画的なコミュニケーションを好むタイプ。断絶（ケーダント）の配置のため、発言に自信が持てず、口数が少なくなりやすい面もある。", "4": "家庭内での責任感が強く、家族の支えとなる役割を担いやすいタイプ。角（アンギュラー）の配置で、家庭が人生の重要な責任の場になりやすい。", "5": "恋愛や自己表現に慎重で、真剣な関係を求めるタイプ。継続（サクシーデント）の配置で、時間をかけて信頼できる関係を育てる。", "6": "日々の仕事に真面目に取り組むタイプ。断絶（ケーダント）の配置のため、自分を追い込みすぎたり、完璧主義に陥りやすい面もある。", "7": "パートナーシップにおいて責任感を持ち、真剣な関係を築こうとするタイプ。角（アンギュラー）の配置で、結婚や協力関係が人生の中心テーマになりやすい。", "8": "他者との深い信頼関係を、時間をかけて築くタイプ。継続（サクシーデント）の配置で、じっくりと責任ある関わりを育てる。", "9": "学問や信念を、体系的かつ慎重に追求するタイプ。断絶（ケーダント）の配置のため、新しい価値観への抵抗感が強く出やすい面もある。", "10": "キャリアにおいて着実に地位を築き上げる、社会的な達成に強いタイプ。角（アンギュラー）の配置で、責任ある立場が人生の中心テーマになりやすい。", "11": "友人関係やコミュニティにおいて、責任ある役割を担うタイプ。継続（サクシーデント）の配置で、じっくりと信頼される立場を築く。", "12": "土星にとって伝統的な『喜びの座』。孤独や内省、精神的な鍛錬を通じて、最も自然に成熟と強さを得る場所。一人の時間の中で自分自身と向き合う力が育つ。"}, "signs_love": {"牡羊座": "恋愛において行動を起こす勇気に自信が持てず、慎重になりすぎて機会を逃しやすいタイプ。少しずつ挑戦を重ねることで、着実な自信が育つ。", "牡牛座": "恋愛でも着実に信頼を積み上げる、忍耐強いタイプ。時間をかけて安定した関係を築く。", "双子座": "恋愛でも情報や言葉を慎重に整理して伝えるタイプ。", "蟹座": "恋愛において感情を表に出すことに臆病になりやすいタイプ。安心できる関係の中で少しずつ心を開くことで、責任感の強さという魅力が活きる。", "獅子座": "恋愛での自己表現に自信が持てず、積極的なアプローチを避けたくなるタイプ。小さな成功体験を重ねることで自信が育つ。", "乙女座": "恋愛でも実務的な支えと責任感が結びついた、堅実なタイプ。", "天秤座": "恋愛において公正さとバランス感覚を持って、責任ある関係を築けるタイプ。", "蠍座": "恋愛でも深く粘り強く向き合う、強い忍耐力を持つタイプ。", "射手座": "恋愛の理想を、責任を持って実践していくタイプ。", "山羊座": "恋愛において責任感・忍耐力が最も自然に発揮される、真剣な関係を築くタイプ。", "水瓶座": "恋愛でも既存の枠組みを尊重しつつ、独自のルールで関係を築くタイプ。", "魚座": "恋愛においても責任と忍耐をもって向き合う、精神的な成熟を通じて力を発揮するタイプ。"}, "houses_love": {"1": "恋愛でも慎重で真面目な性格がそのまま第一印象になりやすいタイプ。", "2": "恋愛での安定を、時間をかけて着実に築くタイプ。", "3": "恋愛での会話も慎重で計画的、自信が持てず口数が少なくなりやすいタイプ。", "4": "恋愛においても家庭内での責任感が強く、家族的な支えとなる関係を築くタイプ。", "5": "恋愛に慎重で、真剣な関係を求めるタイプ。", "6": "恋愛でも真面目に向き合うが、自分を追い込みすぎる面もあるタイプ。", "7": "恋愛・結婚において責任感を持ち、真剣な関係を築こうとするタイプ。", "8": "恋愛での深い信頼関係を、時間をかけて築くタイプ。", "9": "恋愛での価値観を、慎重に見極めていくタイプ。", "10": "恋愛が社会的な地位や責任と結びつきやすいタイプ。", "11": "友人関係の中で、恋愛にも責任ある役割を担うタイプ。", "12": "土星にとって伝統的な喜びの座。一人の時間を大切にしながら、恋愛でも精神的な成熟を育むタイプ。"}}, "天王星": {"glyph": "⛢", "signs": {"牡羊座": "独立心が非常に強く、自分のやり方を貫くために大胆な行動に出るタイプ。改革者としての気質が強い。", "牡牛座": "変化を嫌う星座に位置するため、価値観や所有物への執着と自由への欲求の間で葛藤しやすいが、一度変わると決めたら価値観を根本から刷新する力を持つ。", "双子座": "新しいアイデアや情報を通じて自由を求めるタイプ。知的な独創性に優れる。", "蟹座": "感情や家庭という保守的な領域に、独自の価値観や変化をもたらそうとするタイプ。伝統的でない家族観を持つことも。", "獅子座": "自己表現において独自性を強く求めるタイプ。型にはまらない個性的な自己表現をする。", "乙女座": "実務や日常のシステムに、独創的な改善や効率化をもたらすタイプ。", "天秤座": "人間関係や社会的な仕組みに、平等・自由という新しい価値観を持ち込むタイプ。", "蠍座": "深層心理や社会の裏側にあるテーマに、革命的な変化をもたらすタイプ。", "射手座": "既存の思想や信念体系に対して、独自の哲学を打ち立てるタイプ。", "山羊座": "伝統や権威という保守的な構造に対して、静かに、しかし着実に変革をもたらすタイプ。", "水瓶座": "天王星にとって現代的な支配星座（副支配星座）。自由・平等・革新というテーマが最も自然に発揮される、天王星らしい配置。", "魚座": "精神性や集合的無意識の領域に、新しい理解や気づきをもたらすタイプ。"}, "houses": {"1": "独自性や個性がそのまま第一印象になりやすいタイプ。角（アンギュラー）の配置で、型にはまらない生き方が人生全体に表れやすい。", "2": "独自の方法でお金を稼いだり、型にはまらない価値観を持つタイプ。継続（サクシーデント）の配置で、独創的な形で資産や才能を育てる。", "3": "独創的な考え方を日常会話で表現するタイプ。断絶（ケーダント）の配置のため、発言が唐突に聞こえたり、周囲を驚かせやすい面もある。", "4": "家庭に対して独自の価値観を持ち、伝統的でない家族のあり方を築くタイプ。角（アンギュラー）の配置で、家庭のあり方そのものが人生の重要な変革テーマになりやすい。", "5": "恋愛や創造性において型破りな表現を好むタイプ。継続（サクシーデント）の配置で、独自のスタイルをじっくりと育てていく。", "6": "仕事のやり方に独自の効率化や改革をもたらすタイプ。断絶（ケーダント）の配置のため、独自のやり方が周囲との摩擦を生みやすい面もある。", "7": "パートナーシップにおいて自由や対等さを強く求めるタイプ。角（アンギュラー）の配置で、型にはまらない関係性が人生の中心テーマになりやすい。", "8": "他者との関わりの中で、根本的な変容をもたらすタイプ。継続（サクシーデント）の配置で、深いレベルでの変化をじっくりと受け入れていく。", "9": "独自の思想や哲学を追求するタイプ。断絶（ケーダント）の配置のため、極端な考えに偏ったり、既存の学問体系から逸脱しやすい面もある。", "10": "キャリアにおいて革新的な役割を担う、改革者としての立場を築きやすいタイプ。角（アンギュラー）の配置で、独自性がそのまま社会的な立場に結びつきやすい。", "11": "天王星にとって現代的な『喜びの座』。理想やコミュニティ、仲間との繋がりを通じて、最も自然に自由と革新を発揮する場所。この配置全体の中でも特に仲間との理想の共有というテーマが輝きやすい。", "12": "潜在意識レベルで大きな変容をもたらすタイプ。断絶（ケーダント）の配置のため、その力が表に出にくく、本人も気づかないうちに内面で大きな変化が進んでいることがある。"}, "signs_love": {"牡羊座": "恋愛でも独立心が強く、自分のやり方を貫くために大胆に動くタイプ。", "牡牛座": "恋愛での変化を嫌う面と自由への欲求の間で葛藤しやすいが、変わると決めたら価値観を根本から刷新するタイプ。", "双子座": "恋愛でも新しい刺激や会話を通じて自由を求めるタイプ。", "蟹座": "恋愛や家庭という保守的な領域に、独自の価値観を持ち込もうとするタイプ。", "獅子座": "恋愛での自己表現に独自性を強く求めるタイプ。型にはまらない恋愛スタイルを好む。", "乙女座": "恋愛の日常に、独創的な工夫や改善をもたらすタイプ。", "天秤座": "恋愛関係に、平等・自由という新しい価値観を持ち込むタイプ。", "蠍座": "恋愛の深層心理的なテーマに、革命的な変化をもたらすタイプ。", "射手座": "恋愛観そのものに、独自の哲学を打ち立てるタイプ。", "山羊座": "恋愛という保守的な構造に対して、静かに、しかし着実に変革をもたらすタイプ。", "水瓶座": "天王星にとって現代的な支配星座。恋愛においても自由・平等・革新が最も自然に発揮されるタイプ。", "魚座": "恋愛の精神性の領域に、新しい理解や気づきをもたらすタイプ。"}, "houses_love": {"1": "恋愛でも独自性や個性がそのまま第一印象になりやすいタイプ。", "2": "恋愛でも独自の価値観でお金や資源と向き合うタイプ。", "3": "恋愛での独創的な考え方が唐突に聞こえやすいタイプ。", "4": "恋愛でも伝統的でない家族のあり方を築くタイプ。", "5": "恋愛において型破りな表現を好むタイプ。", "6": "恋愛の日常に、独自の効率化や改革をもたらすタイプ。", "7": "パートナーシップにおいて自由や対等さを強く求めるタイプ。", "8": "恋愛での深い関わりの中で、根本的な変容をもたらすタイプ。", "9": "恋愛観に、独自の思想や哲学を持ち込むタイプ。", "10": "恋愛が社会的な立場における革新的な役割と結びつくタイプ。", "11": "天王星にとって現代的な喜びの座。理想を共有する仲間のような恋愛関係に、最も自然に自由を感じる。", "12": "恋愛での深いレベルの変容が、表に出にくい形で進むタイプ。"}}, "海王星": {"glyph": "♆", "signs": {"牡羊座": "理想を追い求めるエネルギーが行動力に直結するタイプ。情熱と夢が結びつきやすい。", "牡牛座": "美や快適さの中に理想を見出すタイプ。物質と精神の調和を求める。", "双子座": "言葉や情報を通じて理想やインスピレーションを伝えるタイプ。", "蟹座": "家庭や身近な人への深い共感と理想を重ねるタイプ。感情と理想が強く結びつく。", "獅子座": "創造性や自己表現の中に理想を見出すタイプ。芸術的な表現力に長ける。", "乙女座": "日常の奉仕や実務の中に、静かな理想主義を見出すタイプ。", "天秤座": "人間関係の中に理想的な調和や美を求めるタイプ。", "蠍座": "深い精神的な変容や神秘的なテーマに惹かれるタイプ。", "射手座": "壮大な理想や信念を追求するタイプ。精神的な探求心が強い。", "山羊座": "現実的な形で理想を実現しようとするタイプ。理想と責任感が結びつく。", "水瓶座": "人類全体や社会という大きな理想に共感するタイプ。", "魚座": "海王星にとって現代的な支配星座（副支配星座）。共感力・直感・霊性が最も自然に発揮される、海王星らしい配置。"}, "houses": {"1": "夢見がちで感受性豊かな雰囲気がそのまま第一印象になりやすいタイプ。角（アンギュラー）の配置で、理想主義的な生き方が人生全体に表れやすい。", "2": "お金や所有物に対して、理想主義的あるいは無頓着な態度を持つタイプ。継続（サクシーデント）の配置で、直感を頼りに資産と向き合う。", "3": "直感的で詩的なコミュニケーションを好むタイプ。断絶（ケーダント）の配置のため、伝えたいことが曖昧になり相手に伝わりにくい面もある。", "4": "家庭に理想を投影しやすいタイプ。角（アンギュラー）の配置で、時に現実と理想のギャップに悩むこともあるが、深い癒しの場ともなる。", "5": "創造性や恋愛にロマンティックな理想を重ねるタイプ。継続（サクシーデント）の配置で、夢を育みながら表現していく。", "6": "奉仕や癒しの仕事に惹かれるタイプ。断絶（ケーダント）の配置のため、現実的な管理や体調管理が苦手になりやすい面もある。", "7": "パートナーに理想を投影しやすいタイプ。角（アンギュラー）の配置で、理想化からの幻滅に注意しつつも、深い共感で結ばれる関係を築ける。", "8": "精神的な変容や、目に見えない繋がりを重視するタイプ。継続（サクシーデント）の配置で、深いレベルでの癒しをじっくりと得る。", "9": "宗教や精神性への探求心が強いタイプ。断絶（ケーダント）の配置のため、現実からの逃避として理想を追いすぎる面もある。", "10": "キャリアにおいて理想やビジョンを追求するタイプ。角（アンギュラー）の配置で、芸術的・スピリチュアルな分野で才能を発揮しやすい。", "11": "理想的なコミュニティや人類愛を追求するタイプ。継続（サクシーデント）の配置で、仲間との理想をじっくりと育てる。", "12": "海王星にとって現代的な『喜びの座』。精神性・潜在意識・スピリチュアリティが最も自然に発揮される場所。内面の静けさの中で深い直感や癒しを得やすい。"}, "signs_love": {"牡羊座": "恋愛の理想を追い求めるエネルギーが、そのまま情熱的な行動力に直結するタイプ。", "牡牛座": "恋愛において美や快適さの中に理想を見出すタイプ。", "双子座": "言葉を通じて恋愛の理想やインスピレーションを伝えるタイプ。", "蟹座": "恋愛相手への深い共感と理想を重ねるタイプ。感情と理想が強く結びつく。", "獅子座": "恋愛の中の創造性や自己表現に理想を見出すタイプ。", "乙女座": "恋愛での奉仕や気配りの中に、静かな理想主義を見出すタイプ。", "天秤座": "恋愛関係の中に理想的な調和や美を求めるタイプ。", "蠍座": "恋愛における深い精神的な変容や神秘的なつながりに惹かれるタイプ。", "射手座": "恋愛にも壮大な理想や信念を重ねるタイプ。", "山羊座": "恋愛においても現実的な形で理想を実現しようとするタイプ。", "水瓶座": "恋愛にも人類愛的な理想を重ねるタイプ。", "魚座": "海王星にとって現代的な支配星座。恋愛において共感力・直感・ロマンティシズムが最も自然に発揮されるタイプ。"}, "houses_love": {"1": "恋愛でも夢見がちで感受性豊かな雰囲気がそのまま第一印象になりやすいタイプ。", "2": "恋愛での安心感に、理想主義的あるいは無頓着な態度を持つタイプ。", "3": "恋愛での会話に直感的で詩的な表現を好むタイプ。", "4": "恋愛相手に理想を投影しやすいタイプ。時に現実とのギャップに悩むことも。", "5": "恋愛にロマンティックな理想を重ねるタイプ。", "6": "恋愛でも奉仕や癒しを通じたつながりに惹かれるタイプ。", "7": "パートナーに理想を投影しやすいタイプ。理想化からの幻滅に注意しつつも、深い共感で結ばれる。", "8": "恋愛での精神的な変容や、目に見えない繋がりを重視するタイプ。", "9": "恋愛にも精神性への探求心を重ねるタイプ。", "10": "恋愛における理想やビジョンが、社会的な自己実現と結びつくタイプ。", "11": "理想的な関係やコミュニティを恋愛にも重ねるタイプ。", "12": "海王星にとって現代的な喜びの座。恋愛における深い共感や癒しが、最も自然に発揮される。"}}, "冥王星": {"glyph": "♇", "signs": {"牡羊座": "強い意志と行動力で、根本的な変化を自ら引き起こすタイプ。", "牡牛座": "価値観や所有物に対する執着が強いが、一度手放すと決めたら徹底的に変容するタイプ。", "双子座": "思考や情報のレベルで、深く根本的な変化をもたらすタイプ。", "蟹座": "家庭や感情の根底にある、深いテーマの変容に関わるタイプ。", "獅子座": "自己表現において、強烈な存在感とカリスマ性を発揮するタイプ。", "乙女座": "日常やシステムを、根本から作り変える力を持つタイプ。", "天秤座": "人間関係における力関係やバランスを、根本から変容させるタイプ。", "蠍座": "冥王星にとって現代的な支配星座（副支配星座）。変容・再生・強い意志が最も自然に発揮される、冥王星らしい配置。", "射手座": "信念や思想を、根本から揺るがすような変容をもたらすタイプ。", "山羊座": "社会構造や権威のあり方を、根本から作り変える力を持つタイプ。", "水瓶座": "集団や社会全体の変革に関わるタイプ。", "魚座": "精神性や集合的無意識の深いレベルで、変容をもたらすタイプ。"}, "houses": {"1": "強い存在感やカリスマ性がそのまま第一印象になりやすいタイプ。角（アンギュラー）の配置で、強烈な自己変容が人生全体に表れやすい。", "2": "お金や資産に対する強い執着、あるいは大きな変容を経験しやすいタイプ。継続（サクシーデント）の配置で、時間をかけて価値観の根本的な変化を遂げる。", "3": "会話や考え方において、鋭く核心を突く傾向があるタイプ。断絶（ケーダント）の配置のため、強すぎる言葉として受け取られやすい面もある。", "4": "家庭に深い変容や秘密を抱えやすいタイプ。角（アンギュラー）の配置で、家族との関係が人生の重要な変容のテーマになりやすい。", "5": "恋愛や創造性において、強烈で深い情熱を注ぐタイプ。継続（サクシーデント）の配置で、時間をかけて強い絆を育てる。", "6": "仕事や健康において、大きな変容や危機を経験しやすいタイプ。断絶（ケーダント）の配置のため、その変化が突然訪れるように感じられることもある。", "7": "パートナーシップにおいて、強い結びつきや支配・被支配のテーマを経験しやすいタイプ。角（アンギュラー）の配置で、関係性が人生の中心的な変容テーマになりやすい。", "8": "冥王星にとって伝統的な『喜びの座』。死と再生、深い変容というテーマが最も自然に発揮される場所。この配置全体の中でも特に精神的な深まりというテーマが輝きやすい。", "9": "信念や思想において、根本的な変容を経験しやすいタイプ。断絶（ケーダント）の配置のため、価値観が極端に転換することもある。", "10": "キャリアにおいて大きな影響力や権力を得やすいタイプ。角（アンギュラー）の配置で、社会的な立場が強い変容の舞台になりやすい。", "11": "友人関係やコミュニティにおいて、深い変容をもたらすタイプ。継続（サクシーデント）の配置で、仲間との関係を通じてじっくりと変化を遂げる。", "12": "潜在意識レベルで深い変容を経験するタイプ。断絶（ケーダント）の配置のため、その力が表に出にくく、静かに内面で進行する。"}, "signs_love": {"牡羊座": "恋愛でも強い意志と行動力で、根本的な変化を自ら引き起こすタイプ。", "牡牛座": "恋愛相手への執着が強いが、一度手放すと決めたら徹底的に変容するタイプ。", "双子座": "恋愛の思考レベルで、深く根本的な変化をもたらすタイプ。", "蟹座": "恋愛や感情の根底にある、深いテーマの変容に関わるタイプ。", "獅子座": "恋愛での自己表現において、強烈な存在感とカリスマ性を発揮するタイプ。", "乙女座": "恋愛の日常を、根本から作り変える力を持つタイプ。", "天秤座": "恋愛関係における力関係やバランスを、根本から変容させるタイプ。", "蠍座": "冥王星にとって現代的な支配星座。恋愛において変容・再生・強い意志が最も自然に発揮されるタイプ。", "射手座": "恋愛観を、根本から揺るがすような変容をもたらすタイプ。", "山羊座": "恋愛関係の構造やあり方を、根本から作り変える力を持つタイプ。", "水瓶座": "恋愛にも社会全体の変革のような視点を持ち込むタイプ。", "魚座": "恋愛の精神性の深いレベルで、変容をもたらすタイプ。"}, "houses_love": {"1": "恋愛でも強い存在感やカリスマ性がそのまま第一印象になりやすいタイプ。", "2": "恋愛関係における執着、あるいは大きな変容を経験しやすいタイプ。", "3": "恋愛での会話が、鋭く核心を突く傾向があるタイプ。", "4": "恋愛相手との関係に深い変容や秘密を抱えやすいタイプ。", "5": "恋愛において、強烈で深い情熱を注ぐタイプ。", "6": "恋愛関係において、大きな変容や危機を経験しやすいタイプ。", "7": "パートナーシップにおいて、強い結びつきや支配・被支配のテーマを経験しやすいタイプ。", "8": "冥王星にとって伝統的な喜びの座。恋愛における死と再生、深い変容というテーマが最も自然に発揮される。", "9": "恋愛観において、根本的な変容を経験しやすいタイプ。", "10": "恋愛が社会的な影響力や立場と結びつきやすいタイプ。", "11": "友人関係から発展する恋愛において、深い変容をもたらすタイプ。", "12": "恋愛における深いレベルの変容を、静かに内面で経験するタイプ。"}}, "金星": {"glyph": "♀", "signs": {"牡羊座": "情熱的でストレートな愛情表現をし、自分から積極的にアプローチできるタイプ。ただし牡羊座は金星にとって少し勢いが強すぎる位置（デトリメント）でもあり、気持ちが先走って独りよがりな愛情表現になりやすい面も。焦らず相手のペースも意識できると、本来の魅力がより活きる。", "牡牛座": "五感を大切にし、じっくりと愛情を育てるタイプ。金星が最も自然に力を発揮する本拠地（ドミサイル）の配置で、安定した愛情表現・心地よい関係づくりが得意。一途で長続きしやすい恋愛スタイル。", "双子座": "会話や知的な刺激を通じて愛情を育むタイプ。軽やかで多面的な魅力を持ち、恋愛にも柔軟さと好奇心を持ち込める。特筆すべき強弱のない配置（無格）のため、相手や状況によって表現の幅が変わりやすい。", "蟹座": "情緒的な安心感を大切にし、相手を包み込むような愛情表現をするタイプ。家庭的な温かさが魅力。特筆すべき強弱のない配置（無格）のため、安心できる環境や関係性の中でこそ本来の愛情深さが発揮される。", "獅子座": "華やかでドラマチックな愛情表現を好み、愛することにも愛されることにも全力を注ぐタイプ。特筆すべき強弱のない配置（無格）だが、賞賛や注目を受けることで愛情表現がより生き生きとする。", "乙女座": "献身的で気配り上手、相手のために尽くすタイプ。ただし金星にとって力が弱まる位置（フォール）のため、完璧を求めすぎたり、自己評価の低さから愛情表現に自信を持てない面も。ありのままの自分を受け入れる練習ができると、本来の献身の美しさが活きる。", "天秤座": "バランス感覚に優れ、洗練された魅力と社交性で人を惹きつけるタイプ。金星のもう一つの本拠地（ドミサイル）で、調和的なパートナーシップを築くのが得意。八方美人になりすぎず、自分の意思も大切にすることを意識すると良い。", "蠍座": "一途で深く強い愛情を注ぐタイプ。ただし金星にとって力が弱まる位置（デトリメント）のため、独占欲や嫉妬心が強く出やすい面も。信頼をベースにした関係づくりを意識できると、深い絆を築けるという本来の魅力が活きる。", "射手座": "自由と冒険を愛し、束縛のない関係を好むタイプ。楽観的でおおらかな愛情表現が魅力。特筆すべき強弱のない配置（無格）で、成長や刺激を共有できる相手との相性が良い。", "山羊座": "誠実で責任感のある愛情表現をするタイプ。将来を見据えた現実的な関係づくりが得意。特筆すべき強弱のない配置（無格）で、時間をかけてじっくりと信頼を築いていく恋愛スタイル。", "水瓶座": "友情の延長のような、自由でフラットな関係性を好むタイプ。個性やユニークさを大切にする愛情表現が特徴。特筆すべき強弱のない配置（無格）で、束縛を嫌い、対等な関係を望む。", "魚座": "無条件の愛や共感力の高い愛情表現が魅力。金星が高められる位置（エグザルテーション）で、ロマンティックで献身的な愛のかたちが自然に発揮されやすい。ただし自己犠牲になりすぎないよう、自分自身も大切にすることを意識すると良い。"}, "houses": {"1": "愛されることや魅力そのものが自己肯定感に直結しやすいタイプ。外見や雰囲気そのものに愛嬌があり、恋愛が自己表現の一部になる。角（アンギュラー）の配置で、恋愛面での自分らしさが前面に出やすい。", "2": "恋愛に安定・安心を求めるタイプ。所有物や金銭感覚と愛情表現が結びつきやすく、贈り物や物質的な豊かさを通じて愛情を示したり受け取ったりすることを好む。継続（サクシーデント）の配置で、じっくりと関係を育てていく。", "3": "会話や日常のやり取りを通じて愛情を育むタイプ。近所や学校・職場など身近な場所での出会いが多い。断絶（ケーダント）の配置のため、恋愛が軽やかな距離感にとどまりやすく、深める意識を持つとより関係が育つ。", "4": "家庭的な愛情表現が得意で、居心地の良い空間づくりを通じてパートナーとの絆を深めるタイプ。家族との関係性が恋愛観の土台になりやすい。角（アンギュラー）の配置で、家庭・プライベートの領域で愛情がしっかりと発揮される。", "5": "恋愛そのものを楽しむことに長けたタイプ。情熱的でロマンティックな表現を自然に行い、恋も遊びも創造性も謳歌できる。金星にとって最も自然に力を発揮する『ジョイ（喜びの座）』の配置で、この配置全体の中でも特に恋愛面の輝きが強い。", "6": "日常のサポートや気配りを通じて愛情を表現するタイプ。職場や日課の中で育まれる恋愛の可能性もある。断絶（ケーダント）の配置のため、ロマンスよりも実務的な献身に寄りやすく、意識的にときめきを取り入れると関係に彩りが増す。", "7": "パートナーシップそのものを大切にするタイプ。結婚や対等な関係性を重視し、社交的な魅力で相手との調和を築くのが得意。角（アンギュラー）の配置で、恋愛・結婚というテーマが人生の中で強く前面に出やすい。", "8": "精神的にも肉体的にも深く結びつく、濃密な愛情を求めるタイプ。共有の資産や価値観を通じて絆を深める一方、独占欲や執着が出やすい面もある。継続（サクシーデント）の配置で、時間をかけて関係の深さが増していく。", "9": "価値観や世界観を共有できる相手に惹かれるタイプ。国際的、哲学的、あるいは遠方の相手との恋愛に発展しやすい。断絶（ケーダント）の配置のため、日常的な安定よりも刺激や成長を恋愛に求める傾向がある。", "10": "恋愛や結婚が社会的な立場やキャリアと結びつきやすいタイプ。人前でも堂々とした関係を築き、パートナーの存在が評判や評価に影響することも。角（アンギュラー）の配置で、恋愛が人生の重要なテーマとして表面化しやすい。", "11": "友情の延長として恋愛が発展しやすいタイプ。グループやコミュニティの中での出会いが多く、対等な仲間のような関係を好む。継続（サクシーデント）の配置で、じっくりと信頼を積み重ねながら関係が育つ。", "12": "秘めた愛情や、自己犠牲的な献身を伴う恋愛をしやすいタイプ。無意識レベルでの強い結びつきを感じる相手に惹かれることも。断絶（ケーダント）の配置のため、表に出しにくい恋愛や、報われにくいと感じやすい愛のかたちになることもある。"}, "signs_love": {"牡羊座": "情熱的でストレートな愛情表現をし、自分から積極的にアプローチできるタイプ。ただし牡羊座は金星にとって少し勢いが強すぎる位置（デトリメント）でもあり、気持ちが先走って独りよがりな愛情表現になりやすい面も。焦らず相手のペースも意識できると、本来の魅力がより活きる。", "牡牛座": "五感を大切にし、じっくりと愛情を育てるタイプ。金星が最も自然に力を発揮する本拠地（ドミサイル）の配置で、安定した愛情表現・心地よい関係づくりが得意。一途で長続きしやすい恋愛スタイル。", "双子座": "会話や知的な刺激を通じて愛情を育むタイプ。軽やかで多面的な魅力を持ち、恋愛にも柔軟さと好奇心を持ち込める。特筆すべき強弱のない配置（無格）のため、相手や状況によって表現の幅が変わりやすい。", "蟹座": "情緒的な安心感を大切にし、相手を包み込むような愛情表現をするタイプ。家庭的な温かさが魅力。特筆すべき強弱のない配置（無格）のため、安心できる環境や関係性の中でこそ本来の愛情深さが発揮される。", "獅子座": "華やかでドラマチックな愛情表現を好み、愛することにも愛されることにも全力を注ぐタイプ。特筆すべき強弱のない配置（無格）だが、賞賛や注目を受けることで愛情表現がより生き生きとする。", "乙女座": "献身的で気配り上手、相手のために尽くすタイプ。ただし金星にとって力が弱まる位置（フォール）のため、完璧を求めすぎたり、自己評価の低さから愛情表現に自信を持てない面も。ありのままの自分を受け入れる練習ができると、本来の献身の美しさが活きる。", "天秤座": "バランス感覚に優れ、洗練された魅力と社交性で人を惹きつけるタイプ。金星のもう一つの本拠地（ドミサイル）で、調和的なパートナーシップを築くのが得意。八方美人になりすぎず、自分の意思も大切にすることを意識すると良い。", "蠍座": "一途で深く強い愛情を注ぐタイプ。ただし金星にとって力が弱まる位置（デトリメント）のため、独占欲や嫉妬心が強く出やすい面も。信頼をベースにした関係づくりを意識できると、深い絆を築けるという本来の魅力が活きる。", "射手座": "自由と冒険を愛し、束縛のない関係を好むタイプ。楽観的でおおらかな愛情表現が魅力。特筆すべき強弱のない配置（無格）で、成長や刺激を共有できる相手との相性が良い。", "山羊座": "誠実で責任感のある愛情表現をするタイプ。将来を見据えた現実的な関係づくりが得意。特筆すべき強弱のない配置（無格）で、時間をかけてじっくりと信頼を築いていく恋愛スタイル。", "水瓶座": "友情の延長のような、自由でフラットな関係性を好むタイプ。個性やユニークさを大切にする愛情表現が特徴。特筆すべき強弱のない配置（無格）で、束縛を嫌い、対等な関係を望む。", "魚座": "無条件の愛や共感力の高い愛情表現が魅力。金星が高められる位置（エグザルテーション）で、ロマンティックで献身的な愛のかたちが自然に発揮されやすい。ただし自己犠牲になりすぎないよう、自分自身も大切にすることを意識すると良い。"}, "houses_love": {"1": "愛されることや魅力そのものが自己肯定感に直結しやすいタイプ。外見や雰囲気そのものに愛嬌があり、恋愛が自己表現の一部になる。角（アンギュラー）の配置で、恋愛面での自分らしさが前面に出やすい。", "2": "恋愛に安定・安心を求めるタイプ。所有物や金銭感覚と愛情表現が結びつきやすく、贈り物や物質的な豊かさを通じて愛情を示したり受け取ったりすることを好む。継続（サクシーデント）の配置で、じっくりと関係を育てていく。", "3": "会話や日常のやり取りを通じて愛情を育むタイプ。近所や学校・職場など身近な場所での出会いが多い。断絶（ケーダント）の配置のため、恋愛が軽やかな距離感にとどまりやすく、深める意識を持つとより関係が育つ。", "4": "家庭的な愛情表現が得意で、居心地の良い空間づくりを通じてパートナーとの絆を深めるタイプ。家族との関係性が恋愛観の土台になりやすい。角（アンギュラー）の配置で、家庭・プライベートの領域で愛情がしっかりと発揮される。", "5": "恋愛そのものを楽しむことに長けたタイプ。情熱的でロマンティックな表現を自然に行い、恋も遊びも創造性も謳歌できる。金星にとって最も自然に力を発揮する『ジョイ（喜びの座）』の配置で、この配置全体の中でも特に恋愛面の輝きが強い。", "6": "日常のサポートや気配りを通じて愛情を表現するタイプ。職場や日課の中で育まれる恋愛の可能性もある。断絶（ケーダント）の配置のため、ロマンスよりも実務的な献身に寄りやすく、意識的にときめきを取り入れると関係に彩りが増す。", "7": "パートナーシップそのものを大切にするタイプ。結婚や対等な関係性を重視し、社交的な魅力で相手との調和を築くのが得意。角（アンギュラー）の配置で、恋愛・結婚というテーマが人生の中で強く前面に出やすい。", "8": "精神的にも肉体的にも深く結びつく、濃密な愛情を求めるタイプ。共有の資産や価値観を通じて絆を深める一方、独占欲や執着が出やすい面もある。継続（サクシーデント）の配置で、時間をかけて関係の深さが増していく。", "9": "価値観や世界観を共有できる相手に惹かれるタイプ。国際的、哲学的、あるいは遠方の相手との恋愛に発展しやすい。断絶（ケーダント）の配置のため、日常的な安定よりも刺激や成長を恋愛に求める傾向がある。", "10": "恋愛や結婚が社会的な立場やキャリアと結びつきやすいタイプ。人前でも堂々とした関係を築き、パートナーの存在が評判や評価に影響することも。角（アンギュラー）の配置で、恋愛が人生の重要なテーマとして表面化しやすい。", "11": "友情の延長として恋愛が発展しやすいタイプ。グループやコミュニティの中での出会いが多く、対等な仲間のような関係を好む。継続（サクシーデント）の配置で、じっくりと信頼を積み重ねながら関係が育つ。", "12": "秘めた愛情や、自己犠牲的な献身を伴う恋愛をしやすいタイプ。無意識レベルでの強い結びつきを感じる相手に惹かれることも。断絶（ケーダント）の配置のため、表に出しにくい恋愛や、報われにくいと感じやすい愛のかたちになることもある。"}}, "火星": {"glyph": "♂", "signs": {"牡羊座": "火星にとって本拠地（ドミサイル）。まっすぐに行動し、迷わず目標に向かって突き進む強い推進力を持つ、最も火星らしい配置。", "牡牛座": "火星にとって力が弱まる位置（デトリメント）。行動力そのものよりも、じっくりと物事を進める着実さが持ち味になる。無理に急がず自分のペースを保つことで、本来の粘り強さが活きる。", "双子座": "頭の回転の速さがそのまま行動力に結びつくタイプ。特筆すべき強弱のない配置（無格）で、複数のことを同時にこなす器用さがある。", "蟹座": "火星にとって最も力が弱まる位置（フォール）。感情が絡むと行動をためらいやすく、直接的な対立を避けようとする傾向がある。安心できる環境が整うと、大切なものを守るための強さという本来の力が発揮される。", "獅子座": "堂々とした自信を持って行動するタイプ。特筆すべき強弱のない配置（無格）で、注目される場面で最も力を発揮する。", "乙女座": "効率的で正確な行動を好むタイプ。特筆すべき強弱のない配置（無格）で、細部への配慮を怠らない丁寧な実行力を持つ。", "天秤座": "火星にとって力が弱まる位置（デトリメント）。行動を起こす前に周囲との調和を優先しすぎて、決断が遅れやすい。自分の意志をはっきり示す練習ができると、本来の交渉力・調整力が活きる。", "蠍座": "火星にとってもう一つの本拠地（ドミサイル）。一度決めたら揺るがない強い意志と持続力を持ち、深く集中して物事に取り組む力がある。", "射手座": "冒険心と行動力が結びつくタイプ。特筆すべき強弱のない配置（無格）で、新しい挑戦に向かって迷わず飛び込む。", "山羊座": "火星が高められる位置（エグザルテーション）。目標に向かって計画的かつ着実に行動する、忍耐強い実行力を持つ。", "水瓶座": "独自の方法で行動するタイプ。特筆すべき強弱のない配置（無格）で、集団のためというより自分の信念に基づいて動く。", "魚座": "直感に従って行動するタイプ。特筆すべき強弱のない配置（無格）で、行動の動機が理屈よりも感覚的なものであることが多い。"}, "houses": {"1": "行動力・意志の強さがそのまま第一印象になりやすいタイプ。角（アンギュラー）の配置で、積極性やエネルギーが人生全体に色濃く表れる。", "2": "お金や資産形成に対して積極的に行動するタイプ。継続（サクシーデント）の配置で、じっくりと物質的な基盤を築いていく。", "3": "会話や日常のやり取りにおいて競争心や率直さが出やすいタイプ。断絶（ケーダント）の配置のため、衝動的な発言や近距離でのトラブルに注意が必要。", "4": "家庭内での自己主張や、大切なものを守るための行動力が強く出るタイプ。角（アンギュラー）の配置で、家庭が行動力を発揮する重要な場になりやすい。", "5": "恋愛や趣味において積極的にアプローチするタイプ。継続（サクシーデント）の配置で、情熱をじっくりと楽しみながら注いでいく。", "6": "火星にとって伝統的な『喜びの座』。日々の仕事や鍛錬において最も自然に行動力を発揮する場所。勤勉さと体力を活かした実務的な達成を得意とする。", "7": "パートナーとの関係において主導権を握ろうとする、あるいは競争的な関係になりやすいタイプ。角（アンギュラー）の配置で、対人関係が行動力の重要な発揮どころになる。", "8": "危機的な状況や深い変容の場面で、強い行動力を発揮するタイプ。継続（サクシーデント）の配置で、時間をかけて粘り強く困難に立ち向かう。", "9": "信念や理想のために戦う姿勢を持つタイプ。断絶（ケーダント）の配置のため、情熱が一貫性を欠きやすく、時に極端な行動に走ることもある。", "10": "キャリアにおいて積極的に行動し、競争や達成を通じて社会的地位を築くタイプ。角（アンギュラー）の配置で、行動力がそのまま社会的評価に直結しやすい。", "11": "仲間や理想の実現のために行動するタイプ。継続（サクシーデント）の配置で、コミュニティの中でじっくりとリーダーシップを発揮する。", "12": "隠れた場所や、目に見えない領域で力を発揮するタイプ。断絶（ケーダント）の配置のため、行動力が表に出にくく、内側にエネルギーをため込みやすい面もある。"}, "signs_love": {"牡羊座": "恋愛においてもっとも情熱的でストレートなタイプ。好きになったら即行動、追いかけることに喜びを感じる。駆け引きより直球勝負を好む。", "牡牛座": "恋愛においてもじっくりと時間をかけて口説くタイプ。焦らず、五感に訴えるアプローチ（食事やスキンシップ）を好む。ただし火星本来の勢いはやや発揮しにくく、行動に移すまで時間がかかることも。", "双子座": "恋愛において会話や駆け引きを楽しむタイプ。追いかける過程そのものを楽しむ、頭脳的なアプローチを好む。", "蟹座": "恋愛において慎重になりすぎ、自分から積極的にアプローチすることを躊躇しやすいタイプ。傷つくことを恐れて一歩引いてしまうが、安心できる関係だと分かれば守るための強い情熱を発揮する。", "獅子座": "恋愛において堂々とアプローチし、情熱的に口説くタイプ。ドラマチックなアプローチや、贈り物・サプライズを好む。", "乙女座": "恋愛において相手のために気配りをすることで気持ちを示すタイプ。ストレートな告白より、行動で示す誠実なアプローチを好む。", "天秤座": "恋愛において駆け引きに慎重で、相手に合わせようとしすぎて自分から動けなくなりやすいタイプ。相手に選ばれるのを待つ傾向が強く出ることも。", "蠍座": "恋愛において非常に情熱的で一途、一度好きになったら深く強く追いかけるタイプ。駆け引きより本気度で勝負する。", "射手座": "恋愛においてオープンでカジュアルなアプローチを好むタイプ。追いかけることを恋の冒険として楽しむ。", "山羊座": "恋愛において計画的かつ着実にアプローチするタイプ。時間をかけてでも本気で口説き落とす、忍耐強い追跡力を持つ。", "水瓶座": "恋愛において型にはまらない、友達のようなアプローチを好むタイプ。束縛を感じさせない距離感を大切にする。", "魚座": "恋愛において直感的でロマンチックなアプローチをするタイプ。押しの強さより、雰囲気やタイミングを大切にする。"}, "houses_love": {"1": "恋愛においても自分から積極的にアプローチするタイプ。情熱がそのまま第一印象になり、出会ってすぐに好意を示すことが多い。", "2": "恋愛においても安定した関係を求めて着実にアプローチするタイプ。時間をかけて信頼を積み重ねながら距離を縮める。", "3": "会話や日常のやり取りを通じて恋愛感情を育てるタイプ。身近な人や近所での出会いから恋が生まれやすい。", "4": "家庭的な安心感を求めて、真剣な恋愛関係を築こうとするタイプ。将来を見据えた相手にこそ情熱を注ぐ。", "5": "恋愛そのものを情熱的に楽しむタイプ。火星が最も自然にロマンスで力を発揮する場所で、追いかけること自体を楽しめる。", "6": "日常のサポートを通じて愛情を示すタイプ。職場や日課の中で育まれる恋愛の可能性もある。", "7": "パートナーシップにおいて主導権を握ろうとする、情熱的で競争的な関係を築くタイプ。", "8": "深く濃密な、肉体的にも精神的にも強く結びつく恋愛を求めるタイプ。", "9": "刺激や成長を恋愛にも求めるタイプ。遠距離や異文化の相手にも情熱を燃やしやすい。", "10": "恋愛が社会的な立場やキャリアと結びつきやすいタイプ。人前でも堂々とアプローチする。", "11": "友情から発展する恋愛、グループの中での情熱的な出会いを好むタイプ。", "12": "秘めた情熱を抱きやすい、あるいは自己犠牲的な恋愛にのめり込みやすいタイプ。"}}, "ドラゴンヘッド": {"glyph": "☊", "signs": {"牡羊座": "魂の成長課題は、自分から積極的に人生を切り拓き、自分自身を優先して行動することを学ぶこと。他人に気を配りすぎず、自分の意志で決断し、リスクを取る勇気を育てていく。", "牡牛座": "魂の成長課題は、物事を焦らずじっくり積み上げ、自分自身の内なる価値観に基づいた安定を築くこと。他者からの評価に振り回されず、五感を通じた地に足のついた生き方を学んでいく。", "双子座": "魂の成長課題は、多様な視点を持ち、好奇心を通じて世界と軽やかに関わること。1つの真実に固執せず、コミュニケーションを通じて柔軟に学び続ける姿勢を育てていく。", "蟹座": "魂の成長課題は、感情に正直になり、身近な人との情緒的なつながりを大切にすること。強さを演じるのではなく、素直に頼り、頼られる関係性を築く力を育てていく。", "獅子座": "魂の成長課題は、自分自身の創造性と個性を、堂々と表現すること。集団に埋もれるのではなく、自分が主役になることを恐れず、自己表現の喜びを学んでいく。", "乙女座": "魂の成長課題は、日々の実践と丁寧な積み重ねを通じて、現実的に物事を改善していくこと。理想を追うだけでなく、地道な奉仕や自己管理の中に意味を見出す力を育てていく。", "天秤座": "魂の成長課題は、他者との対等な関係性を築き、協力し合うことを学ぶこと。一人で完結するのではなく、パートナーシップを通じてバランス感覚を育てていく。", "蠍座": "魂の成長課題は、表面的な関係にとどまらず、深く本質的な結びつきや変容を受け入れること。コントロールを手放し、信頼して深く関わる力を育てていく。", "射手座": "魂の成長課題は、既存の枠組みを超えて、自分自身の哲学や信念を広げていくこと。安全な場所に留まらず、学びと冒険を通じて視野を広げる力を育てていく。", "山羊座": "魂の成長課題は、責任を引き受け、着実に目標を達成していく力を育てること。感情に流されず、現実的な計画と自己規律を通じて社会的な成熟を目指していく。", "水瓶座": "魂の成長課題は、個人的な感情や執着を超えて、より大きな理想やコミュニティのために貢献すること。独自の視点を活かし、革新的な形で人々とつながる力を育てていく。", "魚座": "魂の成長課題は、コントロールを手放し、共感や直感、精神性を通じて世界と一体化すること。論理や境界にこだわらず、無条件の思いやりを育てていく。"}, "houses": {}, "signs_love": {}, "houses_love": {}}, "ドラゴンテイル": {"glyph": "☋", "signs": {"牡羊座": "過去世から持ち越した資質は、迷いのない行動力と独立心。ただしこれに頼りすぎると、自己中心的になったり、他者との協調を軽視しやすい。今世では、その行動力を活かしつつ、他者との調和も学ぶ必要がある。", "牡牛座": "過去世から持ち越した資質は、安定志向と物質的な安心感を築く力。ただしこれに頼りすぎると、変化を恐れて執着や停滞に陥りやすい。今世では、安定を土台にしながらも、新しい価値観を受け入れる柔軟性が課題になる。", "双子座": "過去世から持ち越した資質は、知的好奇心と器用なコミュニケーション能力。ただしこれに頼りすぎると、表面的な情報収集に終始し、深く物事を追求することを避けやすい。今世では、知識を深め、自分なりの哲学を育てることが課題になる。", "蟹座": "過去世から持ち越した資質は、豊かな感受性と身近な人を守る力。ただしこれに頼りすぎると、過去や家族への依存が強くなりすぎることがある。今世では、感情的な安全地帯を出て、社会的な責任と向き合うことが課題になる。", "獅子座": "過去世から持ち越した資質は、堂々とした自己表現力とカリスマ性。ただしこれに頼りすぎると、注目や称賛を求めすぎて自己中心的になりやすい。今世では、自分を手放し、より大きな目的や仲間のために力を使うことが課題になる。", "乙女座": "過去世から持ち越した資質は、緻密な分析力と実務能力。ただしこれに頼りすぎると、完璧主義や過度な自己批判に陥りやすい。今世では、細部へのこだわりを手放し、大きな理想や直感を信じることが課題になる。", "天秤座": "過去世から持ち越した資質は、優れたバランス感覚と対人関係の調整力。ただしこれに頼りすぎると、他人に合わせすぎて自分自身を見失いやすい。今世では、他者に依存せず、自分自身の意志で立つことが課題になる。", "蠍座": "過去世から持ち越した資質は、深い洞察力と強い精神力。ただしこれに頼りすぎると、支配欲や執着、秘密主義に陥りやすい。今世では、コントロールを手放し、軽やかさや他者への信頼を学ぶことが課題になる。", "射手座": "過去世から持ち越した資質は、広い視野と楽観的な冒険心。ただしこれに頼りすぎると、深く物事にコミットせず、責任から逃げやすい。今世では、知識や経験を日常に落とし込み、着実に実践することが課題になる。", "山羊座": "過去世から持ち越した資質は、強い責任感と社会的な達成力。ただしこれに頼りすぎると、感情を犠牲にしてまで成果や地位を追い求めやすい。今世では、成果よりも心のつながりや安心感を大切にすることが課題になる。", "水瓶座": "過去世から持ち越した資質は、独創的な視点と集団への貢献意識。ただしこれに頼りすぎると、感情的な距離を取りすぎて孤立しやすい。今世では、個人としての情熱や自己表現を取り戻すことが課題になる。", "魚座": "過去世から持ち越した資質は、豊かな共感力と精神性。ただしこれに頼りすぎると、現実逃避や自己犠牲、境界線の曖昧さに陥りやすい。今世では、現実的な行動力と自己管理を身につけることが課題になる。"}, "houses": {}, "signs_love": {}, "houses_love": {}}, "リリス": {"glyph": "⚸", "signs": {"牡羊座": "本当は誰よりも自分が一番でありたい、自分の欲しいものをまっすぐ手に入れたいという本能を抑え込みやすいタイプ。『わがまま』と思われることを恐れて、自己主張を我慢しがち。", "牡牛座": "本当は五感の快楽や物への執着を心ゆくまで味わいたいという本能を抑え込みやすいタイプ。『欲張り』と思われることを恐れて、本当に欲しいものを我慢しがち。", "双子座": "本当はもっと自由に本音を話し、タブーとされる話題にも触れたいという本能を抑え込みやすいタイプ。『軽い』『口が悪い』と思われることを恐れて、言いたいことを飲み込みがち。", "蟹座": "本当はもっと感情的に甘えたい、依存したいという本能を抑え込みやすいタイプ。『重い』『弱い』と思われることを恐れて、平気なふりをしがち。", "獅子座": "本当はもっと注目されたい、称賛されたいという本能を抑え込みやすいタイプ。『目立ちたがり』と思われることを恐れて、自己表現を控えめにしがち。", "乙女座": "本当は完璧でなくてもいい、乱れた自分を見せたいという本能を抑え込みやすいタイプ。『だらしない』と思われることを恐れて、常に整えようとしがち。", "天秤座": "本当はもっと自分本位に、対立を恐れず本音をぶつけたいという本能を抑え込みやすいタイプ。『わがまま』『感じが悪い』と思われることを恐れて、調和を優先しがち。", "蠍座": "本当はもっと深く、激しく執着したい、独占したいという本能を抑え込みやすいタイプ。『重い』『怖い』と思われることを恐れて、感情を隠しがち。", "射手座": "本当はもっと自由奔放に、束縛を一切受けずに生きたいという本能を抑え込みやすいタイプ。『無責任』と思われることを恐れて、自由への欲求を我慢しがち。", "山羊座": "本当はもっと権力や達成そのものを貪欲に求めたいという本能を抑え込みやすいタイプ。『野心的すぎる』と思われることを恐れて、控えめに振る舞いがち。", "水瓶座": "本当はもっと異端であっても構わない、常識を壊したいという本能を抑え込みやすいタイプ。『変わり者』と思われることを恐れて、個性を抑えがち。", "魚座": "本当はもっと現実から逃げたい、境界線なく溶け合いたいという本能を抑え込みやすいタイプ。『だらしない』『現実逃避』と思われることを恐れて、しっかり者を演じがち。"}, "houses": {"1": "自己表現において、本能的な部分を抑え込みやすい。人前では取り繕い、素の自分の欲望を隠しがち。", "2": "お金や所有物に対する本能的な欲求を抑え込みやすい。『欲張り』に見られたくなくて、本当に欲しいものを言い出せない。", "3": "会話や身近な人間関係の中で、タブーとされる本音を抑え込みやすい。", "4": "家庭の中に、表に出せない本能的な感情や秘密を抱えやすい。", "5": "恋愛や自己表現において、本能的な欲望を抑え込みやすい。自由な自己表現を我慢しがち。", "6": "日々の生活や仕事の中で、本能的な欲求を後回しにし、奉仕や我慢を優先しやすい。", "7": "パートナーシップにおいて、本能的な欲求や本音を抑え込みやすい。相手に合わせて自分を消しがち。", "8": "性や深い結びつき、コントロールへの本能的な欲求を強く抑え込みやすい。", "9": "信じている価値観の裏側に、本当はタブー視される考えを隠していることがある。", "10": "社会的な立場において、本能的な野心や欲望を抑え込みやすい。『品行方正』を演じがち。", "11": "集団やコミュニティの中で、本能的な個性や欲求を抑え込みやすい。浮かないよう自分を消しがち。", "12": "無意識の奥底に、最も抑圧された本能や欲望を抱えやすい。夢や潜在意識の中に表れることがある。"}, "signs_love": {}, "houses_love": {}}, "キロン": {"glyph": "⚷", "signs": {"牡羊座": "一番深い傷は『自分の存在や行動が認められなかった』経験。ただしその傷と向き合ったからこそ、他者が自分らしく行動する後押しをする力を持つ。", "牡牛座": "一番深い傷は『安心・安定を奪われた、価値を認められなかった』経験。ただしその傷と向き合ったからこそ、他者に本物の安心感を与える力を持つ。", "双子座": "一番深い傷は『言葉や考えを否定された、伝わらなかった』経験。ただしその傷と向き合ったからこそ、他者の言葉にならない想いを汲み取り、伝える力を持つ。", "蟹座": "一番深い傷は『家庭や身近な人からの愛情不足・見捨てられ』経験。ただしその傷と向き合ったからこそ、他者に深い情緒的な安心を与える力を持つ。", "獅子座": "一番深い傷は『自分らしさや個性を否定された』経験。ただしその傷と向き合ったからこそ、他者が輝くことを心から応援できる力を持つ。", "乙女座": "一番深い傷は『不完全な自分を責め続けた』経験。ただしその傷と向き合ったからこそ、他者の不完全さを受け入れ、癒す力を持つ。", "天秤座": "一番深い傷は『対等な関係を築けなかった、見捨てられた』経験。ただしその傷と向き合ったからこそ、他者と本当に対等な関係を築く力を持つ。", "蠍座": "一番深い傷は『深い裏切りや喪失』経験。ただしその傷と向き合ったからこそ、他者の深い痛みに寄り添い、共に再生する力を持つ。", "射手座": "一番深い傷は『信じていた価値観や希望が崩れた』経験。ただしその傷と向き合ったからこそ、他者に新しい希望や意味を示す力を持つ。", "山羊座": "一番深い傷は『責任を負わされすぎた、認められなかった』経験。ただしその傷と向き合ったからこそ、他者を正しく導き、支える力を持つ。", "水瓶座": "一番深い傷は『孤立した、居場所がなかった』経験。ただしその傷と向き合ったからこそ、居場所のない人に居場所を作る力を持つ。", "魚座": "一番深い傷は『境界線を侵された、犠牲を強いられた』経験。ただしその傷と向き合ったからこそ、他者の痛みに深く共感し、癒す力を持つ。"}, "houses": {"1": "自分自身の存在価値やアイデンティティに深い傷を抱えやすい。ただしその傷と向き合うことで、他者が自分らしくいることを支える力が育つ。", "2": "自己価値や経済的な安定に深い傷を抱えやすい。ただしその傷と向き合うことで、他者の価値を見出し、育てる力が育つ。", "3": "コミュニケーションや学びの場で深い傷を抱えやすい。ただしその傷と向き合うことで、他者の言葉にならない想いを伝える力が育つ。", "4": "家庭や親との関係に深い傷を抱えやすい。ただしその傷と向き合うことで、他者に安心できる居場所を与える力が育つ。", "5": "自己表現や恋愛において深い傷を抱えやすい。ただしその傷と向き合うことで、他者の創造性や愛を引き出す力が育つ。", "6": "仕事や健康、日々の習慣において深い傷を抱えやすい。ただしその傷と向き合うことで、他者を実務的に支える力が育つ。", "7": "パートナーシップや対人関係において深い傷を抱えやすい。ただしその傷と向き合うことで、他者と本当に対等な関係を築く力が育つ。", "8": "深い喪失や裏切り、コントロールできない出来事に傷を抱えやすい。ただしその傷と向き合うことで、他者の再生を支える力が育つ。", "9": "信念や学び、価値観の崩壊に深い傷を抱えやすい。ただしその傷と向き合うことで、他者に新しい希望や意味を示す力が育つ。", "10": "キャリアや社会的評価において深い傷を抱えやすい。ただしその傷と向き合うことで、他者を正しく導く力が育つ。", "11": "友人関係やコミュニティにおいて深い傷（孤立・裏切り）を抱えやすい。ただしその傷と向き合うことで、居場所のない人に居場所を作る力が育つ。", "12": "精神的・見えない領域における深い傷を抱えやすい。ただしその傷と向き合うことで、他者の痛みに深く共感し癒す力が育つ。"}, "signs_love": {}, "houses_love": {}}};
 var LT_SIGNS=["牡羊座","牡牛座","双子座","蟹座","獅子座","乙女座","天秤座","蠍座","射手座","山羊座","水瓶座","魚座"];
 var LT_SIGN_SYMBOLS=["\u2648","\u2649","\u264A","\u264B","\u264C","\u264D","\u264E","\u264F","\u2650","\u2651","\u2652","\u2653"];
 function ltSignToSymbol(name) {
@@ -13234,6 +13422,11 @@ function lt_getSunSign(y,mo,d){var lon0=lt_sunLon(y,mo,d,0);var lon23=lt_sunLon(
 function lt_moonLon(y,mo,d,hour){var mo2=mo,y2=y;if(mo2<=2){y2--;mo2+=12;}var A=Math.floor(y2/100),B=2-A+Math.floor(A/4);var jd=Math.floor(365.25*(y2+4716))+Math.floor(30.6001*(mo2+1))+d+(hour/24)+B-1524.5;var T=(jd-2451545.0)/36525.0;var L0=(218.3164477+481267.88123421*T-0.0015786*T*T+T*T*T/538841)%360;var M=(134.9633964+477198.8675055*T+0.0087414*T*T)%360;var Ms=(357.5291092+35999.0502909*T)%360;var F=(93.2720950+483202.0175233*T-0.0036539*T*T)%360;var D=(297.8501921+445267.1114034*T-0.0018819*T*T)%360;var r=Math.PI/180;var dL=6.288774*Math.sin(M*r)+1.274027*Math.sin((2*D-M)*r)+0.658314*Math.sin(2*D*r)+0.213618*Math.sin(2*M*r)-0.185116*Math.sin(Ms*r)-0.114332*Math.sin(2*F*r)+0.058793*Math.sin((2*D-2*M)*r)+0.057066*Math.sin((2*D-Ms-M)*r)+0.053322*Math.sin((2*D+M)*r)+0.045758*Math.sin((2*D-Ms)*r);return((L0+dL)%360+360)%360;}
 /* ドラゴンヘッド（月の平均昇交点）の黄経。ドラゴンテイルはこの180度反対側 */
 function lt_dragonHeadLon(y,mo,d,hour){var mo2=mo,y2=y;if(mo2<=2){y2--;mo2+=12;}var A=Math.floor(y2/100),B=2-A+Math.floor(A/4);var jd=Math.floor(365.25*(y2+4716))+Math.floor(30.6001*(mo2+1))+d+(hour/24)+B-1524.5;var T=(jd-2451545.0)/36525.0;var omega=125.0445479-1934.1362891*T+0.0020754*T*T+T*T*T/467441;return((omega%360)+360)%360;}
+/* リリス（平均月遠地点/ブラックムーン・リリス）の黄経。月の平均近地点+180度で計算する */
+function lt_lilithLon(y,mo,d,hour){var mo2=mo,y2=y;if(mo2<=2){y2--;mo2+=12;}var A=Math.floor(y2/100),B=2-A+Math.floor(A/4);var jd=Math.floor(365.25*(y2+4716))+Math.floor(30.6001*(mo2+1))+d+(hour/24)+B-1524.5;var T=(jd-2451545.0)/36525.0;var perigee=83.3532465+4069.0137287*T-0.0103200*T*T-T*T*T/80053+T*T*T*T/18999000;return(((perigee+180)%360)+360)%360;}
+/* キロンの黄経（ケプラー軌道要素からの簡易近似計算。軌道傾斜の影響は無視した近似値のため、
+   数度程度の誤差がある点に留意。将来より精密な計算に置き換える可能性あり） */
+function lt_chironLon(y,mo,d,hour){var a=13.6367,e=0.38397,Omega=209.2966,argp=339.3982,M0=356.1954;var period=Math.pow(a,1.5);var n=360/(period*365.25);var mo2=mo,y2=y;if(mo2<=2){y2--;mo2+=12;}var A=Math.floor(y2/100),B=2-A+Math.floor(A/4);var jd=Math.floor(365.25*(y2+4716))+Math.floor(30.6001*(mo2+1))+d+(hour/24)+B-1524.5;var days=jd-2451545.0;var M=((M0+n*days)%360+360)%360;var Mr=M*Math.PI/180;var E=Mr;for(var i=0;i<10;i++){E=E-(E-e*Math.sin(E)-Mr)/(1-e*Math.cos(E));}var nu=2*Math.atan2(Math.sqrt(1+e)*Math.sin(E/2),Math.sqrt(1-e)*Math.cos(E/2));var nuDeg=nu*180/Math.PI;return((nuDeg+argp+Omega)%360+360)%360;}
 function lt_getMoonTransition(y,mo,d){var d0=new Date(Date.UTC(y,mo-1,d,0,0,0)-9*3600000);var d23=new Date(Date.UTC(y,mo-1,d,23,59,0)-9*3600000);var lon0=lt_moonLon(d0.getUTCFullYear(),d0.getUTCMonth()+1,d0.getUTCDate(),d0.getUTCHours()+d0.getUTCMinutes()/60);var lon23=lt_moonLon(d23.getUTCFullYear(),d23.getUTCMonth()+1,d23.getUTCDate(),d23.getUTCHours()+d23.getUTCMinutes()/60);var idx0=Math.floor(lon0/30)%12;var idx23=Math.floor(lon23/30)%12;if(idx0===idx23)return null;var lo=0,hi=24;for(var i=0;i<30;i++){var mid=(lo+hi)/2;var dm=new Date(Date.UTC(y,mo-1,d,0,0,0)-9*3600000+mid*3600000);var idxm=Math.floor(lt_moonLon(dm.getUTCFullYear(),dm.getUTCMonth()+1,dm.getUTCDate(),dm.getUTCHours()+dm.getUTCMinutes()/60)/30)%12;if(idxm===idx0)lo=mid;else hi=mid;}var jstH=Math.floor(lo),jstM=Math.floor((lo-jstH)*60);return{hour:jstH,min:jstM,altSign:LT_SIGNS[idx23],nextDay:false};}
 function lt_getMoonSign(y,mo,d){var d0=new Date(Date.UTC(y,mo-1,d,0,0,0)-9*3600000);var d23=new Date(Date.UTC(y,mo-1,d,23,59,0)-9*3600000);var lon0=lt_moonLon(d0.getUTCFullYear(),d0.getUTCMonth()+1,d0.getUTCDate(),d0.getUTCHours()+d0.getUTCMinutes()/60);var lon23=lt_moonLon(d23.getUTCFullYear(),d23.getUTCMonth()+1,d23.getUTCDate(),d23.getUTCHours()+d23.getUTCMinutes()/60);var idx0=Math.floor(lon0/30)%12;var idx23=Math.floor(lon23/30)%12;var edgeDist=lon0%30;if(edgeDist>15)edgeDist=30-edgeDist;if(idx0===idx23&&edgeDist>0.2)return{sign:LT_SIGNS[idx0],uncertain:false,alt:null,transition:null};if(idx0===idx23&&edgeDist<=0.2){var prevIdx=(idx0+11)%12;return{sign:LT_SIGNS[prevIdx],uncertain:true,alt:LT_SIGNS[idx0],transition:{hour:0,min:0,altSign:LT_SIGNS[idx0],nextDay:false}};}var tr=lt_getMoonTransition(y,mo,d);return{sign:LT_SIGNS[idx0],uncertain:true,alt:LT_SIGNS[idx23],transition:tr};}
 function lt_lookupSign(t,y){var s=t[0][1];for(var i=0;i<t.length;i++){if(t[i][0]<=y)s=t[i][1];else break;}return LT_SIGNS[s];}
@@ -16871,88 +17064,89 @@ var SEASON_KAN_DESC = {
 var ANTHROPIC_API_KEY = 'YOUR_API_KEY_HERE';
 /* ======= API設定 END ======= */
 var FRIEND_DATA = [
-{id:'mrs2ipmlqo38',name:'うさみくん',date:'1993-03-28',time:'',timeUnknown:true,place:'',category:'友達（♂）',memo:'22時40分まではASC蠍座それ以降はASC射手座\n22時26分以降から太陽が4ハウス太陽が5ハウスは考えにくいから\n22時26分より前は考えにくい\n23時15時以降から月6ハウス\nそれより前だと月7ハウスに該当\n最初は23時30ごろが濃厚だったけど\n今は22時半ごろ濃厚\n\n恐らく23時より前\nうさみくん日支酉でなさそうだから',addedAt:0,visible:true},
-{id:'mrs2ipml0jz1',name:'きゃん',date:'1986-05-19',time:'13:57',timeUnknown:false,place:'福岡',category:'親しい友人',addedAt:0,visible:true},
-{id:'mrs2ipmlxg1c',name:'やぁちゃん',date:'1987-03-23',time:'01:30',timeUnknown:false,place:'福岡',category:'親しい友人',addedAt:0,visible:true},
-{id:'mrs2ipmlkdz1',name:'あやこ',date:'1987-01-27',time:'19:59',timeUnknown:false,place:'福島',category:'親しい友人',addedAt:0,visible:true},
-{id:'mrs2ipmldxak',name:'あっちゃん',date:'1986-06-06',time:'08:21',timeUnknown:false,place:'福岡',category:'親しい友人',addedAt:0,visible:true},
-{id:'mrs2ipml03dr',name:'りいちゃん',date:'1997-02-27',time:'17:41',timeUnknown:false,place:'福岡',category:'親しい友人',addedAt:0,visible:true,memo:''},
-{id:'mrslk32zufcf3e',name:'まゆこりん',date:'1986-08-08',time:'23:59',timeUnknown:false,place:'福岡',category:'親しい友人',addedAt:0,visible:true},
-{id:'mrslk32ztr6l68',name:'そらちゃん',date:'1986-11-17',time:'01:44',timeUnknown:false,place:'福岡',category:'親しい友人',addedAt:0,visible:true},
-{id:'mrslk32z630rzo',name:'まきのっち',date:'1986-12-15',time:'23:56',timeUnknown:false,place:'宮崎',category:'親しい友人',addedAt:0,visible:true},
-{id:'mrslk32zuwruvz',name:'まどかちゃん',date:'1989-02-07',time:'16:27',timeUnknown:false,place:'福岡',category:'親しい友人',addedAt:0,visible:true},
-{id:'mrslk32zmvjtjb',name:'さわちゃん',date:'1991-12-06',time:'16:48',timeUnknown:false,place:'福岡',category:'親しい友人',addedAt:0,visible:true},
-{id:'mrslk32z1hfg1s',name:'牡丹先生',date:'1980-05-09',time:'16:00',timeUnknown:false,place:'福岡',category:'先生',addedAt:0,visible:true},
-{id:'mrslk32zpnyxtp',name:'光架先生',date:'1986-02-01',time:'12:58',timeUnknown:false,place:'福岡',category:'先生',addedAt:0,visible:true},
-{id:'mrslk32z4myjtv',name:'英恵先生',date:'1968-10-09',time:'10:00',timeUnknown:false,place:'福岡',category:'先生',addedAt:0,visible:true},
-{id:'mrsmytaxnk5mcx',name:'みどりさん',date:'1971-03-21',time:'',timeUnknown:true,place:'',category:'仕事関係',addedAt:0,visible:true},
-{id:'mrsmytaxw4tsjc',name:'金山さん',date:'1974-05-01',time:'',timeUnknown:true,place:'',category:'仕事関係',addedAt:0,visible:true},
-{id:'mrsmytaxaj9p87',name:'井上一也',date:'1957-03-14',time:'',timeUnknown:true,place:'',category:'身内',addedAt:0,visible:true},
-{id:'mrsmytaxv4fa0r',name:'井上由香',date:'1958-11-05',time:'',timeUnknown:true,place:'',category:'身内',addedAt:0,visible:true},
-{id:'mrsmytax5ofh07',name:'井上領',date:'1990-09-08',time:'16:52',timeUnknown:false,place:'福岡',category:'身内',addedAt:0,visible:true},
-{id:'mrsmytaxsd5jdl',name:'ひろき君',date:'1990-09-08',time:'07:00',timeUnknown:false,place:'',category:'友達（♂）',addedAt:0,visible:true},
-{id:'mrxvwcez2m7j',name:'井上礼子',date:'1953-03-18',time:'16:00',timeUnknown:false,place:'福岡',category:'身内',memo:'夕方に生まれた（23時より前）',addedAt:0,visible:true},
-{id:'mrxvx1el371o',name:'井上洋',date:'1951-04-15',time:'22:59',timeUnknown:false,place:'福岡',category:'身内',addedAt:0,memo:'23時より前',visible:true},
-{id:'mry9j1dha8bg',name:'かおりちゃん',date:'1985-01-22',time:'07:38',timeUnknown:false,place:'神奈川',category:'身内',addedAt:0,visible:true},
-{id:'ms9885m9b10sdc',addedAt:1785519528561,name:'なぎちゃん',date:'1986-04-24',time:'22:18',timeUnknown:false,place:'福岡',category:'友達',visible:true},
-{id:'ms9885m9ezh7p2',addedAt:1785519528561,name:'愛C',date:'1986-10-06',time:'07:32',timeUnknown:false,place:'長崎',category:'友達',visible:true},
-{id:'ms9885m9mnnqie',addedAt:1785519528561,name:'えりこ',date:'1986-10-10',time:'23:15',timeUnknown:false,place:'福岡',category:'友達',visible:true},
-{id:'ms9885m94l2f82',addedAt:1785519528561,name:'ひかり',date:'1986-10-29',time:'06:46',timeUnknown:false,place:'福岡',category:'友達',visible:true},
-{id:'ms9885m9u1aq3e',addedAt:1785519528561,name:'あーC',date:'1989-06-22',time:'22:03',timeUnknown:false,place:'福岡',category:'友達',visible:true},
-{id:'ms9885m9uygssc',addedAt:1785519528561,name:'えりさん',date:'1974-03-14',time:'01:30',timeUnknown:false,place:'福岡',category:'友達',visible:true},
-{id:'ms9885m9mfef5c',addedAt:1785519528561,name:'オーバ',date:'1987-03-21',time:'00:15',timeUnknown:false,place:'福岡',category:'友達',visible:true},
-{id:'ms9885m90c3yv1',addedAt:1785519528561,name:'美穂さん',date:'1969-04-09',time:'13:00',timeUnknown:false,place:'福岡',category:'友達',visible:true},
-{id:'msab0jq7rwzt',name:'西さん（やぁC会社）',date:'1999-07-08',time:'',timeUnknown:false,category:'その他',place:'',memo:'',addedAt:1785584678623,visible:true},
-{id:'msab1rn9kl49',name:'よっぴー',date:'1987-03-09',time:'12:00',timeUnknown:false,category:'友達（♂）',place:'',memo:'絢子元旦那',addedAt:1785584735541,visible:true},
-{id:'msab3u2dw5dm',name:'りいこママ',date:'1964-09-20',time:'',timeUnknown:false,category:'その他',place:'',memo:'',addedAt:1785584831989,visible:true},
-{id:'msab9g9ubloh',name:'ちゅらC',date:'1988-10-06',time:'13:07',timeUnknown:false,category:'親しい友人',place:'福岡',memo:'',addedAt:1785585094050,visible:true},
-{id:'msabc178pq6u',name:'もり',date:'1990-12-12',time:'17:15',timeUnknown:false,category:'友達',place:'福岡',memo:'',addedAt:1785585214484,visible:true},
-{id:'msabdzio3sd9',name:'優くん',date:'2017-01-28',time:'00:34',timeUnknown:false,category:'友達の子供',place:'福岡',memo:'(あっちゃん)',addedAt:1785585305616,visible:true},
-{id:'msabfa9iqxnc',name:'りっちゃん',date:'2020-07-01',time:'04:14',timeUnknown:false,category:'友達の子供',place:'福岡',memo:'(きゃん)',addedAt:1785585366198,visible:true},
-{id:'msabgkw7j4g2',name:'凪人',date:'2022-08-15',time:'17:49',timeUnknown:false,category:'友達の子供',place:'福岡',memo:'(きゃん)',addedAt:1785585426631,visible:true},
-{id:'msabhnchsif8',name:'キノピー',date:'1978-07-13',time:'',timeUnknown:true,category:'友達（♂）',place:'',memo:'',addedAt:1785585476465,visible:true},
-{id:'msabj809hmvw',name:'さくちゃん',date:'2014-09-20',time:'',timeUnknown:false,category:'友達の子供',place:'福岡',memo:'やぁC',addedAt:1785585549897,visible:true},
-{id:'msabk52yt156',name:'てっちゃん',date:'1986-04-25',time:'',timeUnknown:true,category:'友達（♂）',place:'福岡',memo:'',addedAt:1785585592762,visible:true},
-{id:'msabl8e9ilrz',name:'パパ',date:'1932-04-26',time:'',timeUnknown:false,category:'身内',place:'福岡',memo:'',addedAt:1785585643713,visible:true},
-{id:'msabmaddex2i',name:'ママ',date:'1936-07-23',time:'',timeUnknown:false,category:'身内',place:'韓国？',memo:'',addedAt:1785585692929,visible:true},
-{id:'msabn5trf0n8',name:'ふゆみ',date:'1986-11-29',time:'',timeUnknown:false,category:'友達',place:'福岡',memo:'',addedAt:1785585733695,visible:true},
-{id:'msabo3y22pip',name:'まゆたん',date:'1987-01-10',time:'',timeUnknown:false,category:'友達',place:'福岡',memo:'',addedAt:1785585777914,visible:true},
-{id:'msabshj4pues',name:'やぁママ',date:'1949-01-11',time:'',timeUnknown:false,category:'その他',place:'',memo:'',addedAt:1785585982144,visible:true},
-{id:'msabth42ez7d',name:'りな',date:'1988-04-04',time:'10:00',timeUnknown:false,category:'友達',place:'',memo:'',addedAt:1785586028258,visible:true},
-{id:'msabur3oowdz',name:'久美ちゃん',date:'1987-08-03',time:'13:30',timeUnknown:false,category:'友達',place:'',memo:'',addedAt:1785586087860,visible:true},
-{id:'msabw91h6lcs',name:'おうちゃん',date:'2021-04-18',time:'15:13',timeUnknown:false,category:'友達の子供',place:'福岡',memo:'(あやの)',addedAt:1785586157765,visible:true},
-{id:'msabx9e8vfx2',name:'つーちゃん',date:'2019-01-13',time:'15:20',timeUnknown:false,category:'友達の子供',place:'福岡',memo:'(あやの)',addedAt:1785586204880,visible:true},
-{id:'msabyitrgf7r',name:'なぎさくん',date:'2021-12-15',time:'05:41',timeUnknown:false,category:'友達の子供',place:'佐賀',memo:'(絢子)',addedAt:1785586263759,visible:true},
-{id:'msabzhq6suta',name:'大山えり',date:'1986-12-07',time:'10:00',timeUnknown:false,category:'友達',place:'福岡',memo:'',addedAt:1785586308991,visible:true},
-{id:'msac0fh05k6b',name:'深川さん',date:'1980-07-21',time:'',timeUnknown:false,category:'友達（♂）',place:'',memo:'りいちゃん',addedAt:1785586352724,visible:true},
-{id:'msc0ll0hvrii',name:'アンジー',date:'1983-03-05',time:'10:00',timeUnknown:false,category:'仕事関係',place:'長崎',memo:'午前中',addedAt:1785688116641,visible:true},
-{id:'msddps1xc2dx',name:'ヒカル',date:'1991-05-29',time:'07:58',timeUnknown:false,category:'有名人',place:'兵庫県',memo:'',addedAt:1785770613573,visible:true},
-{id:'msddr7na3tui',name:'まえす',date:'1989-09-18',time:'',timeUnknown:false,category:'有名人',place:'兵庫県',memo:'',addedAt:1785770680438,visible:true},
-{id:'msdes2mu7lzt',name:'あやの',date:'1986-05-09',time:'',timeUnknown:false,category:'友達',place:'福岡',memo:'',addedAt:1785772400214,visible:true},
-{id:'msexmf4wm637',name:'Gabriel',date:'1992-05-27',time:'',timeUnknown:false,category:'海外',place:'シンガポール',memo:'りいC彼氏',addedAt:1785864515360,visible:true},
-{id:'msexnug1o5ae',name:'Grant',date:'1996-05-17',time:'05:00',timeUnknown:false,category:'海外',place:'サンディエゴ',memo:'',addedAt:1785864581857,visible:true},
-{id:'msho0c45j6zo',name:'Manita',date:'2014-02-08',time:'',timeUnknown:false,category:'海外',place:'India',memo:'',addedAt:1786029766997,visible:false},
-{id:'msho59c4z3c2',name:'Lakshmi',date:'1980-01-01',time:'',timeUnknown:false,category:'海外',place:'Nepal',memo:'',addedAt:1786029996677,visible:false},
-{id:'mshoiwrpjpcc',name:'駿くん',date:'1986-10-09',time:'',timeUnknown:false,category:'友達（♂）',place:'',memo:'あっちゃん旦那',addedAt:1786030633573,visible:true},
-{id:'msj7ovuaet4h',name:'進撃のノア',date:'1995-01-12',time:'',timeUnknown:false,category:'有名人',place:'',memo:'',addedAt:1786123291186,visible:true},
-{id:'msj7ws0tz35l',name:'宇多田ヒカル',date:'1983-01-19',time:'01:17',timeUnknown:false,category:'有名人',place:'アメリカ(ニューヨーク・マンハッタン）',memo:'',addedAt:1786123659485,visible:true},
-{id:'msj7zo83cdf9',name:'羽生結弦',date:'1994-12-07',time:'00:32',timeUnknown:false,category:'有名人',place:'仙台',memo:'',addedAt:1786123794531,visible:true},
-{id:'msj81ix45t1s',name:'米津玄師',date:'1991-03-10',time:'21:00',timeUnknown:false,category:'有名人',place:'徳島県徳島市',memo:'21時頃',addedAt:1786123880968,visible:true},
-{id:'msj84y8dt24v',name:'藤井風',date:'1997-06-14',time:'15:00',timeUnknown:false,category:'有名人',place:'岡山県',memo:'15時頃',addedAt:1786124040781,visible:true},
-{id:'msngp20ddwsf',name:'加藤神楽',date:'2005-03-08',time:'',timeUnknown:false,category:'有名人',place:'',memo:'',addedAt:1786380280429,visible:true},
-{id:'msnylc3ygz4r',name:'さくらこ',date:'1986-04-30',time:'13:17',timeUnknown:false,category:'本人',place:'福岡',memo:'',addedAt:1786410339982,visible:true},
-{id:'mst2gys6cp82',name:'なつきさん',date:'1983-08-16',time:'16:30',timeUnknown:false,category:'仕事関係',place:'長崎',memo:'',addedAt:1786719185430,visible:true},
-{id:'mst56cmy3oki',name:'飯田祐基',date:'1992-03-11',time:'',timeUnknown:false,category:'有名人',place:'愛知県',memo:'',addedAt:1786723729018,visible:true},
-{id:'msu7j1ko9jlc',name:'井上恭子',date:'1929-09-08',time:'',timeUnknown:false,category:'身内',place:'',memo:'昭和9年？井上晋作さんという弟にあたる方が生まれていたらしい\n洋おじちゃんかまりこおばちゃんの下か間にツヨシさんという方も生まれていたらしい。',addedAt:1786788146616,visible:true},
-{id:'msu7mj6s1jyp',name:'井上大',date:'1923-10-28',time:'',timeUnknown:false,category:'身内',place:'',memo:'',addedAt:1786788309412,visible:true},
-{id:'msu7n51aizqp',name:'井上敬作',date:'1914-01-08',time:'',timeUnknown:false,category:'先祖',place:'',memo:'',addedAt:1786788337726,visible:true},
-{id:'msu7nrck2vh9',name:'井上茂子',date:'1903-09-17',time:'',timeUnknown:false,category:'先祖',place:'',memo:'旧姓たきぐち？\n福間出身',addedAt:1786788366644,visible:true},
-{id:'msu7ot7izcyu',name:'井上長谷雄',date:'1902-02-09',time:'',timeUnknown:false,category:'先祖',place:'',memo:'',addedAt:1786788415710,visible:true},
-{id:'msu7rchjs4jh',name:'井上長作',date:'1880-10-14',time:'',timeUnknown:false,category:'先祖',place:'',memo:'井上儀兵衛さんと井上コノさんの下に\n長作さんとラクさんが養子で井上家にきたらしい。',addedAt:1786788534007,visible:true},
-{id:'msu7sj735ggy',name:'井上ラク',date:'1882-01-02',time:'',timeUnknown:false,category:'先祖',place:'',memo:'旧姓安武（新宮）',addedAt:1786788589359,visible:true},
-{id:'msujujlrggub',name:'みっちゃん',date:'1982-04-01',time:'00:15',timeUnknown:false,category:'友達（♂）',place:'',memo:'そらちゃんの元彼',addedAt:1786808838591,visible:true},
-{id:'msv4x4aanle0',name:'名人',date:'1994-09-23',time:'',timeUnknown:false,category:'有名人',place:'',memo:'',addedAt:1786844230642,visible:true},
-{id:'msv4xrbg66hw',name:'ロケマサ',date:'1997-10-31',time:'',timeUnknown:false,category:'有名人',place:'',memo:'',addedAt:1786844260492,visible:true}
+{id:"mrs2ipmlqo38",name:"うさみくん",date:"1993-03-28",time:"",timeUnknown:true,place:"",category:"友達（♂）",memo:"22時40分まではASC蠍座それ以降はASC射手座\n22時26分以降から太陽が4ハウス太陽が5ハウスは考えにくいから\n22時26分より前は考えにくい\n23時15時以降から月6ハウス\nそれより前だと月7ハウスに該当\n最初は23時30ごろが濃厚だったけど\n今は22時半ごろ濃厚\n\n恐らく23時より前\nうさみくん日支酉でなさそうだから",addedAt:0,visible:true},
+{id:"mrs2ipml0jz1",name:"きゃん",date:"1986-05-19",time:"13:57",timeUnknown:false,place:"福岡",category:"親しい友人",addedAt:0,visible:true},
+{id:"mrs2ipmlxg1c",name:"やぁちゃん",date:"1987-03-23",time:"01:30",timeUnknown:false,place:"福岡",category:"親しい友人",addedAt:0,visible:true},
+{id:"mrs2ipmlkdz1",name:"あやこ",date:"1987-01-27",time:"19:59",timeUnknown:false,place:"福島",category:"親しい友人",addedAt:0,visible:true},
+{id:"mrs2ipmldxak",name:"あっちゃん",date:"1986-06-06",time:"08:21",timeUnknown:false,place:"福岡",category:"親しい友人",addedAt:0,visible:true},
+{id:"mrs2ipml03dr",name:"りいちゃん",date:"1997-02-27",time:"17:41",timeUnknown:false,place:"福岡",category:"親しい友人",memo:"",addedAt:0,visible:true},
+{id:"mrslk32zufcf3e",name:"まゆこりん",date:"1986-08-08",time:"23:59",timeUnknown:false,place:"福岡",category:"親しい友人",addedAt:0,visible:true},
+{id:"mrslk32ztr6l68",name:"そらちゃん",date:"1986-11-17",time:"01:44",timeUnknown:false,place:"福岡",category:"親しい友人",addedAt:0,visible:true},
+{id:"mrslk32z630rzo",name:"まきのっち",date:"1986-12-15",time:"23:56",timeUnknown:false,place:"宮崎",category:"親しい友人",addedAt:0,visible:true},
+{id:"mrslk32zuwruvz",name:"まどかちゃん",date:"1989-02-07",time:"16:27",timeUnknown:false,place:"福岡",category:"親しい友人",addedAt:0,visible:true},
+{id:"mrslk32zmvjtjb",name:"さわちゃん",date:"1991-12-06",time:"16:48",timeUnknown:false,place:"福岡",category:"親しい友人",addedAt:0,visible:true},
+{id:"mrslk32z1hfg1s",name:"牡丹先生",date:"1980-05-09",time:"16:00",timeUnknown:false,place:"福岡",category:"先生",addedAt:0,visible:true},
+{id:"mrslk32zpnyxtp",name:"光架先生",date:"1986-02-01",time:"12:58",timeUnknown:false,place:"福岡",category:"先生",addedAt:0,visible:true},
+{id:"mrslk32z4myjtv",name:"英恵先生",date:"1968-10-09",time:"10:00",timeUnknown:false,place:"福岡",category:"先生",addedAt:0,visible:true},
+{id:"mrsmytaxnk5mcx",name:"みどりさん",date:"1971-03-21",time:"",timeUnknown:true,place:"",category:"仕事関係",addedAt:0,visible:true},
+{id:"mrsmytaxw4tsjc",name:"金山さん",date:"1974-05-01",time:"",timeUnknown:true,place:"",category:"仕事関係",addedAt:0,visible:true},
+{id:"mrsmytaxaj9p87",name:"井上一也",date:"1957-03-14",time:"",timeUnknown:true,place:"",category:"身内",addedAt:0,visible:true},
+{id:"mrsmytaxv4fa0r",name:"井上由香",date:"1958-11-05",time:"",timeUnknown:true,place:"",category:"身内",addedAt:0,visible:true},
+{id:"mrsmytax5ofh07",name:"井上領",date:"1990-09-08",time:"16:52",timeUnknown:false,place:"福岡",category:"身内",addedAt:0,visible:true},
+{id:"mrsmytaxsd5jdl",name:"ひろき君",date:"1990-09-08",time:"07:00",timeUnknown:false,place:"",category:"友達（♂）",addedAt:0,visible:true},
+{id:"mrxvwcez2m7j",name:"井上礼子",date:"1953-03-18",time:"16:00",timeUnknown:false,place:"福岡",category:"身内",memo:"夕方に生まれた（23時より前）",addedAt:0,visible:true},
+{id:"mrxvx1el371o",name:"井上洋",date:"1951-04-15",time:"22:59",timeUnknown:false,place:"福岡",category:"身内",memo:"23時より前",addedAt:0,visible:true},
+{id:"mry9j1dha8bg",name:"かおりちゃん",date:"1985-01-22",time:"07:38",timeUnknown:false,place:"神奈川",category:"身内",addedAt:0,visible:true},
+{id:"ms9885m9b10sdc",name:"なぎちゃん",date:"1986-04-24",time:"22:18",timeUnknown:false,place:"福岡",category:"友達",addedAt:1785519528561,visible:true},
+{id:"ms9885m9ezh7p2",name:"愛C",date:"1986-10-06",time:"07:32",timeUnknown:false,place:"長崎",category:"友達",addedAt:1785519528561,visible:true},
+{id:"ms9885m9mnnqie",name:"えりこ",date:"1986-10-10",time:"23:15",timeUnknown:false,place:"福岡",category:"友達",addedAt:1785519528561,visible:true},
+{id:"ms9885m94l2f82",name:"ひかり",date:"1986-10-29",time:"06:46",timeUnknown:false,place:"福岡",category:"友達",addedAt:1785519528561,visible:true},
+{id:"ms9885m9u1aq3e",name:"あーC",date:"1989-06-22",time:"22:03",timeUnknown:false,place:"福岡",category:"友達",addedAt:1785519528561,visible:true},
+{id:"ms9885m9uygssc",name:"えりさん",date:"1974-03-14",time:"01:30",timeUnknown:false,place:"福岡",category:"友達",addedAt:1785519528561,visible:true},
+{id:"ms9885m9mfef5c",name:"オーバ",date:"1987-03-21",time:"00:15",timeUnknown:false,place:"福岡",category:"友達",addedAt:1785519528561,visible:true},
+{id:"ms9885m90c3yv1",name:"美穂さん",date:"1969-04-09",time:"13:00",timeUnknown:false,place:"福岡",category:"友達",addedAt:1785519528561,visible:true},
+{id:"msab0jq7rwzt",name:"西さん（やぁC会社）",date:"1999-07-08",time:"",timeUnknown:false,place:"",category:"その他",memo:"",addedAt:1785584678623,visible:true},
+{id:"msab1rn9kl49",name:"よっぴー",date:"1987-03-09",time:"12:00",timeUnknown:false,place:"",category:"友達（♂）",memo:"絢子元旦那",addedAt:1785584735541,visible:true},
+{id:"msab3u2dw5dm",name:"りいこママ",date:"1964-09-20",time:"",timeUnknown:false,place:"",category:"その他",memo:"",addedAt:1785584831989,visible:true},
+{id:"msab9g9ubloh",name:"ちゅらC",date:"1988-10-06",time:"13:07",timeUnknown:false,place:"福岡",category:"親しい友人",memo:"",addedAt:1785585094050,visible:true},
+{id:"msabc178pq6u",name:"もり",date:"1990-12-12",time:"17:15",timeUnknown:false,place:"福岡",category:"友達",memo:"",addedAt:1785585214484,visible:true},
+{id:"msabdzio3sd9",name:"優くん",date:"2017-01-28",time:"00:34",timeUnknown:false,place:"福岡",category:"友達の子供",memo:"(あっちゃん)",addedAt:1785585305616,visible:true},
+{id:"msabfa9iqxnc",name:"りっちゃん",date:"2020-07-01",time:"04:14",timeUnknown:false,place:"福岡",category:"友達の子供",memo:"(きゃん)",addedAt:1785585366198,visible:true},
+{id:"msabgkw7j4g2",name:"凪人",date:"2022-08-15",time:"17:49",timeUnknown:false,place:"福岡",category:"友達の子供",memo:"(きゃん)",addedAt:1785585426631,visible:true},
+{id:"msabhnchsif8",name:"キノピー",date:"1978-07-13",time:"",timeUnknown:true,place:"",category:"友達（♂）",memo:"",addedAt:1785585476465,visible:true},
+{id:"msabj809hmvw",name:"さくちゃん",date:"2014-09-20",time:"",timeUnknown:false,place:"福岡",category:"友達の子供",memo:"やぁC",addedAt:1785585549897,visible:true},
+{id:"msabk52yt156",name:"てっちゃん",date:"1986-04-25",time:"",timeUnknown:true,place:"福岡",category:"友達（♂）",memo:"",addedAt:1785585592762,visible:true},
+{id:"msabl8e9ilrz",name:"パパ",date:"1932-04-26",time:"",timeUnknown:false,place:"福岡",category:"身内",memo:"",addedAt:1785585643713,visible:true},
+{id:"msabmaddex2i",name:"ママ",date:"1936-07-23",time:"",timeUnknown:false,place:"韓国？",category:"身内",memo:"",addedAt:1785585692929,visible:true},
+{id:"msabn5trf0n8",name:"ふゆみ",date:"1986-11-29",time:"",timeUnknown:false,place:"福岡",category:"友達",memo:"",addedAt:1785585733695,visible:true},
+{id:"msabo3y22pip",name:"まゆたん",date:"1987-01-10",time:"",timeUnknown:false,place:"福岡",category:"友達",memo:"",addedAt:1785585777914,visible:true},
+{id:"msabshj4pues",name:"やぁママ",date:"1949-01-11",time:"",timeUnknown:false,place:"",category:"その他",memo:"",addedAt:1785585982144,visible:true},
+{id:"msabth42ez7d",name:"りな",date:"1988-04-04",time:"10:00",timeUnknown:false,place:"",category:"友達",memo:"",addedAt:1785586028258,visible:true},
+{id:"msabur3oowdz",name:"久美ちゃん",date:"1987-08-03",time:"13:30",timeUnknown:false,place:"",category:"友達",memo:"",addedAt:1785586087860,visible:true},
+{id:"msabw91h6lcs",name:"おうちゃん",date:"2021-04-18",time:"15:13",timeUnknown:false,place:"福岡",category:"友達の子供",memo:"(あやの)",addedAt:1785586157765,visible:true},
+{id:"msabx9e8vfx2",name:"つーちゃん",date:"2019-01-13",time:"15:20",timeUnknown:false,place:"福岡",category:"友達の子供",memo:"(あやの)",addedAt:1785586204880,visible:true},
+{id:"msabyitrgf7r",name:"なぎさくん",date:"2021-12-15",time:"05:41",timeUnknown:false,place:"佐賀",category:"友達の子供",memo:"(絢子)",addedAt:1785586263759,visible:true},
+{id:"msabzhq6suta",name:"大山えり",date:"1986-12-07",time:"10:00",timeUnknown:false,place:"福岡",category:"友達",memo:"",addedAt:1785586308991,visible:true},
+{id:"msac0fh05k6b",name:"深川さん",date:"1980-07-21",time:"",timeUnknown:false,place:"",category:"友達（♂）",memo:"りいちゃん",addedAt:1785586352724,visible:true},
+{id:"msc0ll0hvrii",name:"アンジー",date:"1983-03-05",time:"10:00",timeUnknown:false,place:"長崎",category:"仕事関係",memo:"午前中",addedAt:1785688116641,visible:true},
+{id:"msddps1xc2dx",name:"ヒカル",date:"1991-05-29",time:"07:58",timeUnknown:false,place:"兵庫県",category:"有名人",memo:"",addedAt:1785770613573,visible:true},
+{id:"msddr7na3tui",name:"まえす",date:"1989-09-18",time:"",timeUnknown:false,place:"兵庫県",category:"有名人",memo:"",addedAt:1785770680438,visible:true},
+{id:"msdes2mu7lzt",name:"あやの",date:"1986-05-09",time:"",timeUnknown:false,place:"福岡",category:"友達",memo:"",addedAt:1785772400214,visible:true},
+{id:"msexmf4wm637",name:"Gabriel",date:"1992-05-27",time:"",timeUnknown:false,place:"シンガポール",category:"海外",memo:"りいC彼氏",addedAt:1785864515360,visible:true},
+{id:"msexnug1o5ae",name:"Grant",date:"1996-05-17",time:"05:00",timeUnknown:false,place:"サンディエゴ",category:"海外",memo:"",addedAt:1785864581857,visible:true},
+{id:"msho0c45j6zo",name:"Manita",date:"2014-02-08",time:"",timeUnknown:false,place:"India",category:"海外",memo:"",addedAt:1786029766997,visible:false},
+{id:"msho59c4z3c2",name:"Lakshmi",date:"1980-01-01",time:"",timeUnknown:false,place:"Nepal",category:"海外",memo:"",addedAt:1786029996677,visible:false},
+{id:"mshoiwrpjpcc",name:"駿くん",date:"1986-10-09",time:"",timeUnknown:false,place:"",category:"友達（♂）",memo:"あっちゃん旦那",addedAt:1786030633573,visible:true},
+{id:"msj7ovuaet4h",name:"進撃のノア",date:"1995-01-12",time:"",timeUnknown:false,place:"",category:"有名人",memo:"",addedAt:1786123291186,visible:true},
+{id:"msj7ws0tz35l",name:"宇多田ヒカル",date:"1983-01-19",time:"01:17",timeUnknown:false,place:"アメリカ(ニューヨーク・マンハッタン）",category:"有名人",memo:"",addedAt:1786123659485,visible:true},
+{id:"msj7zo83cdf9",name:"羽生結弦",date:"1994-12-07",time:"00:32",timeUnknown:false,place:"仙台",category:"有名人",memo:"",addedAt:1786123794531,visible:true},
+{id:"msj81ix45t1s",name:"米津玄師",date:"1991-03-10",time:"21:00",timeUnknown:false,place:"徳島県徳島市",category:"有名人",memo:"21時頃",addedAt:1786123880968,visible:true},
+{id:"msj84y8dt24v",name:"藤井風",date:"1997-06-14",time:"15:00",timeUnknown:false,place:"岡山県",category:"有名人",memo:"15時頃",addedAt:1786124040781,visible:true},
+{id:"msngp20ddwsf",name:"加藤神楽",date:"2005-03-08",time:"",timeUnknown:false,place:"",category:"有名人",memo:"",addedAt:1786380280429,visible:true},
+{id:"msnylc3ygz4r",name:"さくらこ",date:"1986-04-30",time:"13:17",timeUnknown:false,place:"福岡",category:"本人",memo:"",addedAt:1786410339982,visible:true},
+{id:"mst2gys6cp82",name:"なつきさん",date:"1983-08-16",time:"16:30",timeUnknown:false,place:"長崎",category:"仕事関係",memo:"",addedAt:1786719185430,visible:true},
+{id:"mst56cmy3oki",name:"飯田祐基",date:"1992-03-11",time:"",timeUnknown:false,place:"愛知県",category:"有名人",memo:"",addedAt:1786723729018,visible:true},
+{id:"msu7j1ko9jlc",name:"井上恭子",date:"1929-09-08",time:"",timeUnknown:false,place:"",category:"身内",memo:"昭和9年？井上晋作さんという弟にあたる方が生まれていたらしい\n洋おじちゃんかまりこおばちゃんの下か間にツヨシさんという方も生まれていたらしい。",addedAt:1786788146616,visible:true},
+{id:"msu7mj6s1jyp",name:"井上大",date:"1923-10-28",time:"",timeUnknown:false,place:"",category:"身内",memo:"",addedAt:1786788309412,visible:true},
+{id:"msu7n51aizqp",name:"井上敬作",date:"1914-01-08",time:"",timeUnknown:false,place:"",category:"先祖",memo:"",addedAt:1786788337726,visible:true},
+{id:"msu7nrck2vh9",name:"井上茂子",date:"1903-09-17",time:"",timeUnknown:false,place:"",category:"先祖",memo:"旧姓たきぐち？\n福間出身",addedAt:1786788366644,visible:true},
+{id:"msu7ot7izcyu",name:"井上長谷雄",date:"1902-02-09",time:"",timeUnknown:false,place:"",category:"先祖",memo:"",addedAt:1786788415710,visible:true},
+{id:"msu7rchjs4jh",name:"井上長作",date:"1880-10-14",time:"",timeUnknown:false,place:"",category:"先祖",memo:"井上儀兵衛さんと井上コノさんの下に\n長作さんとラクさんが養子で井上家にきたらしい。",addedAt:1786788534007,visible:true},
+{id:"msu7sj735ggy",name:"井上ラク",date:"1882-01-02",time:"",timeUnknown:false,place:"",category:"先祖",memo:"旧姓安武（新宮）",addedAt:1786788589359,visible:true},
+{id:"msujujlrggub",name:"みっちゃん",date:"1982-04-01",time:"00:15",timeUnknown:false,place:"",category:"友達（♂）",memo:"そらちゃんの元彼",addedAt:1786808838591,visible:true},
+{id:"msv4x4aanle0",name:"名人",date:"1994-09-23",time:"",timeUnknown:false,place:"",category:"有名人",memo:"",addedAt:1786844230642,visible:true},
+{id:"msv4xrbg66hw",name:"ロケマサ",date:"1997-10-31",time:"",timeUnknown:false,place:"",category:"有名人",memo:"",addedAt:1786844260492,visible:true},
+{id:"mt60dlexe6gh",name:"Hyde",date:"1969-01-29",time:"00:05",timeUnknown:false,place:"和歌山",category:"有名人",memo:"和歌山市土入（どうにゅう）",addedAt:1787501729193,visible:true}
 ];
 
 /* localStorageに保存された友達データがあれば、それで上書きする */
@@ -16963,7 +17157,7 @@ function openFriendDataManager(){
   var current = JSON.stringify(FRIEND_DATA, null, 2);
   var html = ''
     + '<div style="font-size:14px;font-weight:700;color:var(--gold,#c9a84c);margin-bottom:10px;">👥 友達データ管理</div>'
-    + '<div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.7;">「友達データ帳」アプリで「JSONで出力」（全員）または「新規登録分だけ出力」した内容をここに貼り付けてください。名前が一致する人は情報を更新し、一致しない人は新規追加されます（既存データが消えることはありません）。</div>'
+    + '<div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.7;">「友達データ帳」アプリで「JSONで出力」（全員）または「新規登録分だけ出力」した内容をここに貼り付けてください。idが一致する人は情報を更新し、一致しない人は新規追加されます（既存データが消えることはありません）。※この画面での変更は一時的なもので、恒久的に保存するにはClaudeにファイルへ反映してもらう必要があります。</div>'
     + '<textarea id="friend-data-paste" placeholder="ここにJSONを貼り付け" style="width:100%;min-height:160px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--text);font-family:monospace;font-size:11px;padding:8px;box-sizing:border-box;"></textarea>'
     + '<div id="friend-data-status" style="font-size:11px;color:#7ee787;margin-top:6px;min-height:16px;"></div>'
     + '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">'
@@ -17080,29 +17274,23 @@ function saveFriendDataFromPaste(){
     return;
   }
   var merged = FRIEND_DATA.slice();
-  var nameIndex = {};
-  merged.forEach(function(f, i){ nameIndex[f.name] = i; });
+  var idIndex = {};
+  merged.forEach(function(f, i){ idIndex[f.id] = i; });
   var addedCount = 0, updatedCount = 0;
   parsed.forEach(function(f){
-    if(!f || !f.name) return;
-    if(nameIndex.hasOwnProperty(f.name)){
-      merged[nameIndex[f.name]] = f;
+    if(!f || !f.id) return; // idが無いデータは事故防止のため取り込まない
+    if(idIndex.hasOwnProperty(f.id)){
+      merged[idIndex[f.id]] = f;
       updatedCount++;
     } else {
       merged.push(f);
-      nameIndex[f.name] = merged.length - 1;
+      idIndex[f.id] = merged.length - 1;
       addedCount++;
     }
   });
-  try{
-    /* localStorage保存無効化 */
-  }catch(e){
-    if(statusEl){ statusEl.style.color='#f87171'; statusEl.textContent = '保存に失敗しました。'; }
-    return;
-  }
   FRIEND_DATA = merged;
   FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {};
-  if(statusEl){ statusEl.style.color='#7ee787'; statusEl.textContent = '新規' + addedCount + '人・更新' + updatedCount + '人。合計' + merged.length + '人になりました。次回このアプリを開いた時も反映されます。'; }
+  if(statusEl){ statusEl.style.color='#7ee787'; statusEl.textContent = '新規' + addedCount + '人・更新' + updatedCount + '人。合計' + merged.length + '人になりました。※この変更は今この画面を開いている間だけ有効です。恒久的に保存するには、この内容をClaudeに渡してindex.htmlに反映してもらってください。'; }
   var listEl = document.getElementById('friend-data-list');
   if(listEl) listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA);
   var rawEl = document.getElementById('friend-data-raw');
@@ -19944,10 +20132,57 @@ function lt_getHouseIndex(lon, cusps) {
   }
   return null;
 }
-function openPlanetDictPanel(bodyName, signName, houseNum) {
+/* 内側円のハウスをタップした時に、そのハウスに滞在する天体の一覧を表示する。
+   一覧の中の天体をタップすると、そのままopenPlanetDictPanelで詳細に進む */
+function openHousePlanetsPanel(houseNum, listStr, cuspSignName) {
+  var items = (listStr || '').split('|').filter(Boolean).map(function(s){
+    var parts = s.split(',');
+    return { name: parts[0], sym: parts[1], sign: parts[2], deg: parts[3] || '' };
+  });
+  document.getElementById('hjTitle').textContent = '第' + houseNum + 'ハウス';
+  document.getElementById('hjYomi').textContent = 'このハウスにいる天体';
+  document.getElementById('hjBadge').innerHTML = '';
+  var html = '<div style="display:flex;flex-direction:column;gap:8px;">';
+  /* ハウスカスプ（このハウスの入り口にあるサイン）専用の項目を、天体一覧の先頭に置く */
+  if (cuspSignName) {
+    html += '<div onclick="openHouseCuspPanel('+houseNum+',&quot;'+cuspSignName+'&quot;)" '
+      + 'style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.06);border:1px solid rgba(201,168,76,.35);cursor:pointer;">'
+      + '<span style="font-size:18px;">🚪</span>'
+      + '<span style="font-size:13px;color:var(--gold);font-weight:700;">ハウスカスプ<span style="color:var(--text);font-weight:400;">（'+cuspSignName+'）</span></span>'
+      + '</div>';
+  }
+  if (items.length === 0) {
+    html += '<p style="font-size:12px;color:var(--muted);">このハウスに天体はありません。</p>';
+  } else {
+    items.forEach(function(it){
+      html += '<div onclick="openPlanetDictPanel(&quot;'+it.name+'&quot;,&quot;'+it.sign+'&quot;,'+houseNum+',&quot;'+it.deg+'&quot;)" '
+        + 'style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);cursor:pointer;">'
+        + '<span style="font-size:18px;">'+it.sym+'</span>'
+        + '<span style="font-size:13px;color:var(--text);">'+it.name+'（'+it.sign+' '+it.deg+'）</span>'
+        + '</div>';
+    });
+  }
+  html += '</div>';
+  document.getElementById('hjDesc').innerHTML = html;
+  document.getElementById('hjContext').innerHTML = '';
+  document.getElementById('hjPanel').classList.add('open');
+  document.getElementById('hjOverlay').classList.add('open');
+}
+/* ハウスカスプ（第◯ハウス×サイン）の解説パネルを表示する */
+function openHouseCuspPanel(houseNum, signName) {
+  var text = (LT_HOUSE_CUSP_TEXTS[String(houseNum)] || {})[signName] || '';
+  document.getElementById('hjTitle').textContent = '🚪 第' + houseNum + 'ハウスのカスプ';
+  document.getElementById('hjYomi').textContent = signName;
+  document.getElementById('hjBadge').innerHTML = '';
+  document.getElementById('hjDesc').innerHTML = text
+    ? '<p style="font-size:12px;line-height:1.8;color:var(--text);">'+text+'</p>'
+    : '<p style="font-size:12px;color:var(--muted);">このハウス×サインの解説はまだありません。</p>';
+  document.getElementById('hjContext').innerHTML = '';
+}
+function openPlanetDictPanel(bodyName, signName, houseNum, degText) {
   var d = LT_DICT[bodyName];
   if (!d) return;
-  window._ltDictState = { bodyName: bodyName, signName: signName, houseNum: houseNum, mode: 'normal' };
+  window._ltDictState = { bodyName: bodyName, signName: signName, houseNum: houseNum, degText: degText || '', mode: 'normal' };
   renderPlanetDictPanel();
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
@@ -19965,7 +20200,7 @@ function renderPlanetDictPanel() {
   var isLove = st.mode === 'love';
   var houseText = (isLove ? d.houses_love : d.houses)[st.houseNum] || '';
   var signText = (isLove ? d.signs_love : d.signs)[st.signName] || '';
-  document.getElementById('hjTitle').textContent = (d.glyph||'') + ' ' + st.bodyName;
+  document.getElementById('hjTitle').textContent = (d.glyph||'') + ' ' + st.bodyName + (st.degText ? '（'+st.degText+'）' : '');
   document.getElementById('hjYomi').textContent = st.signName + ' ／ 第' + st.houseNum + 'ハウス';
   var _actS = 'padding:3px 12px;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid;';
   var _actOn = _actS + 'background:var(--accent);color:#fff;border-color:var(--accent);';
