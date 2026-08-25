@@ -2325,7 +2325,7 @@ function buildHoroscopeDataTables(bodies, cusps) {
   var h = '';
   var uid = 'hp_' + Math.floor(Math.random() * 1e9);
   var planetsId = uid + '_planets';
-  h += '<div onclick="toggleShichuuDetail(\''+planetsId+'\')" style="margin-top:14px;width:100%;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:11px 16px;cursor:pointer;">'
+  h += '<div onclick="toggleShichuuDetail(\''+planetsId+'\')" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:11px 16px;cursor:pointer;">'
     + '<span style="font-size:11px;letter-spacing:.1em;color:var(--gold);">天体の位置</span>'
     + '<span id="'+planetsId+'-arrow" style="font-size:10px;color:var(--muted);">▼</span>'
     + '</div>';
@@ -2541,7 +2541,7 @@ function buildAspectHTML(p) {
     gh += '</table></div>';
 
     var listId2 = 'asplist_' + suffixTag;
-    gh += '<div onclick="toggleShichuuDetail(\''+listId2+'\')" style="margin-top:10px;width:100%;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:11px 16px;cursor:pointer;">'
+    gh += '<div onclick="toggleShichuuDetail(\''+listId2+'\')" style="margin:10px -12px 0 -12px;width:calc(100% + 24px);box-sizing:border-box;display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,.04);border:1px solid rgba(201,168,76,.2);border-radius:12px;padding:11px 16px;cursor:pointer;">'
       + '<span style="font-size:11px;letter-spacing:.1em;color:var(--gold);">アスペクト一覧</span>'
       + '<span id="'+listId2+'-arrow" style="font-size:10px;color:var(--muted);">▼</span>'
       + '</div>';
@@ -2562,7 +2562,7 @@ function buildAspectHTML(p) {
   }
 
   var h = wheelSVG;
-  h += '<div style="padding:12px;border-radius:10px;background:transparent;margin-top:8px;">';
+  h += '<div style="padding:12px 12px 0 12px;border-radius:10px;background:transparent;margin-top:8px;">';
   h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">';
   h += '<span style="font-size:11px;color:var(--muted);">アスペクト表</span>';
   var _orbAct = 'padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;background:var(--accent);color:#fff;border-color:var(--accent);';
@@ -5778,7 +5778,7 @@ function showFriendSearchPopup(target) {
   document.getElementById('hjBadge').textContent = '';
 
   // カテゴリー一覧
-  var cats = ['すべて','本人','親しい友人','友達','友達（♂）','身内','先祖','先生','仕事関係','有名人','友達の子供','海外','その他'];
+  var cats = ['すべて','本人','親しい友人','友達','友達（♂）','身内','先祖','先生','仕事関係','有名人','ヒカル界隈','友達の子供','海外','その他'];
   var currentCat = 'すべて';
 
   function buildList(filterCat) {
@@ -5786,7 +5786,7 @@ function showFriendSearchPopup(target) {
       return !f.hidden && f.date && (filterCat === 'すべて' || f.category === filterCat);
     });
     sorted.sort(function(a, b){
-      var order = ['本人','親しい友人','友達','友達（♂）','身内','先祖','先生','仕事関係','有名人','友達の子供','海外','その他'];
+      var order = ['本人','親しい友人','友達','友達（♂）','身内','先祖','先生','仕事関係','有名人','ヒカル界隈','友達の子供','海外','その他'];
       var ai = order.indexOf(a.category); var bi = order.indexOf(b.category);
       if(ai===-1) ai=99; if(bi===-1) bi=99;
       return ai - bi;
