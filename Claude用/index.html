@@ -6534,7 +6534,7 @@ function buildNormalAspectBody(birthdate, isPartner) {
   var cityData = _cData || null;
 
   var moon = lt_getMoonSign(y, mo, d);
-  var _moonHourUT = hasTime ? (birthHourDec - (cityData ? cityData.tz : 9)) : 12;
+  var _moonHourUT = hasTime ? (birthHourDec - (cityData ? cityData.tz : 9)) : (12 - (cityData ? cityData.tz : 9));
   var moonLonVal = lt_moonLon(y, mo, d, _moonHourUT);
   /* 出生時刻が分かっている場合は、runHoroscope()と同様に精密経度からサイン名を決め直す
      （日付のみで判定する簡易ロジックのままだと、月がサインを跨ぐ日に食い違いが生じるため） */
@@ -11686,12 +11686,13 @@ function runHoroscope() {
   /* 各天体計算 */
   var sun     = lt_getSunSign(y, mo, d);
   /* 太陽黄経：pyswisseph精度テーブルから取得（時刻補間あり） */
-  var _sunHourUT = hasTime ? (birthHourDec - (cityData ? cityData.tz : 9)) : 0;
+  /* 時刻不明の場合は、ASC/MC計算と同じ「現地時間正午」を仮定してUTに変換する（他の天体の補間もこの値を使うため統一） */
+  var _sunHourUT = hasTime ? (birthHourDec - (cityData ? cityData.tz : 9)) : (12 - (cityData ? cityData.tz : 9));
   var _sunLonTable = getSunLon(y, mo, d, _sunHourUT);
-  var sunLon = (_sunLonTable !== null) ? _sunLonTable : lt_sunLon(y, mo, d, hasTime ? birthHourDec : 12);
+  var sunLon = (_sunLonTable !== null) ? _sunLonTable : lt_sunLon(y, mo, d, _sunHourUT);
   var moon    = lt_getMoonSign(y, mo, d);
-  /* moonLon: lt_moonLon はUT(世界時)で計算するため、JSTの場合は-9時間して渡す */
-  var _moonHourUT = hasTime ? (birthHourDec - (cityData ? cityData.tz : 9)) : 12;
+  /* moonLon: lt_moonLon はUT(世界時)で計算するため、JSTの場合は-9時間して渡す。時刻不明時も現地正午基準に統一 */
+  var _moonHourUT = hasTime ? (birthHourDec - (cityData ? cityData.tz : 9)) : (12 - (cityData ? cityData.tz : 9));
   var moonLon = lt_moonLon(y, mo, d, _moonHourUT);
   var mercury = lt_getMercurySign(ymd);
   var venus   = lt_getVenusSign(ymd);   /* lt_getVenusSign は ymd(数値) を受け付ける */
