@@ -19680,7 +19680,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   if (_bsTime) _birthDisplay += ' ' + _bsTime;
   if (_bsPlace) _birthDisplay += '（' + _bsPlace + '）';
   if (_bsAge) _birthDisplay += '（' + _bsAge + '）';
-  var html = (hideTabs ? '' : _toggleHTML) + "\n  <div class=\"result-title fade-in\">\n    <h2>\u547D \u5F0F \u8868</h2>\n    <div class=\"person-name\">".concat(_birthDisplay, "\u751F</div>\n    ").concat(personName ? '<div style="font-size:0.75rem;letter-spacing:0.3em;color:var(--sk-silver);margin-top:0.4rem;">' + personName + '</div>' : '', "\n  </div>\n\n  <div class=\"meishiki-wrapper fade-in\">\n    <table class=\"meishiki-table ").concat(noHourClass, "\">\n      ").concat(tableRows, "\n    </table>\n  </div>\n\n  <div style=\"display:flex;gap:8px;justify-content:center;margin:10px 0;\">\n    <button onclick=\"showTsuuhenseiRanking(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(184,150,46,.4);background:rgba(184,150,46,.1);color:var(--sk-gold-light);font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDCCA \u8A55\u4FA1</button>\n    <button onclick=\"showTsuuhenseiFullAnalysis(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(168,154,255,.5);background:rgba(168,154,255,.1);color:#b8a8ff;font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDD0D \u89E3\u6790</button>\n  </div>\n\n  <div class=\"kuubo-card fade-in\">\n    <div class=\"kuubo-title\">\u7A7A \u4EA1\uFF08\u5929 \u4E2D \u6BBA\uFF09</div>\n    <div class=\"kuubo-content\">\n      <div class=\"kuubo-shi\">\n        ").concat(kuuboNames.map(function (s) {
+  var html = (hideTabs ? '' : _toggleHTML) + "\n  <div class=\"result-title fade-in\">\n    <h2>\u547D \u5F0F \u8868</h2>\n    <div class=\"person-name\">".concat(_birthDisplay, "\u751F</div>\n    ").concat(personName ? '<div style="font-size:0.75rem;letter-spacing:0.3em;color:var(--sk-silver);margin-top:0.4rem;">' + personName + '</div>' : '', "\n  </div>\n\n  <div class=\"meishiki-wrapper fade-in\">\n    <table class=\"meishiki-table ").concat(noHourClass, "\">\n      ").concat(tableRows, "\n    </table>\n  </div>\n\n  <div style=\"display:flex;gap:8px;justify-content:center;margin:10px 0;\">\n    <button onclick=\"showTsuuhenseiRanking(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(184,150,46,.4);background:rgba(184,150,46,.1);color:var(--sk-gold-light);font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDCCA \u8A55\u4FA1</button>\n    <button onclick=\"showTsuuhenseiFullAnalysis(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(168,154,255,.5);background:rgba(168,154,255,.1);color:#b8a8ff;font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDD0D \u89E3\u6790</button>\n    <button onclick=\"showTsuuhenseiJobFit(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(120,200,150,.5);background:rgba(120,200,150,.1);color:#8fe0b0;font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDCBC \u9069\u8077</button>\n  </div>\n\n  <div class=\"kuubo-card fade-in\">\n    <div class=\"kuubo-title\">\u7A7A \u4EA1\uFF08\u5929 \u4E2D \u6BBA\uFF09</div>\n    <div class=\"kuubo-content\">\n      <div class=\"kuubo-shi\">\n        ").concat(kuuboNames.map(function (s) {
     return "<span class=\"kuubo-badge\">".concat(s, "</span>");
   }).join('<span class="kuubo-sep">・</span>'), "\n      </div>\n      <div class=\"kuubo-note\">\n        \u65E5\u67F1\u300C").concat(KAN10[day_p.kan]).concat(SHI12[day_p.shi], "\u300D\u304C\u5C5E\u3059\u308B\u65EC\u306E\u7A7A\u4EA1\u5730\u652F\u3067\u3059\u3002\n        ").concat(kuuboInPillars.length > 0 ? "\u547D\u5F0F\u4E2D\u306B\u7A7A\u4EA1\u5730\u652F\uFF08".concat(kuuboInPillars.map(function (p) {
     return SHI12[p.shi];
@@ -21260,6 +21260,52 @@ function showTsuuhenseiFullAnalysis(nik, pKan, pShi) {
       '</div>';
   });
   html += '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:4px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">※五行としての強さ・配置構造としての強さ・命式内での相対的な出現度を分けて分析しています。存在しない配置は理由に含めていません。</div>';
+  showModal(html);
+}
+
+/* 💼適職バッジ：出現度上位の通変星から適職の傾向を解説 */
+var TSUHENSEI_JOB_DESC = {
+  '比肩': '<b>フリーランス・自営業・士業（独立開業）</b>。自分のペースや裁量を大切にする仕事が向く。同業者と対等な立場で協力する働き方、資格を活かして独立するスタイル。',
+  '劫財': '<b>営業・スポーツ・勝負事のある仕事</b>。競争や勝負どころのある仕事、あるいは人を巻き込んでチームで成果を出す仕事に才能を発揮しやすい。',
+  '食神': '<b>飲食・エンタメ・趣味を仕事にする系</b>。好きなことをのんびり形にする仕事が向く。癒し系のサービス業、余裕を持って取り組める創作活動。',
+  '傷官': '<b>クリエイティブ職・専門技術職</b>。独自のセンスや技術・表現力を発揮する仕事に向く。芸術、批評・評論、専門技術を極める仕事。',
+  '偏財': '<b>営業・投資・貿易・広く稼ぐ仕事</b>。商才やフットワークの軽さを活かす仕事が向く。人脈や情報を動かしてお金を生み出す仕事。',
+  '正財': '<b>事務・経理・堅実な会社員</b>。コツコツ堅実に財を築く仕事が向く。地道な積み重ねが評価される職種。',
+  '偏官': '<b>経営者・体育会系・警察／消防</b>。プレッシャーの強い現場やリーダーシップが求められる仕事に強い。修羅場に強いタイプ。',
+  '正官': '<b>公務員・大企業のサラリーマン・管理職</b>。規律・信頼・肩書きのある仕事で安定しやすい。組織の中で評価を積み上げる仕事。',
+  '偏印': '<b>IT・医療・占い・研究・専門職</b>。専門的な技術やマニアックな知識、アイディア、研究を活かす仕事に向く。独自の専門性で勝負する分野。',
+  '印綬': '<b>教育・研究・カウンセラー・資格職</b>。学び続けること・教えること・支えることを通じて力を発揮する仕事に向く。'
+};
+function showTsuuhenseiJobFit(nik, pKan, pShi) {
+  var pillars = _rebuildPillarsForEngine(nik, pKan, pShi);
+  var results = calcTsuuhenseiEngine(nik, pillars);
+  var isShinkyou = (typeof window._lastIsShinkyou === 'boolean') ? window._lastIsShinkyou : true;
+  var labelRank = { '吉': 0, '中立': 1, '注意': 2 };
+  var withColor = results.map(function (r) {
+    var c = getHenseiColor(r.name, isShinkyou);
+    return { name: r.name, star: r.star, label: c.label };
+  });
+  withColor.sort(function (a, b) {
+    var lr = labelRank[a.label] - labelRank[b.label];
+    if (lr !== 0) return lr;
+    return b.star - a.star;
+  });
+  var top3 = withColor.slice(0, 3);
+  var html = '<div style="font-size:15px;font-weight:700;color:var(--sk-gold-light);margin-bottom:4px;">通変星から見る適職</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:12px;">命式全体では「' + (isShinkyou ? '身強（しんきょう）' : '身弱（しんじゃく）') + '」の傾向。あなたにとって力になりやすい（用神的な）通変星を優先して表示しています。</div>';
+  top3.forEach(function (r, i) {
+    var starText = new Array(r.star + 1).join('★') + new Array(6 - r.star).join('☆');
+    var desc = TSUHENSEI_JOB_DESC[r.name] || '';
+    var tagColor = r.label === '吉' ? '#5fd98a' : (r.label === '注意' ? '#e0855c' : '#a8b8c8');
+    html += '<div style="margin-bottom:14px;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:8px;border-left:3px solid var(--sk-gold-light);">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+      '<span style="font-size:13px;font-weight:700;color:var(--text);">' + r.name + '<span style="font-size:10px;font-weight:400;color:' + tagColor + ';margin-left:6px;">（' + r.label + '）</span></span>' +
+      '<span style="font-size:12px;letter-spacing:1px;color:var(--sk-gold-light);">' + starText + '</span>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--muted);line-height:1.6;">' + desc + '</div>' +
+      '</div>';
+  });
+  html += '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:4px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">※身強・身弱から見た用神（あなたに力を与えてくれる通変星）を優先し、その中での出現度で並べています。断定ではなく、方向性の参考としてご覧ください。</div>';
   showModal(html);
 }
 
