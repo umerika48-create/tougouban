@@ -130,44 +130,6 @@
   .empty{text-align:center;padding:30px 10px;color:var(--ink-dim);font-size:13px;}
   .empty .star{color:var(--gold);font-size:22px;display:block;margin-bottom:8px;}
 
-  @media (max-width: 560px){
-    body{padding:20px 12px 40px;}
-    .entry{
-      flex-wrap:wrap;
-    }
-    .entry .info{
-      flex:1 1 auto;
-      min-width:0;
-    }
-    .entry .actions{
-      flex-basis:100%;
-      justify-content:flex-start;
-      margin-top:6px;
-    }
-    .entry .actions button{
-      flex:1 1 auto;
-      text-align:center;
-    }
-    .group-title{
-      flex-wrap:wrap;
-      gap:6px;
-    }
-    .group-title::after{
-      flex-basis:100%;
-      height:0;
-    }
-    .toolbar{
-      flex-direction:column;
-      align-items:stretch;
-    }
-    .toolbar .search{
-      min-width:0;
-    }
-    .row2{
-      grid-template-columns:1fr;
-    }
-  }
-
   .status{font-size:12px;color:var(--gold-soft);margin-top:10px;min-height:16px;}
   textarea.export-box{
     width:100%;min-height:120px;background:var(--night-2);border:1px solid var(--line);
