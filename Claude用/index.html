@@ -19682,7 +19682,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   if (_bsTime) _birthDisplay += ' ' + _bsTime;
   if (_bsPlace) _birthDisplay += '（' + _bsPlace + '）';
   if (_bsAge) _birthDisplay += '（' + _bsAge + '）';
-  var html = (hideTabs ? '' : _toggleHTML) + "\n  <div class=\"result-title fade-in\">\n    <h2>\u547D \u5F0F \u8868</h2>\n    <div class=\"person-name\">".concat(_birthDisplay, "\u751F</div>\n    ").concat(personName ? '<div style="font-size:0.75rem;letter-spacing:0.3em;color:var(--sk-silver);margin-top:0.4rem;">' + personName + '</div>' : '', "\n  </div>\n\n  <div class=\"meishiki-wrapper fade-in\">\n    <table class=\"meishiki-table ").concat(noHourClass, "\">\n      ").concat(tableRows, "\n    </table>\n  </div>\n\n  <div style=\"display:flex;gap:8px;justify-content:center;margin:10px 0;\">\n    <button onclick=\"showTsuuhenseiRanking(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(184,150,46,.4);background:rgba(184,150,46,.1);color:var(--sk-gold-light);font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDCCA \u8A55\u4FA1</button>\n    <button onclick=\"showTsuuhenseiFullAnalysis(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(168,154,255,.5);background:rgba(168,154,255,.1);color:#b8a8ff;font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDD0D \u89E3\u6790</button>\n    <button onclick=\"showTsuuhenseiJobFit(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(120,200,150,.5);background:rgba(120,200,150,.1);color:#8fe0b0;font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDCBC \u9069\u8077</button>\n  </div>\n\n  <div class=\"kuubo-card fade-in\">\n    <div class=\"kuubo-title\">\u7A7A \u4EA1\uFF08\u5929 \u4E2D \u6BBA\uFF09</div>\n    <div class=\"kuubo-content\">\n      <div class=\"kuubo-shi\">\n        ").concat(kuuboNames.map(function (s) {
+  var html = (hideTabs ? '' : _toggleHTML) + "\n  <div class=\"result-title fade-in\">\n    <h2>\u547D \u5F0F \u8868</h2>\n    <div class=\"person-name\">".concat(_birthDisplay, "\u751F</div>\n    ").concat(personName ? '<div style="font-size:0.75rem;letter-spacing:0.3em;color:var(--sk-silver);margin-top:0.4rem;">' + personName + '</div>' : '', "\n  </div>\n\n  <div class=\"meishiki-wrapper fade-in\">\n    <table class=\"meishiki-table ").concat(noHourClass, "\">\n      ").concat(tableRows, "\n    </table>\n  </div>\n\n  <div style=\"display:flex;gap:8px;justify-content:center;margin:10px 0;\">\n    <button onclick=\"showTsuuhenseiRanking(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(184,150,46,.4);background:rgba(184,150,46,.1);color:var(--sk-gold-light);font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDCCA \u8A55\u4FA1</button>\n    <button onclick=\"showTsuuhenseiFullAnalysis(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(168,154,255,.5);background:rgba(168,154,255,.1);color:#b8a8ff;font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDD0D \u89E3\u6790</button>\n    <button onclick=\"showTsuuhenseiJobFit(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(120,200,150,.5);background:rgba(120,200,150,.1);color:#8fe0b0;font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDCBC \u9069\u8077</button>\n    <button onclick=\"showTsuuhenseiPartnerFit(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(240,150,180,.5);background:rgba(240,150,180,.1);color:#f5a8c0;font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDC91 \u5408\u3046\u4EBA</button>\n  </div>\n\n  <div class=\"kuubo-card fade-in\">\n    <div class=\"kuubo-title\">\u7A7A \u4EA1\uFF08\u5929 \u4E2D \u6BBA\uFF09</div>\n    <div class=\"kuubo-content\">\n      <div class=\"kuubo-shi\">\n        ").concat(kuuboNames.map(function (s) {
     return "<span class=\"kuubo-badge\">".concat(s, "</span>");
   }).join('<span class="kuubo-sep">・</span>'), "\n      </div>\n      <div class=\"kuubo-note\">\n        \u65E5\u67F1\u300C").concat(KAN10[day_p.kan]).concat(SHI12[day_p.shi], "\u300D\u304C\u5C5E\u3059\u308B\u65EC\u306E\u7A7A\u4EA1\u5730\u652F\u3067\u3059\u3002\n        ").concat(kuuboInPillars.length > 0 ? "\u547D\u5F0F\u4E2D\u306B\u7A7A\u4EA1\u5730\u652F\uFF08".concat(kuuboInPillars.map(function (p) {
     return SHI12[p.shi];
@@ -21298,6 +21298,52 @@ function showTsuuhenseiJobFit(nik, pKan, pShi) {
   top3.forEach(function (r, i) {
     var starText = new Array(r.star + 1).join('★') + new Array(6 - r.star).join('☆');
     var desc = TSUHENSEI_JOB_DESC[r.name] || '';
+    var tagColor = r.label === '吉' ? '#5fd98a' : (r.label === '注意' ? '#e0855c' : '#a8b8c8');
+    html += '<div style="margin-bottom:14px;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:8px;border-left:3px solid var(--sk-gold-light);">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
+      '<span style="font-size:13px;font-weight:700;color:var(--text);">' + r.name + '<span style="font-size:10px;font-weight:400;color:' + tagColor + ';margin-left:6px;">（' + r.label + '）</span></span>' +
+      '<span style="font-size:12px;letter-spacing:1px;color:var(--sk-gold-light);">' + starText + '</span>' +
+      '</div>' +
+      '<div style="font-size:12px;color:var(--muted);line-height:1.6;">' + desc + '</div>' +
+      '</div>';
+  });
+  html += '<div style="font-size:10px;color:var(--sk-silver-dim);margin-top:4px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">※身強・身弱から見た用神（あなたに力を与えてくれる通変星）を優先し、その中での出現度で並べています。断定ではなく、方向性の参考としてご覧ください。</div>';
+  showModal(html);
+}
+
+/* 💑合う人バッジ：出現度上位の通変星（用神優先）から相性の良い人物タイプを解説 */
+var TSUHENSEI_PARTNER_DESC = {
+  '比肩': '<b>対等な関係を築ける人</b>。自立していて干渉しすぎない、こちらのペースを尊重してくれる人と長く続きやすい。',
+  '劫財': '<b>一緒に高め合える人</b>。良い意味でライバルになれる、行動力があってこちらの背中を押してくれる人。',
+  '食神': '<b>一緒にいて安心できる人</b>。おおらかで、好きなことを一緒に楽しめる、肩の力が抜ける相手。',
+  '傷官': '<b>個性やセンスを認めてくれる人</b>。人と違う感性や才能を否定せず、面白がってくれる相手。',
+  '偏財': '<b>フットワークが軽く刺激をくれる人</b>。一緒にいると世界が広がる、社交的で行動的な相手。',
+  '正財': '<b>堅実で誠実な人</b>。地に足がついていて、安心して将来を任せられる相手。',
+  '偏官': '<b>頼れる存在感のある人</b>。プレッシャーにも動じず、引っ張っていってくれる強さのある相手。',
+  '正官': '<b>誠実で社会的にしっかりした人</b>。常識があり、周りからの信頼も厚い、安定感のある相手。',
+  '偏印': '<b>知的好奇心を刺激してくれる人</b>。独自の視点や専門知識を持ち、一緒にいて発見がある相手。',
+  '印綬': '<b>精神的に包み込んでくれる人</b>。学びや成長を後押ししてくれる、面倒見の良い相手。'
+};
+function showTsuuhenseiPartnerFit(nik, pKan, pShi) {
+  var pillars = _rebuildPillarsForEngine(nik, pKan, pShi);
+  var results = calcTsuuhenseiEngine(nik, pillars);
+  var isShinkyou = (typeof window._lastIsShinkyou === 'boolean') ? window._lastIsShinkyou : true;
+  var labelRank = { '吉': 0, '中立': 1, '注意': 2 };
+  var withColor = results.map(function (r) {
+    var c = getHenseiColor(r.name, isShinkyou);
+    return { name: r.name, star: r.star, label: c.label };
+  });
+  withColor.sort(function (a, b) {
+    var lr = labelRank[a.label] - labelRank[b.label];
+    if (lr !== 0) return lr;
+    return b.star - a.star;
+  });
+  var top3 = withColor.slice(0, 3);
+  var html = '<div style="font-size:15px;font-weight:700;color:var(--sk-gold-light);margin-bottom:4px;">通変星から見る合う人</div>' +
+    '<div style="font-size:11px;color:var(--muted);margin-bottom:12px;">命式全体では「' + (isShinkyou ? '身強（しんきょう）' : '身弱（しんじゃく）') + '」の傾向。あなたにとって力になりやすい（用神的な）通変星が持つ人物像を優先して表示しています。</div>';
+  top3.forEach(function (r, i) {
+    var starText = new Array(r.star + 1).join('★') + new Array(6 - r.star).join('☆');
+    var desc = TSUHENSEI_PARTNER_DESC[r.name] || '';
     var tagColor = r.label === '吉' ? '#5fd98a' : (r.label === '注意' ? '#e0855c' : '#a8b8c8');
     html += '<div style="margin-bottom:14px;padding:8px 10px;background:rgba(255,255,255,0.03);border-radius:8px;border-left:3px solid var(--sk-gold-light);">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">' +
