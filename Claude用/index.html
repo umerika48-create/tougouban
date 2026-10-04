@@ -3602,6 +3602,13 @@ var STARS = {
 /* =======================================================
    ■ 六星占術データ
    ======================================================= */
+/* 'YYYY-MM-DD' を「その日の正午（端末のローカル）」のDateにする。
+   new Date('1986-04-30') は世界時の0時として解釈され、日本より西の端末では前日になってしまうため */
+function _parseYMD(str) {
+  var m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(String(str || ''));
+  if (!m) return new Date(str);
+  return new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10), 12, 0, 0, 0);
+}
 /* 六星：生年月日から算出（霊合星人対応） */
 var ROKKU_STARS = {
   1:{ name:'土星人', symbol:'♄', color:'#a08060' },
@@ -3737,8 +3744,8 @@ var ROKKU_UNMEISU = {
   1958:[15,46,14,45,15,46,16,47,18,48,19,49],
   1959:[20,51,19,50,20,51,21,52,23,53,24,54],
   1960:[25,56,25,56,26,57,27,58,29,59,30,60],
-  1961:[31,2,30,61,31,2,32,3,34,4,35,3],
-  1962:[36,7,35,6,36,7,37,8,39,8,40,10],
+  1961:[31,2,30,61,31,2,32,3,34,4,35,5],
+  1962:[36,7,35,6,36,7,37,8,39,9,40,10],
   1963:[41,12,40,11,41,12,42,13,44,14,45,15],
   1964:[46,17,46,17,47,18,48,19,50,20,51,21],
   1965:[52,23,51,22,52,23,53,24,55,25,56,26],
@@ -3778,7 +3785,7 @@ var ROKKU_UNMEISU = {
   1999:[50,21,49,20,50,21,51,22,53,23,54,24],
   2000:[55,26,55,26,56,27,57,28,59,29,60,30],
   2001:[61,32,60,31,61,32,2,33,4,34,5,35],
-  2002:[6,37,5,36,6,37,7,38,9,39,10,10],
+  2002:[6,37,5,36,6,37,7,38,9,39,10,40],
   2003:[11,42,10,41,11,42,12,43,14,44,15,45],
   2004:[16,47,16,47,17,48,18,49,20,50,21,51],
   2005:[22,53,21,52,22,53,23,54,25,55,26,56],
@@ -3850,7 +3857,7 @@ function seisuu2Star(seisuu) {
 
 /* 六星人フル算出（星人名・プラスマイナス・霊合・星数） */
 function getRokkuFull(birthdate) {
-  var d   = new Date(birthdate);
+  var d   = _parseYMD(birthdate);
   var yr  = d.getFullYear(), mo = d.getMonth()+1, day = d.getDate();
 
   /* 運命数テーブルから取得 */
@@ -4044,8 +4051,8 @@ function showRokkuAishoDetail(elId, stageName) {
 function buildRokkuAishoHTML(bdA, bdB) {
   var fullA = getRokkuFull(bdA);
   var fullB = getRokkuFull(bdB);
-  var yrA = (new Date(bdA)).getFullYear();
-  var yrB = (new Date(bdB)).getFullYear();
+  var yrA = (_parseYMD(bdA)).getFullYear();
+  var yrB = (_parseYMD(bdB)).getFullYear();
   var ettoA = getEtto(yrA);
   var ettoB = getEtto(yrB);
   var keyA = fullA.starId + (fullA.plus ? '+' : '-');
@@ -4360,7 +4367,7 @@ var SUUHI_YEAR = {
    → 2026+5+5=2036 → 2+0+3+6=11 → while(>9) で 1+1=2 になってしまう（マスター11が消える）
    修正: 各要素を先に還元してから足し、reduceToSingle でマスターを保持する */
 function getPersonalYear(birthdate, targetYear) {
-  var d = new Date(birthdate);
+  var d = _parseYMD(birthdate);
   var mo = d.getMonth()+1, day = d.getDate();
   var rYear = reduceToSingle(targetYear); /* 2026→1, 2025→9 など */
   var rMo   = reduceToSingle(mo);
@@ -4391,7 +4398,7 @@ function formatCoreNum(n) {
 
 /* 本命数：生年月日の全数字を1桁ずつ足して還元（パターンA） */
 function getLifePathNumber(birthdate) {
-  var d = new Date(birthdate);
+  var d = _parseYMD(birthdate);
   var str = String(d.getFullYear()) +
             String(d.getMonth() + 1) +
             String(d.getDate());
@@ -4402,7 +4409,7 @@ function getLifePathNumber(birthdate) {
 
 /* 未来数（チャレンジナンバー）：月と日の全数字を1桁ずつ足して還元 */
 function getFutureNumber(birthdate) {
-  var d = new Date(birthdate);
+  var d = _parseYMD(birthdate);
   var str = String(d.getMonth() + 1) + String(d.getDate());
   var sum = 0;
   str.split('').forEach(function(c){ sum += parseInt(c); });
@@ -4411,7 +4418,7 @@ function getFutureNumber(birthdate) {
 
 /* 過去数：日の全数字を1桁ずつ足して還元 */
 function getPastNumber(birthdate) {
-  var d = new Date(birthdate);
+  var d = _parseYMD(birthdate);
   var str = String(d.getDate());
   var sum = 0;
   str.split('').forEach(function(c){ sum += parseInt(c); });
@@ -4879,7 +4886,7 @@ var COMBO_MSG = {
 
 /* 本命星（立春基準） */
 function getHonmeiStar(birthdate) {
-  var d = new Date(birthdate);
+  var d = _parseYMD(birthdate);
   var yr = d.getFullYear();
   var mo = d.getMonth()+1, dy = d.getDate();
   /* 立春判定: SETSUIRI_TABLEを使用（2/3や2/5立春の年に対応） */
@@ -5083,7 +5090,7 @@ function getMonthGanzhiSanmei(yearStem, kMonth) {
 
 /* 生年月日から算命学の命式（年柱・月柱・日柱）を算出 */
 function getSanmeiMeishiki(birthdate) {
-  var bd = new Date(birthdate);
+  var bd = _parseYMD(birthdate);
   var y = bd.getFullYear(), m = bd.getMonth()+1, d = bd.getDate();
   var km = getKigakuMonth(y, m, d);
   var dayGZ = getDayGanzhi(y, m, d);
@@ -6835,17 +6842,16 @@ function getYearBoard(yr) {
   return placeStars(c===0 ? 9 : c);
 }
 
-/* 月盤の中宮星 */
+/* 月盤の中宮星
+   yr = 気学年（立春基準）, mo = 月(1〜12。1月は「その気学年の最後の月＝丑月」)
+   ・年の九星は毎年 -1、月の九星は毎月 -1 で進む
+   ・寅月(2月)の中宮は、年の九星が 1・4・7 → 八白、2・5・8 → 二黒、3・6・9 → 五黄（式: 3×年の九星+5 を9で割った余り）
+   ・検証: 八雲院（2025年は2月・11月の月盤が年盤と同じ二黒）、2024年5〜8月が二黒・一白・九紫・八白、2025年1月が三碧 */
 function getMonthCenter(yr, mo) {
-  var yc = getYearCenter(yr);
-  /* 2月の月中宮 = 年中宮 - 2 (mod 9) */
-  var feb_mc = yc - 2; if(feb_mc <= 0) feb_mc += 9;
-  /* 1月は当年2月の月中宮から-11（12→1月順で-11ヶ月）、3月以降は月が増えるごとに-1 */
-  var offset = (mo === 1) ? -11 : -(mo - 2);
-  var mc = feb_mc + offset;
-  while(mc <= 0) mc += 9;
-  while(mc > 9) mc -= 9;
-  return mc;
+  var yc = getYearCenter(yr);                       /* 1〜9 */
+  var feb = ((3 * yc + 5 - 1) % 9) + 1;            /* 寅月(2月)の中宮 */
+  var k = (mo >= 2) ? (mo - 2) : 11;               /* 寅月から数えて何か月目か（1月=丑月=11） */
+  return ((((feb - k - 1) % 9) + 9) % 9) + 1;
 }
 
 
@@ -7924,9 +7930,8 @@ function buildYearFourStepHTML(birthdate, targetYear) {
     var movementParts = [];
     // 大運との関係（性別入力があれば計算）
     try {
-      var isFemaleEl = document.getElementById('genderFemale');
-      var isFemale = isFemaleEl ? isFemaleEl.checked : true;
-      var dauResult = calcDaun((typeof _np !== 'undefined' && _np && _np.jst) ? _np.jst : bdt, nenP.kan, nenP.shi, getsP.kan, getsP.shi, isFemale);
+      var _gSel = getShichuuGenderForBd(birthdate);   // 男女ボタンで選んだ性別（未選択なら null → 大運との関係は出さない）
+      var dauResult = _gSel ? calcDaun((typeof _np !== 'undefined' && _np && _np.jst) ? _np.jst : bdt, nenP.kan, nenP.shi, getsP.kan, getsP.shi, _gSel === 'F') : null;
       if (dauResult && dauResult.list) {
         var birthYearNum = by;
         var targetAge = targetYear - birthYearNum;
@@ -8282,18 +8287,472 @@ function toggleNycPanel(idx) {
    切り替え当日は前日と同じ星が2日続く
    ======================================================= */
 var _DAILY_SW = [
-  /* [年, 月, 日, 種別('W'=陽遁/'S'=陰遁), 開始星] */
-  [2024,  1,  1, 'W', 1],  /* 2024陽遁始め */
-  [2024,  6, 29, 'S', 9],  /* 2024陰遁始め */
-  [2025,  6, 24, 'S', 9],  /* 2025陰遁始め */
-  [2025, 12, 21, 'W', 1],  /* 2025陽遁始め */
-  [2026,  2,  4, 'W', 1],  /* 2026陽遁始め */
-  [2026,  6, 19, 'S', 9],  /* 2026陰遁始め */
-  [2026, 12, 16, 'W', 1],  /* 2026陽遁始め */
-  [2027,  6, 14, 'S', 9],  /* 2027陰遁始め（近似） */
-  [2027, 12, 11, 'W', 1],  /* 2027陽遁始め（近似） */
-  [2028,  6,  2, 'S', 9],  /* 2028陰遁始め（近似） */
-  [2028, 11, 28, 'W', 1],  /* 2028陽遁始め（近似） */
+  /* [年, 月, 日, 種別('W'=陽遁/'S'=陰遁), 開始星] 冬至に最も近い甲子日＝陽遁始め(一白)、夏至に最も近い甲子日＝陰遁始め(九紫)。
+     天文計算(Swiss Ephemeris)で1869〜2100年を作成。以前の手入力表（2024〜2028年のみ・一部欠落）を置き換え */
+  [1869,6,2,'S',9],
+  [1869,11,29,'W',1],
+  [1870,5,28,'S',9],
+  [1870,11,24,'W',1],
+  [1871,5,23,'S',9],
+  [1872,1,18,'W',1],
+  [1872,7,16,'S',9],
+  [1873,1,12,'W',1],
+  [1873,7,11,'S',9],
+  [1874,1,7,'W',1],
+  [1874,7,6,'S',9],
+  [1875,1,2,'W',1],
+  [1875,7,1,'S',9],
+  [1875,12,28,'W',1],
+  [1876,6,25,'S',9],
+  [1876,12,22,'W',1],
+  [1877,6,20,'S',9],
+  [1877,12,17,'W',1],
+  [1878,6,15,'S',9],
+  [1878,12,12,'W',1],
+  [1879,6,10,'S',9],
+  [1879,12,7,'W',1],
+  [1880,6,4,'S',9],
+  [1880,12,1,'W',1],
+  [1881,5,30,'S',9],
+  [1881,11,26,'W',1],
+  [1882,5,25,'S',9],
+  [1883,1,20,'W',1],
+  [1883,7,19,'S',9],
+  [1884,1,15,'W',1],
+  [1884,7,13,'S',9],
+  [1885,1,9,'W',1],
+  [1885,7,8,'S',9],
+  [1886,1,4,'W',1],
+  [1886,7,3,'S',9],
+  [1886,12,30,'W',1],
+  [1887,6,28,'S',9],
+  [1887,12,25,'W',1],
+  [1888,6,22,'S',9],
+  [1888,12,19,'W',1],
+  [1889,6,17,'S',9],
+  [1889,12,14,'W',1],
+  [1890,6,12,'S',9],
+  [1890,12,9,'W',1],
+  [1891,6,7,'S',9],
+  [1891,12,4,'W',1],
+  [1892,6,1,'S',9],
+  [1892,11,28,'W',1],
+  [1893,5,27,'S',9],
+  [1893,11,23,'W',1],
+  [1894,5,22,'S',9],
+  [1895,1,17,'W',1],
+  [1895,7,16,'S',9],
+  [1896,1,12,'W',1],
+  [1896,7,10,'S',9],
+  [1897,1,6,'W',1],
+  [1897,7,5,'S',9],
+  [1898,1,1,'W',1],
+  [1898,6,30,'S',9],
+  [1898,12,27,'W',1],
+  [1899,6,25,'S',9],
+  [1899,12,22,'W',1],
+  [1900,6,20,'S',9],
+  [1900,12,17,'W',1],
+  [1901,6,15,'S',9],
+  [1901,12,12,'W',1],
+  [1902,6,10,'S',9],
+  [1902,12,7,'W',1],
+  [1903,6,5,'S',9],
+  [1903,12,2,'W',1],
+  [1904,5,30,'S',9],
+  [1904,11,26,'W',1],
+  [1905,5,25,'S',9],
+  [1906,1,20,'W',1],
+  [1906,7,19,'S',9],
+  [1907,1,15,'W',1],
+  [1907,7,14,'S',9],
+  [1908,1,10,'W',1],
+  [1908,7,8,'S',9],
+  [1909,1,4,'W',1],
+  [1909,7,3,'S',9],
+  [1909,12,30,'W',1],
+  [1910,6,28,'S',9],
+  [1910,12,25,'W',1],
+  [1911,6,23,'S',9],
+  [1911,12,20,'W',1],
+  [1912,6,17,'S',9],
+  [1912,12,14,'W',1],
+  [1913,6,12,'S',9],
+  [1913,12,9,'W',1],
+  [1914,6,7,'S',9],
+  [1914,12,4,'W',1],
+  [1915,6,2,'S',9],
+  [1915,11,29,'W',1],
+  [1916,5,27,'S',9],
+  [1916,11,23,'W',1],
+  [1917,7,21,'S',9],
+  [1918,1,17,'W',1],
+  [1918,7,16,'S',9],
+  [1919,1,12,'W',1],
+  [1919,7,11,'S',9],
+  [1920,1,7,'W',1],
+  [1920,7,5,'S',9],
+  [1921,1,1,'W',1],
+  [1921,6,30,'S',9],
+  [1921,12,27,'W',1],
+  [1922,6,25,'S',9],
+  [1922,12,22,'W',1],
+  [1923,6,20,'S',9],
+  [1923,12,17,'W',1],
+  [1924,6,14,'S',9],
+  [1924,12,11,'W',1],
+  [1925,6,9,'S',9],
+  [1925,12,6,'W',1],
+  [1926,6,4,'S',9],
+  [1926,12,1,'W',1],
+  [1927,5,30,'S',9],
+  [1927,11,26,'W',1],
+  [1928,5,24,'S',9],
+  [1929,1,19,'W',1],
+  [1929,7,18,'S',9],
+  [1930,1,14,'W',1],
+  [1930,7,13,'S',9],
+  [1931,1,9,'W',1],
+  [1931,7,8,'S',9],
+  [1932,1,4,'W',1],
+  [1932,7,2,'S',9],
+  [1932,12,29,'W',1],
+  [1933,6,27,'S',9],
+  [1933,12,24,'W',1],
+  [1934,6,22,'S',9],
+  [1934,12,19,'W',1],
+  [1935,6,17,'S',9],
+  [1935,12,14,'W',1],
+  [1936,6,11,'S',9],
+  [1936,12,8,'W',1],
+  [1937,6,6,'S',9],
+  [1937,12,3,'W',1],
+  [1938,6,1,'S',9],
+  [1938,11,28,'W',1],
+  [1939,5,27,'S',9],
+  [1939,11,23,'W',1],
+  [1940,7,20,'S',9],
+  [1941,1,16,'W',1],
+  [1941,7,15,'S',9],
+  [1942,1,11,'W',1],
+  [1942,7,10,'S',9],
+  [1943,1,6,'W',1],
+  [1943,7,5,'S',9],
+  [1944,1,1,'W',1],
+  [1944,6,29,'S',9],
+  [1944,12,26,'W',1],
+  [1945,6,24,'S',9],
+  [1945,12,21,'W',1],
+  [1946,6,19,'S',9],
+  [1946,12,16,'W',1],
+  [1947,6,14,'S',9],
+  [1947,12,11,'W',1],
+  [1948,6,8,'S',9],
+  [1948,12,5,'W',1],
+  [1949,6,3,'S',9],
+  [1949,11,30,'W',1],
+  [1950,5,29,'S',9],
+  [1950,11,25,'W',1],
+  [1951,5,24,'S',9],
+  [1952,1,19,'W',1],
+  [1952,7,17,'S',9],
+  [1953,1,13,'W',1],
+  [1953,7,12,'S',9],
+  [1954,1,8,'W',1],
+  [1954,7,7,'S',9],
+  [1955,1,3,'W',1],
+  [1955,7,2,'S',9],
+  [1955,12,29,'W',1],
+  [1956,6,26,'S',9],
+  [1956,12,23,'W',1],
+  [1957,6,21,'S',9],
+  [1957,12,18,'W',1],
+  [1958,6,16,'S',9],
+  [1958,12,13,'W',1],
+  [1959,6,11,'S',9],
+  [1959,12,8,'W',1],
+  [1960,6,5,'S',9],
+  [1960,12,2,'W',1],
+  [1961,5,31,'S',9],
+  [1961,11,27,'W',1],
+  [1962,5,26,'S',9],
+  [1962,11,22,'W',1],
+  [1963,7,20,'S',9],
+  [1964,1,16,'W',1],
+  [1964,7,14,'S',9],
+  [1965,1,10,'W',1],
+  [1965,7,9,'S',9],
+  [1966,1,5,'W',1],
+  [1966,7,4,'S',9],
+  [1966,12,31,'W',1],
+  [1967,6,29,'S',9],
+  [1967,12,26,'W',1],
+  [1968,6,23,'S',9],
+  [1968,12,20,'W',1],
+  [1969,6,18,'S',9],
+  [1969,12,15,'W',1],
+  [1970,6,13,'S',9],
+  [1970,12,10,'W',1],
+  [1971,6,8,'S',9],
+  [1971,12,5,'W',1],
+  [1972,6,2,'S',9],
+  [1972,11,29,'W',1],
+  [1973,5,28,'S',9],
+  [1973,11,24,'W',1],
+  [1974,5,23,'S',9],
+  [1975,1,18,'W',1],
+  [1975,7,17,'S',9],
+  [1976,1,13,'W',1],
+  [1976,7,11,'S',9],
+  [1977,1,7,'W',1],
+  [1977,7,6,'S',9],
+  [1978,1,2,'W',1],
+  [1978,7,1,'S',9],
+  [1978,12,28,'W',1],
+  [1979,6,26,'S',9],
+  [1979,12,23,'W',1],
+  [1980,6,20,'S',9],
+  [1980,12,17,'W',1],
+  [1981,6,15,'S',9],
+  [1981,12,12,'W',1],
+  [1982,6,10,'S',9],
+  [1982,12,7,'W',1],
+  [1983,6,5,'S',9],
+  [1983,12,2,'W',1],
+  [1984,5,30,'S',9],
+  [1984,11,26,'W',1],
+  [1985,5,25,'S',9],
+  [1986,1,20,'W',1],
+  [1986,7,19,'S',9],
+  [1987,1,15,'W',1],
+  [1987,7,14,'S',9],
+  [1988,1,10,'W',1],
+  [1988,7,8,'S',9],
+  [1989,1,4,'W',1],
+  [1989,7,3,'S',9],
+  [1989,12,30,'W',1],
+  [1990,6,28,'S',9],
+  [1990,12,25,'W',1],
+  [1991,6,23,'S',9],
+  [1991,12,20,'W',1],
+  [1992,6,17,'S',9],
+  [1992,12,14,'W',1],
+  [1993,6,12,'S',9],
+  [1993,12,9,'W',1],
+  [1994,6,7,'S',9],
+  [1994,12,4,'W',1],
+  [1995,6,2,'S',9],
+  [1995,11,29,'W',1],
+  [1996,5,27,'S',9],
+  [1996,11,23,'W',1],
+  [1997,5,22,'S',9],
+  [1998,1,17,'W',1],
+  [1998,7,16,'S',9],
+  [1999,1,12,'W',1],
+  [1999,7,11,'S',9],
+  [2000,1,7,'W',1],
+  [2000,7,5,'S',9],
+  [2001,1,1,'W',1],
+  [2001,6,30,'S',9],
+  [2001,12,27,'W',1],
+  [2002,6,25,'S',9],
+  [2002,12,22,'W',1],
+  [2003,6,20,'S',9],
+  [2003,12,17,'W',1],
+  [2004,6,14,'S',9],
+  [2004,12,11,'W',1],
+  [2005,6,9,'S',9],
+  [2005,12,6,'W',1],
+  [2006,6,4,'S',9],
+  [2006,12,1,'W',1],
+  [2007,5,30,'S',9],
+  [2007,11,26,'W',1],
+  [2008,5,24,'S',9],
+  [2009,1,19,'W',1],
+  [2009,7,18,'S',9],
+  [2010,1,14,'W',1],
+  [2010,7,13,'S',9],
+  [2011,1,9,'W',1],
+  [2011,7,8,'S',9],
+  [2012,1,4,'W',1],
+  [2012,7,2,'S',9],
+  [2012,12,29,'W',1],
+  [2013,6,27,'S',9],
+  [2013,12,24,'W',1],
+  [2014,6,22,'S',9],
+  [2014,12,19,'W',1],
+  [2015,6,17,'S',9],
+  [2015,12,14,'W',1],
+  [2016,6,11,'S',9],
+  [2016,12,8,'W',1],
+  [2017,6,6,'S',9],
+  [2017,12,3,'W',1],
+  [2018,6,1,'S',9],
+  [2018,11,28,'W',1],
+  [2019,5,27,'S',9],
+  [2019,11,23,'W',1],
+  [2020,7,20,'S',9],
+  [2021,1,16,'W',1],
+  [2021,7,15,'S',9],
+  [2022,1,11,'W',1],
+  [2022,7,10,'S',9],
+  [2023,1,6,'W',1],
+  [2023,7,5,'S',9],
+  [2024,1,1,'W',1],
+  [2024,6,29,'S',9],
+  [2024,12,26,'W',1],
+  [2025,6,24,'S',9],
+  [2025,12,21,'W',1],
+  [2026,6,19,'S',9],
+  [2026,12,16,'W',1],
+  [2027,6,14,'S',9],
+  [2027,12,11,'W',1],
+  [2028,6,8,'S',9],
+  [2028,12,5,'W',1],
+  [2029,6,3,'S',9],
+  [2029,11,30,'W',1],
+  [2030,5,29,'S',9],
+  [2030,11,25,'W',1],
+  [2031,5,24,'S',9],
+  [2032,1,19,'W',1],
+  [2032,7,17,'S',9],
+  [2033,1,13,'W',1],
+  [2033,7,12,'S',9],
+  [2034,1,8,'W',1],
+  [2034,7,7,'S',9],
+  [2035,1,3,'W',1],
+  [2035,7,2,'S',9],
+  [2035,12,29,'W',1],
+  [2036,6,26,'S',9],
+  [2036,12,23,'W',1],
+  [2037,6,21,'S',9],
+  [2037,12,18,'W',1],
+  [2038,6,16,'S',9],
+  [2038,12,13,'W',1],
+  [2039,6,11,'S',9],
+  [2039,12,8,'W',1],
+  [2040,6,5,'S',9],
+  [2040,12,2,'W',1],
+  [2041,5,31,'S',9],
+  [2041,11,27,'W',1],
+  [2042,5,26,'S',9],
+  [2042,11,22,'W',1],
+  [2043,7,20,'S',9],
+  [2044,1,16,'W',1],
+  [2044,7,14,'S',9],
+  [2045,1,10,'W',1],
+  [2045,7,9,'S',9],
+  [2046,1,5,'W',1],
+  [2046,7,4,'S',9],
+  [2046,12,31,'W',1],
+  [2047,6,29,'S',9],
+  [2047,12,26,'W',1],
+  [2048,6,23,'S',9],
+  [2048,12,20,'W',1],
+  [2049,6,18,'S',9],
+  [2049,12,15,'W',1],
+  [2050,6,13,'S',9],
+  [2050,12,10,'W',1],
+  [2051,6,8,'S',9],
+  [2051,12,5,'W',1],
+  [2052,6,2,'S',9],
+  [2052,11,29,'W',1],
+  [2053,5,28,'S',9],
+  [2053,11,24,'W',1],
+  [2054,5,23,'S',9],
+  [2055,1,18,'W',1],
+  [2055,7,17,'S',9],
+  [2056,1,13,'W',1],
+  [2056,7,11,'S',9],
+  [2057,1,7,'W',1],
+  [2057,7,6,'S',9],
+  [2058,1,2,'W',1],
+  [2058,7,1,'S',9],
+  [2058,12,28,'W',1],
+  [2059,6,26,'S',9],
+  [2059,12,23,'W',1],
+  [2060,6,20,'S',9],
+  [2060,12,17,'W',1],
+  [2061,6,15,'S',9],
+  [2061,12,12,'W',1],
+  [2062,6,10,'S',9],
+  [2062,12,7,'W',1],
+  [2063,6,5,'S',9],
+  [2063,12,2,'W',1],
+  [2064,5,30,'S',9],
+  [2064,11,26,'W',1],
+  [2065,5,25,'S',9],
+  [2065,11,21,'W',1],
+  [2066,7,19,'S',9],
+  [2067,1,15,'W',1],
+  [2067,7,14,'S',9],
+  [2068,1,10,'W',1],
+  [2068,7,8,'S',9],
+  [2069,1,4,'W',1],
+  [2069,7,3,'S',9],
+  [2069,12,30,'W',1],
+  [2070,6,28,'S',9],
+  [2070,12,25,'W',1],
+  [2071,6,23,'S',9],
+  [2071,12,20,'W',1],
+  [2072,6,17,'S',9],
+  [2072,12,14,'W',1],
+  [2073,6,12,'S',9],
+  [2073,12,9,'W',1],
+  [2074,6,7,'S',9],
+  [2074,12,4,'W',1],
+  [2075,6,2,'S',9],
+  [2075,11,29,'W',1],
+  [2076,5,27,'S',9],
+  [2076,11,23,'W',1],
+  [2077,5,22,'S',9],
+  [2078,1,17,'W',1],
+  [2078,7,16,'S',9],
+  [2079,1,12,'W',1],
+  [2079,7,11,'S',9],
+  [2080,1,7,'W',1],
+  [2080,7,5,'S',9],
+  [2081,1,1,'W',1],
+  [2081,6,30,'S',9],
+  [2081,12,27,'W',1],
+  [2082,6,25,'S',9],
+  [2082,12,22,'W',1],
+  [2083,6,20,'S',9],
+  [2083,12,17,'W',1],
+  [2084,6,14,'S',9],
+  [2084,12,11,'W',1],
+  [2085,6,9,'S',9],
+  [2085,12,6,'W',1],
+  [2086,6,4,'S',9],
+  [2086,12,1,'W',1],
+  [2087,5,30,'S',9],
+  [2087,11,26,'W',1],
+  [2088,5,24,'S',9],
+  [2089,1,19,'W',1],
+  [2089,7,18,'S',9],
+  [2090,1,14,'W',1],
+  [2090,7,13,'S',9],
+  [2091,1,9,'W',1],
+  [2091,7,8,'S',9],
+  [2092,1,4,'W',1],
+  [2092,7,2,'S',9],
+  [2092,12,29,'W',1],
+  [2093,6,27,'S',9],
+  [2093,12,24,'W',1],
+  [2094,6,22,'S',9],
+  [2094,12,19,'W',1],
+  [2095,6,17,'S',9],
+  [2095,12,14,'W',1],
+  [2096,6,11,'S',9],
+  [2096,12,8,'W',1],
+  [2097,6,6,'S',9],
+  [2097,12,3,'W',1],
+  [2098,6,1,'S',9],
+  [2098,11,28,'W',1],
+  [2099,5,27,'S',9],
+  [2099,11,23,'W',1],
+  [2100,5,22,'S',9],
+  [2101,1,17,'W',1],
 ];
 function _toJD(y,m,d){
   var a=Math.floor((14-m)/12),yy=y+4800-a,mm=m+12*a-3;
@@ -8307,7 +8766,7 @@ function getDailyKyusei(y,m,d){
     if(_toJD(_DAILY_SW[i][0],_DAILY_SW[i][1],_DAILY_SW[i][2])<=jd) prev=_DAILY_SW[i];
     else break;
   }
-  if(!prev) return 5;
+  if(!prev) return 5;   /* 1869年より前は未対応 */
   var diff=jd-_toJD(prev[0],prev[1],prev[2]);
   if(prev[3]==='W') return ((prev[4]-1+diff)%9)+1;
   else              return ((prev[4]-1-diff%9+9*100)%9)+1;
@@ -9453,10 +9912,10 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
     }
     var birthStr=yr+'年'+mo+'月'+da+'日'+(unknownTime ? _yakLabel : '　'+('0'+hourVal).slice(-2)+':'+('0'+minVal).slice(-2));
     if(!unknownTime && _si && _si.deltaMin){ birthStr += '（真太陽時 '+('0'+solarDT.getHours()).slice(-2)+':'+('0'+solarDT.getMinutes()).slice(-2)+'）'; }
-    var isFemale=true;
-    var birthForDaun=birthDT; // 日本時間の壁時計（時刻不明のときは正午）
-    var dauResult=calcDaun(birthForDaun,year_p.kan,year_p.shi,month_p.kan,month_p.shi,isFemale);
-    if(dauResult) dauResult.birthYear=yr;
+    // 大運は性別を選んだあとに計算する（男女ボタン・buildDaunSectionHTML）。日本時間の壁時計（時刻不明のときは正午）で計算
+    var _daunWrapId = 'daun-wrap-' + (window._daunSeq = (window._daunSeq || 0) + 1);
+    window._daunCtx[_daunWrapId] = { birthDT: birthDT, year_p: year_p, month_p: month_p, yr: yr, nik: (day_p ? day_p.kan : 0),
+      gkey: _genderKey(birthdate, unknownTime ? '' : (('0'+hourVal).slice(-2) + ('0'+minVal).slice(-2))) };
 
     // 身強・身弱判定
     (function() {
@@ -9506,7 +9965,7 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
     if(window._pendingSunSign || window._pendingMoonSign) {
       window._pendingAddSigns = {sun: window._pendingSunSign, moon: window._pendingMoonSign, sunTrans: window._pendingSunTrans, moonTrans: window._pendingMoonTrans};
     }
-    return _resultHTML + buildUnseiHTML(dauResult,yr,day_p?day_p.kan:0);
+    return _resultHTML + '<div id="' + _daunWrapId + '">' + buildDaunSectionHTML(_daunWrapId) + '</div>';
   } catch(e){ 
     console.error('buildShichuuCardHTML error:', e);
     return '<p style="color:#ff8080;padding:10px;">命式の計算中にエラーが発生しました：' + e.message + '</p>'; 
@@ -13516,9 +13975,36 @@ function lt_moonLon(y,mo,d,hour){var mo2=mo,y2=y;if(mo2<=2){y2--;mo2+=12;}var A=
 function lt_dragonHeadLon(y,mo,d,hour){var mo2=mo,y2=y;if(mo2<=2){y2--;mo2+=12;}var A=Math.floor(y2/100),B=2-A+Math.floor(A/4);var jd=Math.floor(365.25*(y2+4716))+Math.floor(30.6001*(mo2+1))+d+(hour/24)+B-1524.5;var T=(jd-2451545.0)/36525.0;var omega=125.0445479-1934.1362891*T+0.0020754*T*T+T*T*T/467441;return((omega%360)+360)%360;}
 /* リリス（平均月遠地点/ブラックムーン・リリス）の黄経。月の平均近地点+180度で計算する */
 function lt_lilithLon(y,mo,d,hour){var mo2=mo,y2=y;if(mo2<=2){y2--;mo2+=12;}var A=Math.floor(y2/100),B=2-A+Math.floor(A/4);var jd=Math.floor(365.25*(y2+4716))+Math.floor(30.6001*(mo2+1))+d+(hour/24)+B-1524.5;var T=(jd-2451545.0)/36525.0;var perigee=83.3532465+4069.0137287*T-0.0103200*T*T-T*T*T/80053+T*T*T*T/18999000;return(((perigee+180)%360)+360)%360;}
-/* キロンの黄経（ケプラー軌道要素からの簡易近似計算。軌道傾斜の影響は無視した近似値のため、
-   数度程度の誤差がある点に留意。将来より精密な計算に置き換える可能性あり） */
-function lt_chironLon(y,mo,d,hour){var a=13.6367,e=0.38397,Omega=209.2966,argp=339.3982,M0=356.1954;var period=Math.pow(a,1.5);var n=360/(period*365.25);var mo2=mo,y2=y;if(mo2<=2){y2--;mo2+=12;}var A=Math.floor(y2/100),B=2-A+Math.floor(A/4);var jd=Math.floor(365.25*(y2+4716))+Math.floor(30.6001*(mo2+1))+d+(hour/24)+B-1524.5;var days=jd-2451545.0;var M=((M0+n*days)%360+360)%360;var Mr=M*Math.PI/180;var E=Mr;for(var i=0;i<10;i++){E=E-(E-e*Math.sin(E)-Mr)/(1-e*Math.cos(E));}var nu=2*Math.atan2(Math.sqrt(1+e)*Math.sin(E/2),Math.sqrt(1-e)*Math.cos(E/2));var nuDeg=nu*180/Math.PI;return((nuDeg+argp+Omega)%360+360)%360;}
+/* キロンの黄経：Swiss Ephemeris（小惑星データ seas_18）で計算した値を10日ごとに保存し、3次補間で求める（1870〜2100年）。
+   以前のケプラー軌道の簡易近似は誤差が最大約80度（平均31度）あり、星座が違う人が多かったため置き換え。
+   範囲外の日付は、従来の簡易近似（精度が低い）を使う */
+var _CHIRON_JD0 = 2404032.5, _CHIRON_STEP = 10, _CHIRON_V0 = 35950;
+var _CHIRON_B64 = "/P8FAA4AGAAfACgALgAzADcAOwA8ADwAPAA5ADcAMgAsACcAHwAYAA8ABgD9//X/7P/l/93/2f/U/9L/0v/U/9f/3P/i/+v/8//9/wYADwAZACAAKAAvADMAOAA7ADwAPAA7ADoANgAxACwAJgAeABcADgAGAPz/9P/r/+T/3f/Y/9T/0v/S/9T/1//d/+P/6//1//3/BwARABkAIgAoAC8ANQA4ADsAPAA8ADwAOQA1ADEALAAlAB4AFgANAAUA/P/z/+r/4//d/9f/0//S/9L/1P/X/93/5P/t//X///8IABEAGwAiACoAMAA0ADkAOwA9AD0AOwA5ADUAMQAsACQAHgAVAA0ABAD7//L/6v/i/9v/1//T/9H/0v/U/9f/3v/l/+3/9v8AAAkAEwAbACQAKgAxADYAOQA8AD0APQA8ADkANQAxACsAJQAdABQADQADAPr/8f/p/+L/2//V/9P/0f/R/9T/2P/e/+X/7v/3/wEACgAUAB0AJAAsADIANwA6ADwAPgA9ADwAOgA2ADEAKwAkAB0AFAAMAAMA+f/x/+j/4P/b/9X/0f/R/9H/0//Y/9//5v/u//j/AgAMABUAHgAlAC0AMwA4ADsAPgA+AD4APQA6ADYAMQAsACQAHQAUAAwAAgD5//D/5//g/9n/1P/R/9D/0P/U/9j/3v/n/+//+f8DAAwAFwAfACcALgA0ADkAPAA/AD8AQAA9ADsANwAyACsAJQAdABQADAACAPj/7//n/9//2P/T/9H/z//Q/9P/2P/e/+f/8P/6/wMADgAYACAAKQAvADYAOgA9AEAAQQBAAD8APAA4ADIALQAlAB0AFQALAAIA+P/v/+b/3v/Y/9L/z//O/9D/0v/Y/97/5//x//r/BQAPABgAIgAqADEANwA8AD8AQQBDAEEAQAA+ADkAMwAuACYAHgAVAAwAAgD4/+//5f/d/9f/0f/O/87/zv/S/9f/3v/n//H/+/8GAA8AGgAjACwAMgA5AD0AQQBDAEQARABCAD8AOgA2AC8AJwAfABYADQACAPj/7//l/9z/1v/Q/83/zP/O/9H/1v/e/+f/8f/7/wYAEQAbACQALQA0ADsAPwBDAEUARgBGAEQAQQA8ADgAMQApACEAFwAOAAMA+P/v/+X/3P/V/8//zP/K/8z/0P/W/93/5v/x//v/BwARABwAJgAvADYA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KAAxADoAQABGAEkATABNAE0ASgBGAEIAOwA0ACsAIgAYAA0AAgD4/+3/5P/b/9T/z//M/8v/zf/Q/9b/3f/m//D/+v8GABEAGwAmAC4ANgA9AEMARgBJAEoASQBHAEQAPwA5ADIAKgAhABcADAADAPj/7v/k/93/1f/R/83/zf/N/9H/1//d/+b/7//6/wUADwAZACMALQAzADsAQABDAEYARwBHAEUAQQA9ADcAMAApAB8AFgAMAAIA+P/v/+X/3f/X/9L/zv/O/8//0v/X/93/5v/w//n/BAAOABgAIgAqADIAOQA9AEIAQwBFAEQAQwA/ADsANQAvACYAHgAVAAwAAQD4/+//5f/e/9j/0//P/8//0P/T/9f/3//m//D/+f8DAA4AFwAhACkAMQA2ADwAQABCAEIAQwBAAD0AOQA0ACwAJgAdABQACgABAPj/7v/m/97/2P/U/9D/0P/R/9P/2f/f/+f/8P/5/wMADgAXACAAKAAwADUAOwA+AEAAQQBAAD8APAA3ADIAKwAkABsAEwAKAAAA9//u/+b/3v/Z/9T/0f/R/9H/1f/Z/+D/5//x//r/AwAOABcAHwAoAC8ANQA5AD0APwA/AD8APQA6ADYAMAAqACIAGgASAAkA///3/+3/5v/f/9j/1f/R/9H/0//V/9r/4f/p//H/+v8EAA4AFwAfACgALgA0ADkAOwA+AD8APQA8ADgANQAuACkAIQAZABAACAD///b/7f/l/97/2f/V/9L/0v/T/9b/2//i/+n/8v/7/wUADgAXACAAJwAuADQANwA8ADwAPgA8ADsANwAzAC0AJwAgABgAEAAGAP7/9f/s/+X/3v/Z/9X/0v/T/9P/1//c/+P/6v/y//z/BgAPABcAIAAoAC4AMwA4ADoAPAA8ADwAOQA3ADEALQAlAB8AFwAOAAYA/f/0/+z/5P/e/9j/1f/T/9L/1P/Y/93/4//r//T//f8GABAAGAAgACgALgAzADgAOgA7ADwAOwA4ADUAMQArACUAHQAWAA0ABQD8//P/6//k/93/2P/V/9P/0//U/9n/3f/k/+3/9P/+/wcAEAAZACEAKQAuADMANwA6ADsAOwA7ADcANAAwACoAJAAcABUADAAEAPv/8v/q/+P/3f/Y/9X/0//T/9X/2f/e/+X/7f/2////CAARABoAIgAoAC8AMwA4ADkAOwA7ADoANwAzAC8AKQAjABsAFAALAAIA+v/y/+n/4//c/9f/1f/S/9T/1f/a/9//5v/u//f/AAAJABIAGwAiACoALwA0ADcAOgA7ADoAOQA3ADMALgAoACIAGgATAAoAAgD5//D/6f/h/9z/1//U/9P/0//W/9r/4P/n/+//+P8BAAoAEwAcACQAKgAvADUAOAA5ADsAOgA5ADYAMwAtACgAIQAaABEACQABAPj/7//o/+H/2//W/9T/0//T/9b/2//g/+j/8P/6/wIACwAVABwAJQArADAANQA4ADsAOgA7ADkANQAyAC0AKAAgABkAEQAIAAAA9v/v/+f/4P/a/9b/0//S/9T/1v/b/+L/6f/x//r/AwANABYAHgAlACwAMQA2ADkAOgA7ADsAOQA1ADIALQAnAB8AGQAQAAcA///2/+7/5f/f/9r/1f/T/9L/1P/W/9z/4v/p//L//P8FAA4AFgAgACYALQAyADcAOQA7ADwAOwA5ADUAMgAtACYAHwAYAA8ABwD+//X/7f/l/97/2f/U/9L/0v/U/9b/3P/j/+r/9P/8/wYADwAZACAAKAAuADMANwA7ADsAPQA7ADkANgAyAC0AJgAfABcADwAGAP3/9f/s/+T/3f/Y/9P/0v/R/9T/1v/d/+P/6//0//7/BwARABkAIgApAC8ANQA4ADsAPQA9ADwAOgA2ADIALQAmAB8AFwAPAAUA/f/z/+v/4//d/9f/0//R/9H/0//W/93/4//s//X///8JABEAGwAjACsAMAA2ADoAPAA+AD4APQA6ADcAMwAtACYAHwAXAA8ABQD8//P/6v/i/9z/1v/S/9D/0P/T/9b/3f/k/+3/9v///woAEwAcACUAKwAzADcAOwA9AD8APwA+ADwAOAAzAC4AJwAfABcADwAFAPv/8//p/+L/2v/V/9H/z//Q/9L/1v/d/+T/7f/3/wEACgAVAB0AJgAuADMAOQA8AD8AQQBAAEAAPAA6ADQALwAnACEAFwAPAAUA+//y/+n/4P/a/9T/0P/O/8//0f/W/9z/5f/t//f/AgAMABUAHwAoAC8ANQA6AD8AQABDAEIAQQA+ADsANgAvACkAIQAZAA8ABQD8//H/6f/f/9n/0//P/83/zv/Q/9X/3P/k/+7/9/8DAAwAFwAhACkAMAA3AD0AQABDAEQARABDAEAAPQA3ADIA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RgBAADgALwAlABoADwADAPj/7f/j/9r/0v/O/8n/yf/L/87/1P/c/+b/8P/7/wcAEgAeACcAMgA5AEEARwBKAE0ATwBNAEwASQBDAD4ANQAuACQAGQAPAAQA+f/u/+X/3P/U/9D/y//L/8v/z//V/9z/5P/v//r/BAAQABsAJQAuADYAPQBDAEcASgBLAEoASQBGAEEAOwA0ACsAIwAZAA4ABAD6/+//5v/d/9b/0f/N/8z/zf/Q/9X/3P/l/+7/+P8DAA4AGQAjACsANAA6AEAARABHAEgASABGAEMAPgA5ADIAKgAiABgADgAEAPn/8P/n/97/1//S/8//zf/O/9H/1v/c/+X/7v/4/wIADQAXACEAKQAyADgAPgBBAEUARQBGAEMAQQA8ADcAMAApACAAFwANAAQA+f/w/+f/3//Y/9P/0P/P/8//0v/W/93/5f/u//j/AQANABYAHwApADAANgA8AEAAQgBDAEMAQgA+ADsANQAuACcAHwAWAAwAAwD5//D/6P/f/9n/1P/Q/9D/0P/T/9f/3v/l/+7/+P8CAAwAFQAfACcALwA1ADsAPgBAAEIAQQBAADwAOQAzAC0AJgAdABUACwADAPj/8P/n/+D/2f/U/9L/0P/R/9T/2P/e/+b/7//4/wIADAAVAB8AJgAuADQAOQA9AD8AQABAAD4AOwA3ADIAKwAkABwAFAAKAAIA+P/v/+f/4P/Z/9X/0v/R/9L/1P/Z/+D/5v/w//j/AwAMABUAHgAnAC0AMwA4ADwAPgA/AD4APAA6ADUAMQAqACIAGwATAAkAAQD3/+//5//f/9r/1f/S/9L/0v/V/9r/4P/o//D/+f8DAA0AFQAfACYALQAzADcAOwA9AD0APQA8ADgANAAvACgAIgAaABEACAAAAPb/7//m/9//2v/V/9P/0v/T/9b/2v/h/+n/8f/6/wMADQAWAB8AJgAtADMANwA6ADwAPQA8ADoANwAzAC0AKAAgABgAEAAIAP7/9v/u/+X/3//a/9X/0//S/9T/1v/c/+L/6f/y//v/BAAOABcAHwAmAC0AMwA2ADoAOwA8ADwAOQA2ADEALQAmAB8AFwAPAAcA/f/1/+3/5f/e/9r/1f/T/9L/1P/Y/9z/4//q//P//P8GAA4AFwAgACcALQAyADcAOQA7ADwAOgA5ADUAMAAsACUAHgAWAA4ABQD9//T/7P/k/97/2f/V/9P/0//U/9j/3f/k/+v/9P/9/wcADwAYACAAKAAtADMANwA5ADsAOwA6ADcANAAwACsAJAAdABUADQAEAPz/8//r/+P/3v/Y/9X/0//T/9X/2f/d/+X/7P/1////BwAQABkAIQAoAC4AMwA3ADoAOgA7ADkANwA0AC8AKgAjABwAFAAMAAMA+v/z/+r/4//c/9j/1f/T/9P/1f/Z/9//5v/t//b/AAAIABIAGQAiACkALwAzADcAOgA6ADsAOQA3ADMALgApACIAGwAUAAoAAwD5//H/6v/i/9z/1//U/9P/1P/V/9r/3//n/+7/+P8AAAoAEgAbACMAKgAvADQAOAA5ADsAOgA5ADcAMgAuACkAIQAaABMACgABAPn/8P/o/+L/2//X/9T/0v/U/9X/2//g/+f/8P/4/wIACgAUABwAJAArADAANQA4ADoAOwA6ADkANgAzAC0AKAAhABoAEQAJAAEA+P/v/+f/4f/a/9b/1P/S/9T/1v/a/+H/6P/x//n/AwAMABUAHgAlACsAMQA2ADgAOwA7ADsAOQA2ADMALQAnACEAGQARAAgAAAD3/+7/5v/g/9r/1f/T/9L/0//X/9v/4f/p//L/+v8EAA4AFgAfACYALAAyADcAOQA7ADwAOwA6ADYAMwAtACcAIAAZABAACAD///b/7f/m/97/2f/V/9L/0v/T/9b/3P/h/+r/8//7/wYADgAYACAAJwAuADMAOAA6ADwAPAA8ADoANwAyAC4AJwAgABgAEAAHAP7/9v/s/+X/3v/Y/9T/0f/R/9P/1v/c/+L/6//z//3/BgAQABkAIQApAC8ANAA5ADsAPQA+ADwAOwA3ADMALgAnACAAGAAQAAcA/f/1/+v/5P/d/9f/0//R/9D/0//W/9v/4//r//T//v8IABEAGgAjACoAMAA2ADoAPQA+AD4APgA7ADgANAAuACgAIAAYABAABgD9//T/6//j/9z/1v/S/9D/0P/R/9b/3P/j/+v/9f///wkAEgAcACQAKwAyADgAOwA+AD8AQAA/ADwAOQA1AC8AKAAhABkADwAHAPz/9P/q/+L/2//V/9H/z//P/9H/1f/c/+P/7P/1/wAACgAUAB0AJQAtADQAOQA9AD8AQQBCAEAAPgA6ADYAMAApACIAGQAQAAcA/P/z/+r/4f/a/9T/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1v/Q/8n/x//H/8j/zf/U/93/5//z//7/CwAXACIALQA3AEAARwBMAFEAUwBUAFMAUQBOAEcAQgA5ADAAJgAbABAABAD4/+3/4//Z/9L/zf/J/8j/yv/N/9T/3P/l//D//P8HABMAHgApADIAOwBCAEgATABOAFAAUABNAEoARQA/ADcALwAlABsADwAFAPn/7//l/9v/1f/O/8v/yv/L/8//1P/b/+T/7//5/wUAEAAbACUALwA3AD4ARABIAEsATABMAEsARwBCADwANgAtACQAGgAPAAUA+v/w/+b/3f/W/9H/zf/L/8z/0P/U/9v/5P/u//j/AwAOABgAIwAsADQAOwBBAEUASABJAEkARwBFAD8AOwAzACwAIgAZAA8ABQD6//H/5//e/9f/0v/P/8z/zv/Q/9X/3P/k/+3/9/8CAA0AFwAgACoAMgA5AD4AQgBFAEcARgBFAEIAPQA5ADEAKgAhABgADwAEAPr/8f/n/+D/2P/T/9D/zv/O/9H/1v/c/+T/7v/3/wEADAAVACAAKAAwADcAPABAAEMARABEAEMAPwA8ADYAMAAoACAAFwAOAAMA+v/x/+j/4P/Z/9P/0f/P/8//0//W/93/5f/t//f/AQALABUAHwAnAC4ANgA6AD8AQQBCAEIAQQA9ADoANAAuACcAHwAWAAwAAwD6//D/6P/g/9n/1f/R/9D/0P/T/9j/3v/l/+3/+P8BAAsAFQAdACcALQA1ADkAPQA/AEEAQAA/ADwAOAAzACwAJQAeABQADAACAPn/8P/o/+D/2v/V/9H/0f/R/9T/2P/f/+b/7v/4/wEACwAVAB0AJgAtADQAOAA8AD4APwA/AD0AOwA2ADEAKwAkABwAEwALAAEA+f/v/+f/4P/a/9b/0v/R/9L/1f/Z/9//5//v//j/AgAMABQAHgAmACwAMwA3ADsAPQA+AD4APAA5ADUAMAApACMAGgATAAkAAQD3/+//5//g/9r/1f/T/9H/0//V/9r/4P/o//D/+f8DAAwAFQAeACUALQAyADcAOgA9AD0APAA7ADgAMwAvACgAIQAaABEACAAAAPb/7//m/9//2v/W/9P/0v/T/9b/2//h/+j/8f/6/wMADQAWAB4AJgAsADMANgA6ADwAPAA7ADoANwAyAC0AJwAgABkAEAAHAP//9f/u/+b/3//Z/9b/0//S/9T/1//b/+L/6v/y//v/BAANABcAHwAmACwAMwA2ADkAOwA8ADsAOQA1ADIALAAmAB8AFwAPAAYA/v/1/+z/5f/f/9n/1v/T/9L/1f/X/93/4v/r//P//P8FAA4AGAAfACcALQAyADYAOgA6ADsAOwA4ADUAMAArACUAHgAWAA4ABQD9//T/7P/k/97/2f/V/9P/0//V/9j/3f/k/+v/9P/+/wYADwAYACAAKAAtADMANgA5ADsAOwA5ADgANAAwACoAJAAdABUADAAFAPv/8//r/+T/3v/Y/9X/0//T/9X/2f/e/+X/7P/1////BwAQABkAIQAoAC4AMwA3ADkAOwA6ADoANwAzAC8AKgAjABwAFAAMAAMA+//y/+r/4//d/9j/1P/T/9P/1v/Z/9//5f/u//b/AAAIABIAGgAiACgALwAzADgAOQA7ADoAOQA3ADMALgApACMAGwATAAsAAgD6//H/6f/i/93/1//U/9P/0//W/9r/3//n/+7/9/8BAAoAEgAcACIAKgAwADQANwA6ADsAOgA5ADcAMwAuACgAIgAaABIACgACAPn/8P/o/+L/2//X/9P/0//T/9b/2v/g/+j/7//5/wEACwAUAB0AIwArADAANQA4ADsAOwA6ADkANwAyAC4AKAAhABoAEgAJAAEA9//w/+f/4f/a/9b/0//T/9P/1v/a/+H/6P/x//n/AwAMABUAHgAlACwAMQA2ADkAOgA8ADsAOQA3ADIALgAoACAAGgARAAgAAAD3/+7/5//f/9r/1f/T/9L/0//W/9v/4f/p//H/+/8EAA0AFwAfACYALQAyADcAOgA7ADwAPAA5ADcAMwAuACcAIQAZABAACAD///b/7v/l/9//2P/V/9L/0f/T/9b/2//i/+n/8//7/wYADgAYACAAKAAuADQANwA7ADwAPQA9ADoANwAzAC4AKAAgABkAEAAHAP//9f/t/+T/3v/Y/9P/0f/R/9P/1v/b/+L/6v/z//3/BgAQABoAIQApADAANAA5ADwAPgA+AD0AOwA4ADMALgAoACEAGQAQAAcA/f/1/+z/5P/c/9f/0//Q/9D/0v/W/9v/4v/r//T//v8IABEAGgAjACsAMQA2ADoAPQA/AD8APgA8ADkANQAuACkAIQAZABAABwD9//T/6//j/9z/1v/R/9D/z//R/9b/2//i/+z/9P///wkA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BQASAB8AKwA1AEAASABQAFQAWQBbAFsAWwBXAFMATQBFAD0AMgAnABwADwACAPb/6v/f/9b/zv/J/8b/xf/I/83/1P/d/+j/8/8AAAwAGQAkAC8AOQBCAEkATwBSAFYAVgBWAFMATwBKAEMAOgAyACcAHAAQAAQA+P/t/+L/2f/R/8v/yf/H/8n/zf/U/9v/5v/w//z/CAAUACAAKgA0ADwARABJAE4AUQBSAFEATwBMAEcAQAA5ADAAJgAcABAABQD6/+//5P/b/9T/zv/K/8n/y//N/9T/2//k/+7/+v8FABEAGwAmADAAOQA/AEUASgBNAE4ATQBMAEkARAA+ADcALgAlABsAEAAGAPr/8P/m/93/1v/Q/8z/y//L/8//1P/b/+P/7f/4/wMADgAZACQALAA1ADwAQgBHAEkASgBLAEgARgBCADsANQAtACQAGgAQAAUA+//x/+f/3v/X/9L/zv/M/83/z//V/9v/4//t//f/AQANABcAIQAqADIAOgA/AEMARgBIAEgARgBDAD8AOQAzACsAIwAZAA8ABgD7//H/5//g/9j/0//P/83/zv/R/9X/2//j/+3/9v8BAAwAFQAgACgAMAA4ADwAQQBEAEUARgBDAEEAPQA4ADEAKQAhABgADwAFAPr/8f/p/+D/2f/T/9D/z//P/9H/1v/c/+T/7f/2/wAACwAVAB4AJwAvADYAOwA/AEEARABDAEEAPwA7ADYALwAoACAAFwANAAQA+v/x/+n/4P/a/9T/0f/P/9D/0//W/93/5P/t//f/AAALABQAHgAmAC4ANAA5AD4AQABBAEIAPwA9ADkANAAuACYAHwAWAAwAAwD6//H/6P/h/9n/1f/S/9D/0f/T/9j/3f/l/+7/9/8AAAsAFAAdACYALQAzADgAPQA+AEAAQAA+ADsAOAAyACwAJQAdABUACwADAPn/8P/o/+H/2v/V/9L/0f/S/9T/2P/f/+X/7//3/wEACwAUAB0AJQAtADMANwA7AD4APgA/ADwAOgA2ADEAKwAjABwAFAAKAAIA+P/w/+f/4f/a/9X/0//R/9P/1P/a/9//5//v//j/AQAMABQAHQAmACwAMgA3ADoAPQA9AD4AOwA5ADQAMAApACIAGwASAAoAAAD4/+//5//g/9r/1v/T/9L/0v/W/9r/4P/o//D/+f8CAAwAFQAeACUALAAyADYAOgA8AD0APAA6ADgAMwAuACgAIQAaABEACAAAAPf/7v/n/9//2v/W/9P/0v/U/9b/2//h/+j/8f/6/wQADAAWAB4AJQAtADEANwA5ADsAPAA8ADkANwAyAC0AJwAgABgAEAAHAP//9v/t/+b/4P/Z/9b/0//T/9T/1//b/+L/6v/y//v/BAANABYAHwAmAC0AMQA3ADkAOwA7ADsAOAA2ADEALAAmAB8AFwAPAAYA/v/1/+3/5f/f/9n/1v/T/9P/1P/X/93/4//q//P//P8FAA8AFwAfACcALQAyADYAOQA7ADsAOgA4ADUAMAArACUAHgAWAA4ABQD9//T/7P/k/97/2f/V/9T/0//U/9j/3v/j/+z/9P/9/wYAEAAYACAAJwAtADMANgA5ADsAOwA5ADgANAAwACoAJAAdABUADQAEAPz/8//r/+T/3f/Y/9X/0//U/9X/2P/e/+X/7P/1//7/CAAQABkAIQAoAC4AMwA3ADkAOwA6ADoANwAzAC8AKgAjABwAFAAMAAQA+v/y/+v/4//c/9j/1f/T/9P/1f/Z/9//5f/u//b///8JABEAGgAiACkALwAzADgAOQA7ADoAOQA3ADQALgApACMAGwATAAsAAwD5//H/6v/i/9z/1//U/9P/0//V/9r/3//m/+//9/8BAAkAEwAbACMAKgAwADQAOAA6ADoAOwA5ADcAMwAuACkAIgAaABMACgACAPj/8f/o/+H/2//X/9P/0//T/9X/2v/g/+f/8P/4/wIACwAUABwAJAArADEANQA4ADoAPAA7ADkANwAzAC4AKAAhABoAEgAKAAAA+P/w/+f/4P/b/9X/0//S/9P/1v/a/+D/6P/x//n/AwAMABYAHQAmACwAMQA2ADkAOwA8ADwAOgA2ADMALgAoACIAGQARAAkAAAD3/+//5v/f/9r/1f/S/9L/0v/W/9r/4f/p//H/+/8EAA4AFgAfACcALQAzADcAOgA8ADwAPAA7ADcAMwAuACgAIQAZABEACQD///b/7v/l/97/2f/U/9L/0f/S/9b/2v/i/+n/8v/8/wUADwAYACAAKAAvADQAOAA7AD0APgA8ADsAOAA0AC4AKQAhABkAEQAHAP//9f/t/+X/3f/Y/9P/0f/Q/9L/1v/a/+L/6v/z//3/BgAQABoAIQAqADAANQA5AD0APgA/AD4AOwA5ADQALwApACIAGQARAAcA/v/1/+z/5P/d/9b/0v/Q/9D/0f/W/9r/4v/r//T//f8IABEAGwAjACsAMQA3ADsAPgA/AEAAPwA+ADkANgAvACoAIgAZABEACAD+//T/7P/j/9v/1v/R/8//z//R/9T/2//i/+v/9P///wgAEwAcACUALAAzADgAPQBAAEEAQQBBAD8AOwA2ADEAKwAjABoAEQAIAP7/9P/r/+P/2v/V/9D/zv/O/9D/1P/a/+L/6//1////CQAUAB4AJgAuADUAOgA+AEIAQwBDAEMAQAA9ADgAMwAsACQAGwASAAkA/v/0/+v/4v/a/9P/z//N/8z/z//T/9r/4v/q//b///8LABUAHgAoADAANgA9AEAARABFAEYARABDAD8AOgA1AC4AJgAdABMACQD///X/6//h/9n/0//N/8z/y//N/9L/2f/h/+r/9v8AAAsAFgAgACkAMQA5AD4AQwBGAEgASABHAEYAQQA+ADcAMAAoAB8AFgAKAAEA9f/r/+H/2P/S/83/yv/J/8z/0P/Y/+D/6f/1/wAADAAWACIAKgA0ADoAQQBFAEkASwBLAEoASQBFAEEAOgA0ACsAIgAYAA0AAgD2/+z/4f/Y/9H/zP/I/8j/yf/P/9X/3//o//T/AAAMABcAIgAsADUAPQBDAEgATABOAE8ATgBNAEkARQA+ADgALwAlABwAEAAEAPn/7f/i/9n/0P/K/8f/xf/I/8z/0//c/+f/8//+/wwAFwAjAC0ANwA/AEYASwBPAFIAUwBTAFEATgBKAEMAPQA0ACsAIAAUAAkA+//w/+T/2f/Q/8n/xf/D/8X/yf/Q/9n/5f/w//3/CwAXACMALgA4AEEASQBPAFMAVgBXAFgAVwBUAFAASgBDADoAMQAmABoADgAAAPT/5//b/9D/yf/E/8D/wv/F/83/1f/g/+7/+v8JABUAIwAvADkAQwBMAFIAVwBbAF0AXQBdAFsAVwBSAEsAQgA5AC4AIgAVAAcA+v/r/97/0//K/8L/v/++/8H/yP/Q/9z/6P/3/wUAEwAhAC4AOgBFAE0AVgBbAGAAYwBkAGQAYwBgAFoAVQBMAEQAOAAsAB8AEAABAPP/5P/X/8z/w/+9/7z/vP/C/8r/1f/i//H/AAAPAB4ALAA5AEUATwBYAF8AZQBpAGsAbQBrAGkAZgBfAFkATwBGADkAKwAdAA0A/v/t/9//0f/F/77/uf+4/7z/w//M/9r/6P/4/wkAGAAoADYARABPAFkAYgBpAG8AcgB0AHUAdABxAGwAZgBeAFUASQA7AC0AHgAMAPv/6//a/83/wf+6/7b/tv+6/8P/z//d/+3//v8QACAAMAA+AE0AWABjAGsAcwB3AHwAfgB+AHwAegB1AG4AZQBbAE8AQQAxACAADgD8/+r/2v/K/7//t/+z/7T/uf/D/8//3//w/wEAFAAlADUARQBTAGAAagBzAHsAgACEAIYAhwCGAIIAfgB3AG4AYwBWAEgAOAAlABMAAADt/9v/y/+//7b/sf+y/7j/wf/N/97/7/8CABQAJgA4AEcAVwBjAG8AeACAAIYAiwCNAI4AjQCKAIYAfgB2AGwAXgBQAD8ALQAZAAYA8v/f/8//wf+3/7L/sP+2/77/yv/a/+v//v8RACQANQBGAFUAYwBvAHkAggCIAI4AkACSAJEAjwCKAIQAfABxAGUAVgBFADQAIAAMAPj/5v/T/8X/uv+z/7H/tP+7/8b/1f/m//j/CgAeAC8AQABQAF8AawB1AH8AhgCMAI8AkQCRAI8AiwCFAH0AcwBnAFgASQA3ACUAEQD9/+r/2f/J/77/tv+y/7T/uf/D/9H/4P/x/wMAFgAnADkASABXAGQAbwB4AIAAhgCKAI0AjACLAIcAggB6AHAAZQBXAEcANwAlABIA///t/9v/zf/B/7n/tf+1/7r/wv/N/9z/7P/+/w8AIAAxAEAATwBcAGcAcAB5AH4AgwCFAIUAhACAAHoAdABpAF8AUQBDADIAIQAQAP7/7P/d/87/w/+8/7f/t/+8/8P/zf/b/+r/+v8LABsAKwA7AEgAVQBfAGkAcQB2AHsAfAB9AHoAeABxAA==";
+var _chironTbl = null;
+function _chironInit(){
+  if(_chironTbl) return _chironTbl;
+  var bin = atob(_CHIRON_B64), n = bin.length / 2, v = [_CHIRON_V0], acc = _CHIRON_V0;
+  for(var i = 0; i < n; i++){
+    var lo = bin.charCodeAt(2*i), hi = bin.charCodeAt(2*i + 1), d = lo + hi * 256;
+    if(d >= 32768) d -= 65536;
+    acc += d; v.push(acc);
+  }
+  _chironTbl = v;
+  return v;
+}
+function lt_chironLon(y,mo,d,hour){
+  var mo2=mo,y2=y;if(mo2<=2){y2--;mo2+=12;}var A=Math.floor(y2/100),B=2-A+Math.floor(A/4);
+  var jd=Math.floor(365.25*(y2+4716))+Math.floor(30.6001*(mo2+1))+d+(hour/24)+B-1524.5;
+  var v;
+  try { v = _chironInit(); } catch(e) { return lt_chironLonKepler(y,mo,d,hour); }
+  var t = (jd - _CHIRON_JD0) / _CHIRON_STEP, i = Math.floor(t);
+  if(i < 1 || i > v.length - 3) return lt_chironLonKepler(y,mo,d,hour);
+  var f = t - i, p0 = v[i-1], p1 = v[i], p2 = v[i+1], p3 = v[i+2];
+  /* Catmull-Rom 3次補間 */
+  var val = 0.5 * ((2*p1) + (-p0 + p2) * f + (2*p0 - 5*p1 + 4*p2 - p3) * f * f + (-p0 + 3*p1 - 3*p2 + p3) * f * f * f);
+  return (((val / 100) % 360) + 360) % 360;
+}
+function lt_chironLonKepler(y,mo,d,hour){var a=13.6367,e=0.38397,Omega=209.2966,argp=339.3982,M0=356.1954;var period=Math.pow(a,1.5);var n=360/(period*365.25);var mo2=mo,y2=y;if(mo2<=2){y2--;mo2+=12;}var A=Math.floor(y2/100),B=2-A+Math.floor(A/4);var jd=Math.floor(365.25*(y2+4716))+Math.floor(30.6001*(mo2+1))+d+(hour/24)+B-1524.5;var days=jd-2451545.0;var M=((M0+n*days)%360+360)%360;var Mr=M*Math.PI/180;var E=Mr;for(var i=0;i<10;i++){E=E-(E-e*Math.sin(E)-Mr)/(1-e*Math.cos(E));}var nu=2*Math.atan2(Math.sqrt(1+e)*Math.sin(E/2),Math.sqrt(1-e)*Math.cos(E/2));var nuDeg=nu*180/Math.PI;return((nuDeg+argp+Omega)%360+360)%360;}
 function lt_getMoonTransition(y,mo,d){var d0=new Date(Date.UTC(y,mo-1,d,0,0,0)-9*3600000);var d23=new Date(Date.UTC(y,mo-1,d,23,59,0)-9*3600000);var lon0=lt_moonLon(d0.getUTCFullYear(),d0.getUTCMonth()+1,d0.getUTCDate(),d0.getUTCHours()+d0.getUTCMinutes()/60);var lon23=lt_moonLon(d23.getUTCFullYear(),d23.getUTCMonth()+1,d23.getUTCDate(),d23.getUTCHours()+d23.getUTCMinutes()/60);var idx0=Math.floor(lon0/30)%12;var idx23=Math.floor(lon23/30)%12;if(idx0===idx23)return null;var lo=0,hi=24;for(var i=0;i<30;i++){var mid=(lo+hi)/2;var dm=new Date(Date.UTC(y,mo-1,d,0,0,0)-9*3600000+mid*3600000);var idxm=Math.floor(lt_moonLon(dm.getUTCFullYear(),dm.getUTCMonth()+1,dm.getUTCDate(),dm.getUTCHours()+dm.getUTCMinutes()/60)/30)%12;if(idxm===idx0)lo=mid;else hi=mid;}var jstH=Math.floor(lo),jstM=Math.floor((lo-jstH)*60);return{hour:jstH,min:jstM,altSign:LT_SIGNS[idx23],nextDay:false};}
 function lt_getMoonSign(y,mo,d){var d0=new Date(Date.UTC(y,mo-1,d,0,0,0)-9*3600000);var d23=new Date(Date.UTC(y,mo-1,d,23,59,0)-9*3600000);var lon0=lt_moonLon(d0.getUTCFullYear(),d0.getUTCMonth()+1,d0.getUTCDate(),d0.getUTCHours()+d0.getUTCMinutes()/60);var lon23=lt_moonLon(d23.getUTCFullYear(),d23.getUTCMonth()+1,d23.getUTCDate(),d23.getUTCHours()+d23.getUTCMinutes()/60);var idx0=Math.floor(lon0/30)%12;var idx23=Math.floor(lon23/30)%12;var edgeDist=lon0%30;if(edgeDist>15)edgeDist=30-edgeDist;if(idx0===idx23&&edgeDist>0.2)return{sign:LT_SIGNS[idx0],uncertain:false,alt:null,transition:null};if(idx0===idx23&&edgeDist<=0.2){var prevIdx=(idx0+11)%12;return{sign:LT_SIGNS[prevIdx],uncertain:true,alt:LT_SIGNS[idx0],transition:{hour:0,min:0,altSign:LT_SIGNS[idx0],nextDay:false}};}var tr=lt_getMoonTransition(y,mo,d);return{sign:LT_SIGNS[idx0],uncertain:true,alt:LT_SIGNS[idx23],transition:tr};}
 function lt_lookupSign(t,y){var s=t[0][1];for(var i=0;i<t.length;i++){if(t[i][0]<=y)s=t[i][1];else break;}return LT_SIGNS[s];}
@@ -18805,6 +19291,42 @@ function reorderResultCards(html) {
   grid.style.marginBottom = '14px';
 
   return doc.documentElement.outerHTML.replace(/^.*<body>|<\/body>.*$/gs, '').trim();
+}
+
+/* ===== 大運の男女切り替え（保存しない：画面を開いている間だけ覚える） =====
+   大運は男女で順行・逆行が変わるため、性別を選ぶまでは大運を出さない */
+window._shichuuGender = window._shichuuGender || {};
+window._daunCtx = window._daunCtx || {};
+function _genderKey(bd, hhmmDigits){ return (bd || '') + '|' + (hhmmDigits || ''); }
+function getShichuuGenderForBd(bd){
+  var t = getNatalTimeForBd(bd);
+  return window._shichuuGender[_genderKey(bd, (t.time || '').replace(/[^0-9]/g, ''))] || null;
+}
+function buildDaunSectionHTML(wrapId){
+  var c = window._daunCtx[wrapId];
+  if(!c) return '';
+  var g = window._shichuuGender[c.gkey] || null;
+  function btn(code, label){
+    var on = (g === code);
+    return '<button onclick="setShichuuGender(\'' + wrapId + '\',\'' + code + '\')" style="padding:4px 14px;border-radius:12px;font-size:11px;cursor:pointer;border:1px solid '
+      + (on ? 'var(--gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (on ? 'var(--gold)' : 'transparent') + ';color:' + (on ? '#000' : 'var(--muted)') + ';font-weight:' + (on ? '700' : '400') + ';">' + label + '</button>';
+  }
+  var sel = '<div style="margin:14px 0 8px;padding:8px 12px;background:rgba(184,150,46,0.08);border-radius:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">'
+    + '<span style="font-size:11px;color:var(--gold);">大運（出生時の性別）</span>'
+    + '<span style="display:flex;gap:6px;">' + btn('M', '男性') + btn('F', '女性') + '</span></div>';
+  if(!g){
+    return sel + '<div style="padding:14px 12px;font-size:12px;color:var(--muted);line-height:1.8;text-align:center;">性別を選んでください。<br>大運は、男女で進む向き（順行・逆行）と始まる年齢が変わるため、性別を選ぶと表示されます。</div>';
+  }
+  var dau = calcDaun(c.birthDT, c.year_p.kan, c.year_p.shi, c.month_p.kan, c.month_p.shi, g === 'F');
+  if(dau) dau.birthYear = c.yr;
+  return sel + buildUnseiHTML(dau, c.yr, c.nik);
+}
+function setShichuuGender(wrapId, g){
+  var c = window._daunCtx[wrapId];
+  if(!c) return;
+  window._shichuuGender[c.gkey] = g;
+  var el = document.getElementById(wrapId);
+  if(el) el.innerHTML = buildDaunSectionHTML(wrapId);
 }
 
 function buildUnseiHTML(dauResult, birthYear, nik){
