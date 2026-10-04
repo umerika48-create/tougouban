@@ -5093,6 +5093,57 @@ function getSanmeiMeishiki(birthdate) {
 }
 
 /* =======================================================
+   出生時刻・出生地を考慮した命式（年柱・月柱・日柱・時柱）
+   命式カード(buildShichuuCardHTML)と同じ判定ルール：
+   ・時刻あり＆23時以降 → 夜子時＝翌日の日柱（相性・年運・月運・九年サイクルもこれに従う）
+   ・時刻不明 → 正午（0時モード）で計算
+   ======================================================= */
+function getNatalPillars(birthdate, timeStr, cityData) {
+  var parts = (birthdate || '').split('-');
+  var yr = parseInt(parts[0], 10), mo = parseInt(parts[1], 10), da = parseInt(parts[2], 10);
+  var t4 = (timeStr || '').replace(/[^0-9]/g, '');
+  var unknown = (t4.length !== 4);
+  var hourVal = 0, minVal = 0;
+  if (!unknown) {
+    hourVal = parseInt(t4.slice(0, 2), 10);
+    minVal = parseInt(t4.slice(2, 4), 10);
+    if (hourVal > 23 || minVal > 59) { unknown = true; hourVal = 0; minVal = 0; }
+  }
+  var offsetMin = (cityData && cityData.lon) ? Math.round((cityData.lon - 135) * 4) : 0;
+  var birthDT = unknown ? new Date(yr, mo - 1, da, 12, 0, 0, 0) : new Date(yr, mo - 1, da, hourVal, minVal - offsetMin, 0, 0);
+  var yak = (!unknown && hourVal >= 23);
+  var nicchiDate = birthDT;
+  if (yak && birthDT.getDate() === da) {
+    nicchiDate = new Date(birthDT.getFullYear(), birthDT.getMonth(), birthDT.getDate() + 1, 0, 30, 0, 0);
+  }
+  var year_p = calcNenchu(birthDT);
+  var month_p = calcGetschu(birthDT, year_p.kan);
+  var day_p = calcNicchu(nicchiDate);
+  var hour_p = null;
+  if (!unknown) {
+    var adj = new Date(yr, mo - 1, da, hourVal, minVal - offsetMin, 0, 0);
+    hour_p = calcJicchu(adj.getHours(), adj.getMinutes(), day_p.kan);
+  }
+  return { year_p: year_p, month_p: month_p, day_p: day_p, hour_p: hour_p, yak: yak, unknown: unknown, hourVal: hourVal, minVal: minVal };
+}
+
+/* 生年月日（文字列）しか渡されない関数のために、画面上の「あなた／相手」のどちらの時刻かを探す */
+function getNatalTimeForBd(bd) {
+  var meEl = document.getElementById('birthdate');
+  var meBd = (meEl && meEl.value) ? meEl.value : '';
+  var isMe = !!bd && (bd === meBd || bd === window._nyBirthdateMe);
+  var isPt = !!bd && !!window._compatBdB && bd === window._compatBdB;
+  if (isMe && isPt) { isPt = (window.__buildIsPartner === true); isMe = !isPt; }
+  if (isPt) { return { time: window._compatBirthTime || '', city: window._compatCityData || null }; }
+  if (isMe) { return { time: window._normalBirthTime || '', city: window._normalCityData || null }; }
+  return { time: '', city: null };
+}
+function getNatalPillarsForBd(bd) {
+  var t = getNatalTimeForBd(bd);
+  return getNatalPillars(bd, t.time, t.city);
+}
+
+/* =======================================================
    四柱推命モジュール（子平法）
    ・年柱月柱日柱は算命学モジュールの干支計算を流用（実データ検証済み）
    ・時柱は五鼠遁＋出生地の経度による真太陽時補正で算出
@@ -5274,6 +5325,10 @@ function getHenseiColor(henseiName, isShinkyou) {
 
 function getShichuuShinYoujin(birthdate) {
   var meishiki = getSanmeiMeishiki(birthdate);
+  var _npY = getNatalPillarsForBd(birthdate);
+  if (_npY.yak) { /* 23時以降生まれは夜子時＝翌日の日柱 */
+    meishiki = { year: meishiki.year, month: meishiki.month, day: JIKKAN[_npY.day_p.kan] + JUNISHI[_npY.day_p.shi] };
+  }
   var dayStem = meishiki.day[0];
   var dayEl = STEM_EL_SANMEI[dayStem];
   var branchEl = {'子':'水','丑':'土','寅':'木','卯':'木','辰':'土','巳':'火','午':'火','未':'土','申':'金','酉':'金','戌':'土','亥':'水'};
@@ -6175,7 +6230,7 @@ function showYearHenseiDetail(key) {
       // 日干を取得
       var bpts = data.birthdate.split('-');
       var bdt = new Date(parseInt(bpts[0]),parseInt(bpts[1])-1,parseInt(bpts[2]),12,0);
-      var dayP = calcNicchu(bdt);
+      var dayP = getNatalPillarsForBd(data.birthdate).day_p;
       if(!dayP) throw new Error('dayP null');
       var nikkan = dayP.kan;
 
@@ -7165,9 +7220,10 @@ function calcShichuuYearScore(birthdate, targetYear) {
     var SHI12sc = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
     var bpts = birthdate.split('-');
     var bdt = new Date(parseInt(bpts[0],10), parseInt(bpts[1],10)-1, parseInt(bpts[2],10), 12, 0);
-    var dayP = calcNicchu(bdt);
-    var nenP = calcNenchu(bdt);
-    var getsP = calcGetschu(bdt, nenP.kan);
+    var _np = getNatalPillarsForBd(birthdate);
+    var dayP = _np.day_p;
+    var nenP = _np.year_p;
+    var getsP = _np.month_p;
     var ryuDT = new Date(targetYear, 4, 1, 12, 0);
     var ryuNen = calcNenchu(ryuDT);
     var hensei1 = calcHensei(dayP.kan, ryuNen.kan);
@@ -7199,9 +7255,10 @@ function calcShichuuMonthScore(birthdate, kYear, mo) {
     var SHI12sm = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
     var bpts = birthdate.split('-');
     var bdt = new Date(parseInt(bpts[0],10), parseInt(bpts[1],10)-1, parseInt(bpts[2],10), 12, 0);
-    var dayP = calcNicchu(bdt);
-    var nenP = calcNenchu(bdt);
-    var getsP = calcGetschu(bdt, nenP.kan);
+    var _np = getNatalPillarsForBd(birthdate);
+    var dayP = _np.day_p;
+    var nenP = _np.year_p;
+    var getsP = _np.month_p;
     /* 流月（九星気学と同じく、1月は翌年カレンダーだが当年サイクル扱い） */
     var rgYear = (mo === 1) ? kYear + 1 : kYear;
     var rgDT = new Date(rgYear, mo - 1, 15, 12, 0);
@@ -7479,9 +7536,10 @@ function buildMonthFourStepHTML(birthdate, kYear, mo) {
     var by = parseInt(bpts[0],10), bm = parseInt(bpts[1],10), bd = parseInt(bpts[2],10);
     var bdt = new Date(by, bm-1, bd, 12, 0);
 
-    var dayP = calcNicchu(bdt);
-    var nenP = calcNenchu(bdt);
-    var getsP = calcGetschu(bdt, nenP.kan);
+    var _np = getNatalPillarsForBd(birthdate);
+    var dayP = _np.day_p;
+    var nenP = _np.year_p;
+    var getsP = _np.month_p;
 
     /* 流月（1月は翌年カレンダーだが気学・四柱推命上は当年サイクル扱い） */
     var rgYear = (mo === 1) ? kYear + 1 : kYear;
@@ -7688,9 +7746,10 @@ function buildYearFourStepHTML(birthdate, targetYear) {
     var by = parseInt(bpts[0],10), bm = parseInt(bpts[1],10), bd = parseInt(bpts[2],10);
     var bdt = new Date(by, bm-1, bd, 12, 0);
 
-    var dayP = calcNicchu(bdt);
-    var nenP = calcNenchu(bdt);
-    var getsP = calcGetschu(bdt, nenP.kan);
+    var _np = getNatalPillarsForBd(birthdate);
+    var dayP = _np.day_p;
+    var nenP = _np.year_p;
+    var getsP = _np.month_p;
     var dayKan = KAN10y[dayP.kan];
 
     var ryuDT = new Date(targetYear, 4, 1, 12, 0);
@@ -7988,7 +8047,7 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
         var ryuNen=calcNenchu(ryuDT);
         var bpts=birthdate.split('-');
         var bdt=new Date(parseInt(bpts[0]),parseInt(bpts[1])-1,parseInt(bpts[2]),12,0);
-        var dayP=calcNicchu(bdt);
+        var dayP=getNatalPillarsForBd(birthdate).day_p;
         if(ryuNen&&dayP){
           var ryuKs=KAN10ry[ryuNen.kan], ryuSs=SHI12ry[ryuNen.shi];
           var hns=calcHensei(dayP.kan,ryuNen.kan);
@@ -8607,9 +8666,10 @@ function buildMonthCycleHTML(honmei, kYear, kMonth, birthdate) {
         var rgMon = calcGetschu(rgDT, rgNen.kan);
         var bpts = birthdate.split('-');
         var bdt = new Date(parseInt(bpts[0]), parseInt(bpts[1])-1, parseInt(bpts[2]), 12, 0);
-        var dayP = calcNicchu(bdt);
-        var nenP2 = calcNenchu(bdt);
-        var getsP2 = calcGetschu(bdt, nenP2.kan);
+        var _np2 = getNatalPillarsForBd(birthdate);
+        var dayP = _np2.day_p;
+        var nenP2 = _np2.year_p;
+        var getsP2 = _np2.month_p;
         var ryugetsuKanClean = '', ryugetsuShiClean = '';
         if(rgMon && dayP) {
           var rgKan = KAN10rg[rgMon.kan];
@@ -16196,24 +16256,24 @@ function buildShichuuCompatHTML(bdA, bdB) {
   var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
   var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
 
-  // 命式取得
-  function getMeishiki(bd) {
+  // 命式取得（出生時刻・出生地を考慮：23時以降は夜子時＝翌日の日柱）
+  function getMeishiki(bd, timeStr, cityData) {
     var parts = bd.split('-');
     if(parts.length < 3) return null;
-    var yr = parseInt(parts[0]), mo = parseInt(parts[1]), da = parseInt(parts[2]);
-    var dt = new Date(yr, mo-1, da, 12, 0);
-    var year_p = calcNenchu(dt);
-    var month_p = calcGetschu(dt, null);
-    var day_p = calcNicchu(dt);
-    return { year_p, month_p, day_p,
+    var np = getNatalPillars(bd, timeStr, cityData);
+    var year_p = np.year_p;
+    var month_p = np.month_p;
+    var day_p = np.day_p;
+    return { year_p: year_p, month_p: month_p, day_p: day_p,
       nikkan: day_p ? KAN10[day_p.kan] : null,
       nisshi: day_p ? SHI12[day_p.shi] : null,
       getsshi: month_p ? SHI12[month_p.shi] : null,
+      yak: np.yak, unknown: np.unknown, hourVal: np.hourVal, minVal: np.minVal
     };
   }
 
-  var mA = getMeishiki(bdA);
-  var mB = getMeishiki(bdB);
+  var mA = getMeishiki(bdA, window._normalBirthTime, window._normalCityData);
+  var mB = getMeishiki(bdB, window._compatBirthTime, window._compatCityData);
   if(!mA || !mB || !mA.day_p || !mB.day_p) return '';
 
   var nikA = mA.nikkan, nikB = mB.nikkan;
@@ -16316,6 +16376,19 @@ function buildShichuuCompatHTML(bdA, bdB) {
   var hdB = HENSEI_COMPAT_DESC[hNameBA] || {label: hNameBA, love: ''};
 
   var html = '';
+
+  // どの日柱で計算したかを表示（23時以降生まれの人がいる場合）
+  function _yakNote(who, m) {
+    var tm = ('0' + m.hourVal).slice(-2) + ':' + ('0' + m.minVal).slice(-2);
+    return '<div style="font-size:11px;color:var(--muted);line-height:1.6;">・' + who + '（' + tm + '生まれ）：23時以降のため、翌日の日柱「' + KAN10[m.day_p.kan] + SHI12[m.day_p.shi] + '」で計算しています</div>';
+  }
+  if (mA.yak || mB.yak) {
+    html += '<div style="margin-bottom:12px;padding:8px 12px;background:rgba(184,150,46,0.08);border-radius:10px;border:1px solid rgba(184,150,46,0.25);">';
+    html += '<div style="font-size:11px;color:var(--sk-gold-light);font-weight:700;margin-bottom:4px;">⏰ 夜子時（23時以降）の扱い</div>';
+    if (mA.yak) html += _yakNote('あなた', mA);
+    if (mB.yak) html += _yakNote('相手', mB);
+    html += '</div>';
+  }
 
   // 十神セクション
   html += '<div style="margin-bottom:12px;padding:10px 12px;background:rgba(255,255,255,0.03);border-radius:10px;border:1px solid rgba(255,255,255,0.08);">';
