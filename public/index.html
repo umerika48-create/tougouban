@@ -285,7 +285,7 @@ let friends = INITIAL_DATA.slice();
 let editingId = null;
 let activeCategory = 'すべて';
 let selectedIds = new Set();
-let serverSynced = false; // 初回のサーバー同期が終わるまでtrueにならない（保存の事故防止）
+let writeBlock = 'syncing'; // 'syncing'=初回同期中 / 'empty'=サーバーのデータが空 / null=書き込み可
 
 function fmtDate(d){
   if(!d) return '未設定';
@@ -352,41 +352,62 @@ async function loadFromServer(){
     if(!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     if(Array.isArray(data)){
-      // サーバーが空配列（まだ何も保存されていない）の場合は、
-      // 埋め込み初期データを表示済みのまま保持する（消さない）
       if(data.length > 0){
         friends = data;
+        writeBlock = null;
+        render();
+        setSyncBanner('最新データを取得しました', 'ok');
+        setTimeout(() => setSyncBanner(''), 2500);
+      } else {
+        // サーバーのデータが空。表示中の内容は予備データ。
+        // この状態で追加・編集すると「空になった状態」を確定させてしまうため、保存は止める。
+        writeBlock = 'empty';
+        render();
+        setSyncBanner('⚠ サーバーのデータが空です。いま表示しているのは予備データで、保存はできません。復旧が必要です（Claudeに「友達データを復旧して」と伝えてください）', 'err');
       }
-      render();
-      setSyncBanner('最新データを取得しました', 'ok');
-      setTimeout(() => setSyncBanner(''), 2500);
     }
   }catch(e){
     // 取得に失敗しても、表示済みのデータは絶対に消さない・置き換えない
     setSyncBanner('⚠ 最新データの取得に失敗しました（表示中の内容は最新でない可能性があります）', 'err');
-  }finally{
-    // 成功・失敗にかかわらず、初回同期の試行が終わったことを記録する。
-    // これより前は保存操作をブロックし、初期表示データで上書き保存する事故を防ぐ。
-    serverSynced = true;
+    // オフライン等。保存はサーバー側で1人ずつ安全に処理されるので、ここでは止めない。
+    writeBlock = null;
   }
 }
 
-async function saveToServer(){
-  if(!serverSynced){
+// サーバーへの書き込み（1人単位の追加・更新・削除）。
+// 成功すると、サーバーから返ってきた最新の全データで画面を置き換える。
+// 失敗した場合は null を返し、画面のデータには何も変更を加えない。
+async function apiWrite(path, body, opts){
+  opts = opts || {};
+  if(writeBlock === 'syncing'){
     setSyncBanner('⚠ サーバーとの同期が完了するまで、少しお待ちください（保存できませんでした）', 'err');
-    return false;
+    return null;
+  }
+  if(writeBlock === 'empty' && !opts.allowWhenEmpty){
+    setSyncBanner('⚠ サーバーのデータが空のため保存できません。復旧が必要です（Claudeに依頼してください）', 'err');
+    return null;
   }
   try{
-    const res = await fetch('/api/data', {
+    const res = await fetch(path, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(friends)
+      body: JSON.stringify(body)
     });
-    if(!res.ok) throw new Error('HTTP ' + res.status);
-    return true;
+    let result = null;
+    try{ result = await res.json(); }catch(e){}
+    if(!res.ok || !result || result.ok === false){
+      const msg = (result && result.error) ? result.error : ('HTTP ' + res.status);
+      setSyncBanner('⚠ 保存に失敗しました：' + msg, 'err');
+      return null;
+    }
+    if(Array.isArray(result.data)){
+      friends = result.data;
+      writeBlock = null;
+    }
+    return result;
   }catch(e){
     setSyncBanner('⚠ 保存に失敗しました（オフラインの可能性があります。もう一度お試しください）', 'err');
-    return false;
+    return null;
   }
 }
 
@@ -456,9 +477,11 @@ function render(){
     btn.addEventListener('click', async () => {
       const cat = btn.getAttribute('data-cat');
       const vis = btn.getAttribute('data-vis') === 'true';
-      friends.forEach(f => { if((f.category || '未分類') === cat) f.visible = vis; });
-      await saveToServer();
-      render();
+      const targets = friends
+        .filter(f => (f.category || '未分類') === cat)
+        .map(f => ({ id: f.id, name: f.name, visible: vis }));
+      const r = await apiWrite('/api/upsert', { items: targets });
+      if(r) render();
     });
   });
 
@@ -467,9 +490,8 @@ function render(){
       const id = btn.getAttribute('data-id');
       const f = friends.find(x => x.id === id);
       if(!f) return;
-      f.visible = f.visible === false ? true : false;
-      await saveToServer();
-      render();
+      const r = await apiWrite('/api/upsert', { items: [{ id: f.id, name: f.name, visible: f.visible === false }] });
+      if(r) render();
     });
   });
 
@@ -505,10 +527,11 @@ function render(){
   list.querySelectorAll('.del-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
       const id = btn.getAttribute('data-id');
-      friends = friends.filter(f => f.id !== id);
-      selectedIds.delete(id);
-      await saveToServer();
-      render();
+      const r = await apiWrite('/api/delete', { ids: [id] });
+      if(r){
+        selectedIds.delete(id);
+        render();
+      }
     });
   });
 }
@@ -629,21 +652,24 @@ document.getElementById('add-btn').addEventListener('click', async () => {
   }
 
   if(editingId){
-    const idx = friends.findIndex(f => f.id === editingId);
-    if(idx !== -1){
-      friends[idx] = { ...friends[idx], name, date, time, timeUnknown, category, place, memo };
+    const r = await apiWrite('/api/upsert', { items: [{ id: editingId, name, date, time, timeUnknown, category, place, memo }] });
+    if(!r){
+      statusEl.textContent = '保存できませんでした。上の赤い表示を確認してください。';
+      return;
     }
-    await saveToServer();
     render();
     statusEl.textContent = `${name}さんを更新しました。`;
     resetForm();
   } else {
-    friends.push({
+    const r = await apiWrite('/api/upsert', { items: [{
       id: Date.now().toString(36) + Math.random().toString(36).slice(2,6),
       name, date, time, timeUnknown, category, place, memo,
       addedAt: Date.now(), visible: true
-    });
-    await saveToServer();
+    }] });
+    if(!r){
+      statusEl.textContent = '保存できませんでした。上の赤い表示を確認してください。';
+      return;
+    }
     render();
     statusEl.textContent = `${name}さんを追加しました。`;
     resetForm();
@@ -712,31 +738,24 @@ document.getElementById('import-merge-btn').addEventListener('click', async () =
     return;
   }
 
-  const nameIndex = {};
-  friends.forEach((f, i) => { nameIndex[f.name] = i; });
-  let added = 0, updated = 0;
-  parsed.forEach(f => {
-    if(!f || !f.name) return;
-    if(nameIndex.hasOwnProperty(f.name)){
-      friends[nameIndex[f.name]] = { ...friends[nameIndex[f.name]], ...f };
-      updated++;
-    } else {
-      friends.push({
-        id: f.id || (Date.now().toString(36) + Math.random().toString(36).slice(2,6)),
-        name: f.name, date: f.date || '', time: f.time || '',
-        timeUnknown: !!f.timeUnknown, category: f.category || '未分類',
-        place: f.place || '', memo: f.memo || '',
-        addedAt: f.addedAt || Date.now(),
-        visible: f.visible === undefined ? true : f.visible
-      });
-      nameIndex[f.name] = friends.length - 1;
-      added++;
-    }
-  });
-
-  await saveToServer();
+  const items = parsed.filter(f => f && typeof f.name === 'string' && f.name.trim());
+  if(items.length === 0){
+    statusEl.textContent = '取り込める人（nameのある項目）がありませんでした。';
+    return;
+  }
+  // サーバーが空の状態では、ここからの貼り付けを「復旧操作」として許可する
+  const restoring = (writeBlock === 'empty');
+  const r = await apiWrite('/api/upsert', { items: items, force: restoring }, { allowWhenEmpty: true });
+  if(!r){
+    statusEl.textContent = '統合できませんでした。上の赤い表示を確認してください。';
+    return;
+  }
   render();
-  statusEl.textContent = `新規${added}人・更新${updated}人。合計${friends.length}人になりました。`;
+  if(restoring){
+    setSyncBanner('復旧しました', 'ok');
+    setTimeout(() => setSyncBanner(''), 2500);
+  }
+  statusEl.textContent = `新規${r.added}人・更新${r.updated}人。合計${friends.length}人になりました。`;
   document.getElementById('import-box').value = '';
 });
 
