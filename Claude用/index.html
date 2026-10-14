@@ -6,7 +6,12 @@
 window.onerror = function(msg, src, line, col, err) {
   /* ブラウザ(Braveなど)が外から差し込むウォレット用スクリプトのエラーや、出どころ不明の「Script error.」はアプリの不具合ではないので表示しない */
   var _all = String(msg) + ' ' + (err && err.stack ? err.stack : '');
-  if (/ethereum|solana|selectedAddress/i.test(_all) || (!src && /^Script error\.?$/.test(String(msg)))) { return true; }
+  /* ・ウォレット用(ethereum等)、Chrome系iOSの内部スクリプト(__gCrWeb)、Safari系(__firefox__)の名前が出るもの
+     ・出どころ不明の「Script error.」
+     ・ブラウザが後から差し込んだ命令(スタックが「global code@…:1:」＝ページの1行目)  はアプリの不具合ではないので表示しない */
+  if (/ethereum|solana|selectedAddress|__gCrWeb|__firefox__|webkit\.messageHandlers/i.test(_all)
+      || (!src && /^Script error\.?$/.test(String(msg)))
+      || (line === 1 && /global code@/.test(_all))) { return true; }
   var d = document.createElement('div');
   d.style.cssText = 'position:fixed;top:0;left:0;right:0;background:red;color:white;font-size:11px;padding:8px;z-index:99999;word-break:break-all;';
   d.textContent = 'ERROR: ' + msg + ' | src:' + src + ' | line:' + line + ' | col:' + col + (err ? ' | '+err.stack : '');
