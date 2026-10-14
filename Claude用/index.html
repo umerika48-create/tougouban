@@ -3322,9 +3322,20 @@ function showSynAspectMeaning(meaningId, angle, nameA, nameB) {
 }
 
 function buildSynastryHTML(bdA, bdB) {
-  var _utA = 0, _utB = 0; /* 時刻不明時は0時UT */
-  var pA = bdA.split('-'); var yA=+pA[0], mA=+pA[1], dA=+pA[2];
-  var pB = bdB.split('-'); var yB=+pB[0], mB=+pB[1], dB=+pB[2];
+  /* 出生時刻（わかる人は実際の時刻、不明な人は日本時間の正午）を世界時(UT)に直して計算する。
+     月は1日に約13°動くので、時刻を使わないと月のアスペクトが大きくずれる */
+  function _synUT(bd, timeStr, cityData) {
+    var q = bd.split('-'); var yy=+q[0], mm=+q[1], dd=+q[2];
+    var t4 = (timeStr || '').replace(/[^0-9]/g, '');
+    var unknown = (t4.length !== 4);
+    var hh = 12, mi = 0, tz = 9;
+    if (!unknown) { hh = parseInt(t4.slice(0,2),10); mi = parseInt(t4.slice(2,4),10); if (hh>23||mi>59) { unknown = true; hh = 12; mi = 0; } }
+    if (!unknown && cityData && typeof cityData.tz === 'number') tz = cityData.tz;
+    var u = new Date(Date.UTC(yy, mm-1, dd, hh, mi) - tz*3600000);
+    return { y:u.getUTCFullYear(), m:u.getUTCMonth()+1, d:u.getUTCDate(), h:u.getUTCHours()+u.getUTCMinutes()/60, unknown:unknown };
+  }
+  var _uA = _synUT(bdA, window._normalBirthTime, window._normalCityData);
+  var _uB = _synUT(bdB, window._compatBirthTime, window._compatCityData);
 
   /* 各天体の黄経を取得（0時UTテーブルから） */
   var _tbl = {
@@ -3332,34 +3343,25 @@ function buildSynastryHTML(bdA, bdB) {
     JUPITER:LON_JUPITER_0UT, SATURN:LON_SATURN_0UT, URANUS:LON_URANUS_0UT,
     NEPTUNE:LON_NEPTUNE_0UT, PLUTO:LON_PLUTO_0UT
   };
-  function plon(nm, y, m, d) { var t=_tbl[nm]; return t?getPlanetLonInterp(t,y,m,d,0):null; }
+  function plon(nm, y, m, d, ut) { var t=_tbl[nm]; return t?getPlanetLonInterp(t,y,m,d,ut||0):null; }
 
   var SYMS = ['☀️','🌙','☿','♀','♂','♃','♄','♅','♆','♇'];
   var NAMES= ['太陽','月','水星','金星','火星','木星','土星','天王星','海王星','冥王星'];
 
   function getLons(y, m, d, ut) {
     var sunL = getSunLon(y, m, d, ut);
-    var LT_SL = LT_SIGNS;
-    function moonL(){
-      var moon = lt_getMoonSign(y*10000+m*100+d);
-      if(!moon) return null;
-      var si = LT_SL.indexOf(moon.sign);
-      if(si<0) return null;
-      var deg = si*30;
-      if(moon.deg!==undefined) deg += moon.deg + (moon.min||0)/60;
-      return deg;
-    }
+    var moonL = lt_moonLon(y, m, d, ut);
     return [
       sunL,
-      moonL(),
-      plon('MERCURY',y,m,d), plon('VENUS',y,m,d), plon('MARS',y,m,d),
-      plon('JUPITER',y,m,d), plon('SATURN',y,m,d), plon('URANUS',y,m,d),
-      plon('NEPTUNE',y,m,d), plon('PLUTO',y,m,d)
+      moonL,
+      plon('MERCURY',y,m,d,ut), plon('VENUS',y,m,d,ut), plon('MARS',y,m,d,ut),
+      plon('JUPITER',y,m,d,ut), plon('SATURN',y,m,d,ut), plon('URANUS',y,m,d,ut),
+      plon('NEPTUNE',y,m,d,ut), plon('PLUTO',y,m,d,ut)
     ];
   }
 
-  var lonsA = getLons(yA, mA, dA, _utA);
-  var lonsB = getLons(yB, mB, dB, _utB);
+  var lonsA = getLons(_uA.y, _uA.m, _uA.d, _uA.h);
+  var lonsB = getLons(_uB.y, _uB.m, _uB.d, _uB.h);
 
   /* アスペクト定義（2パターン） */
   /* TIGHT: 5°以内（デフォルト） */
@@ -3408,8 +3410,9 @@ function buildSynastryHTML(bdA, bdB) {
   var _stdResult   = calcGrid(ASPECTS_STD);
   /* windowに保存してswitchSynOrbから参照できるように */
   /* シンプルに固定キーで保存（常に最新の表示データを上書き） */
-  window['_synData_tight_' + _synSuffix] = _tightResult;
-  window['_synData_std_'   + _synSuffix] = _stdResult;
+  var _synKey = (bdA + '_' + bdB).replace(/[^0-9]/g,'');
+  window['_synData_tight_' + _synKey] = _tightResult;
+  window['_synData_std_'   + _synKey] = _stdResult;
   /* デフォルトはTIGHT */
   var aspGrid = _tightResult.grid;
   var aspList = _tightResult.list;
@@ -3421,6 +3424,9 @@ function buildSynastryHTML(bdA, bdB) {
   var td = 'height:30px;text-align:center;vertical-align:middle;font-size:10px;border:1px solid rgba(255,255,255,.06);';
 
   var h = '<div style="margin-top:8px;">';
+  if (_uA.unknown || _uB.unknown) {
+    h += '<div style="font-size:10px;color:var(--muted);line-height:1.6;margin-bottom:6px;">※ ' + (_uA.unknown && _uB.unknown ? 'あなたと相手' : (_uA.unknown ? 'あなた' : '相手')) + 'の出生時間が不明のため、正午で計算しています。月は1日に約13°動くので、月のアスペクトは±6.5°ほどずれる可能性があります。</div>';
+  }
 
   /* ヘッダー行：タイトル + 切り替えボタン */
   h += '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">';
@@ -16842,7 +16848,8 @@ var HENSEI_COMPAT_DESC = {
   '印綬': {label:'印綬（包んでくれる存在）', love:'包容力があり、安心できる相手。精神的なつながりが深い。'},
 };
 
-function buildShichuuCompatHTML(bdA, bdB) {
+function buildShichuuCompatHTML(bdA, bdB, ov) {
+  /* ov: 別パターン用（{A:'HH:MM', B:'HH:MM'} のとき、その時刻・出生地なしで計算し直す） */
   if(!bdA || !bdB) return '';
   
   var KAN10 = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
@@ -16864,8 +16871,8 @@ function buildShichuuCompatHTML(bdA, bdB) {
     };
   }
 
-  var mA = getMeishiki(bdA, window._normalBirthTime, window._normalCityData);
-  var mB = getMeishiki(bdB, window._compatBirthTime, window._compatCityData);
+  var mA = getMeishiki(bdA, (ov && ov.A) ? ov.A : window._normalBirthTime, (ov && ov.A) ? null : window._normalCityData);
+  var mB = getMeishiki(bdB, (ov && ov.B) ? ov.B : window._compatBirthTime, (ov && ov.B) ? null : window._compatCityData);
   if(!mA || !mB || !mA.day_p || !mB.day_p) return '';
 
   var nikA = mA.nikkan, nikB = mB.nikkan;
@@ -17046,7 +17053,63 @@ function buildShichuuCompatHTML(bdA, bdB) {
   html += '<div style="font-size:12px;color:var(--sk-gold-light);font-weight:700;margin-top:4px;">' + (scoreLabels[score]||'') + '</div>';
   html += '</div>';
 
+  /* ── 出生時間が不明な人がいて、時間しだいで命式が変わる場合は、別パターンを切り替えて見られるようにする ──
+     時間が不明なときは正午で計算している。次の時刻で計算し直して、年柱・月柱・日柱が変わるものだけを並べる
+       ・早い時刻（0:30）  ・遅い時刻（22:30）  ・23時以降（23:30＝夜子時で翌日の日柱）
+     相性カードが使うのは日柱・月柱だけなので、時柱（12通り）は影響しない */
+  if (!ov) {
+    var _unkA = mA.unknown, _unkB = mB.unknown;
+    var _alts = [];
+    if (_unkA || _unkB) {
+      var _cands = [['00:30','午前の早い時刻に生まれた場合'],['22:30','夕方〜22時台に生まれた場合'],['23:30','23時以降に生まれた場合（翌日の日柱）']];
+      var _sig = function(m) { return m.year_p.kan+','+m.year_p.shi+'/'+m.month_p.kan+','+m.month_p.shi+'/'+m.day_p.kan+','+m.day_p.shi; };
+      var _seenA = {}, _seenB = {};
+      _seenA[_sig(mA)] = 1; _seenB[_sig(mB)] = 1;
+      var _seen = {}; _seen[_sig(mA)+'|'+_sig(mB)] = 1;
+      _cands.forEach(function(c) {
+        var oa = _unkA ? getMeishiki(bdA, c[0], null) : mA;
+        var ob = _unkB ? getMeishiki(bdB, c[0], null) : mB;
+        if (!oa || !ob || !oa.day_p || !ob.day_p) return;
+        var key = _sig(oa) + '|' + _sig(ob);
+        if (_seen[key]) return;
+        _seen[key] = 1;
+        _alts.push({label: c[1], ov: {A: _unkA ? c[0] : null, B: _unkB ? c[0] : null}});
+      });
+    }
+    if (_alts.length > 0) {
+      var _gid = 'scAlt' + Math.floor(Math.random() * 1e9);
+      var who = (_unkA && _unkB) ? 'あなたと相手' : (_unkA ? 'あなた' : '相手');
+      var wrap = '<div id="' + _gid + '-0">' + html + '</div>';
+      var btns = '<button type="button" id="' + _gid + '-b0" onclick="event.stopPropagation();scAltShow(\'' + _gid + '\',0)" style="padding:4px 10px;margin:2px 4px 2px 0;border-radius:14px;border:1px solid var(--accent);background:var(--accent);color:#fff;font-size:11px;cursor:pointer;">正午で計算（いまの表示）</button>';
+      _alts.forEach(function(a, idx) {
+        var n = idx + 1;
+        wrap += '<div id="' + _gid + '-' + n + '" style="display:none;">' + buildShichuuCompatHTML(bdA, bdB, a.ov) + '</div>';
+        btns += '<button type="button" id="' + _gid + '-b' + n + '" onclick="event.stopPropagation();scAltShow(\'' + _gid + '\',' + n + ')" style="padding:4px 10px;margin:2px 4px 2px 0;border-radius:14px;border:1px solid rgba(168,154,255,.4);background:transparent;color:rgba(168,154,255,.9);font-size:11px;cursor:pointer;">' + a.label + '</button>';
+      });
+      var note = '<div style="margin-bottom:10px;padding:8px 12px;background:rgba(168,154,255,.08);border-radius:10px;border:1px solid rgba(168,154,255,.25);">'
+        + '<div style="font-size:11px;color:#c8bcff;font-weight:700;margin-bottom:4px;">⏱ ' + who + 'の出生時間が不明です</div>'
+        + '<div style="font-size:11px;color:var(--muted);line-height:1.6;margin-bottom:6px;">時間によって、日柱や月柱が変わる可能性があります。下のボタンで、時間別の結果を見比べられます。（相性カードが使うのは日柱と月柱です）</div>'
+        + btns + '</div>';
+      return note + wrap;
+    }
+  }
+
   return html;
+}
+
+/* 時間不明の別パターンの切り替え */
+function scAltShow(gid, n) {
+  for (var i = 0; i < 10; i++) {
+    var d = document.getElementById(gid + '-' + i);
+    if (!d) break;
+    d.style.display = (i === n) ? '' : 'none';
+    var b = document.getElementById(gid + '-b' + i);
+    if (b) {
+      b.style.background = (i === n) ? 'var(--accent)' : 'transparent';
+      b.style.color = (i === n) ? '#fff' : 'rgba(168,154,255,.9)';
+      b.style.borderColor = (i === n) ? 'var(--accent)' : 'rgba(168,154,255,.4)';
+    }
+  }
 }
 
 
