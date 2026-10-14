@@ -5897,7 +5897,7 @@ function showFriendSearchPopup(target) {
   document.getElementById('hjBadge').textContent = '';
 
   // カテゴリー一覧
-  var cats = ['すべて','本人','親しい友人','友達','友達（♂）','身内','先祖','先生','仕事関係','有名人','ヒカル界隈','友達の子供','海外','その他'];
+  var cats = ['すべて','本人','親しい友人','友達','友達（♂）','身内','先祖','先生','仕事関係','お客様','有名人','ヒカル界隈','友達の子供','海外','その他'];
   var currentCat = 'すべて';
 
   function buildList(filterCat) {
@@ -5905,7 +5905,7 @@ function showFriendSearchPopup(target) {
       return !f.hidden && f.date && (filterCat === 'すべて' || f.category === filterCat);
     });
     sorted.sort(function(a, b){
-      var order = ['本人','親しい友人','友達','友達（♂）','身内','先祖','先生','仕事関係','有名人','ヒカル界隈','友達の子供','海外','その他'];
+      var order = ['本人','親しい友人','友達','友達（♂）','身内','先祖','先生','仕事関係','お客様','有名人','ヒカル界隈','友達の子供','海外','その他'];
       var ai = order.indexOf(a.category); var bi = order.indexOf(b.category);
       if(ai===-1) ai=99; if(bi===-1) bi=99;
       return ai - bi;
