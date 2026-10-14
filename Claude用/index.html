@@ -5159,7 +5159,7 @@ function getSolarTimeInfo(yr, mo, da, hourVal, minVal, cityData) {
   };
 }
 
-function getNatalPillars(birthdate, timeStr, cityData) {
+function getNatalPillars(birthdate, timeStr, cityData, yakMode) {
   var parts = (birthdate || '').split('-');
   var yr = parseInt(parts[0], 10), mo = parseInt(parts[1], 10), da = parseInt(parts[2], 10);
   var t4 = (timeStr || '').replace(/[^0-9]/g, '');
@@ -5182,7 +5182,7 @@ function getNatalPillars(birthdate, timeStr, cityData) {
     solar = si.solar; deltaMin = si.deltaMin; jstDate = si.jst;
     year_p = calcNenchu(si.jst);
     month_p = calcGetschu(si.jst, year_p.kan);
-    yak = (solar.getHours() >= 23);          /* 真太陽時で23時以降 → 夜子時＝翌日の日柱 */
+    yak = (solar.getHours() >= 23) && (yakMode !== false);   /* 真太陽時で23時以降 → 夜子時＝翌日の日柱（0時切替を選んだ人は当日のまま） */
     var nicchiDate = yak ? new Date(solar.getFullYear(), solar.getMonth(), solar.getDate() + 1, 0, 30, 0, 0) : solar;
     day_p = calcNicchu(nicchiDate);
     hour_p = calcJicchu(solar.getHours(), solar.getMinutes(), day_p.kan);
@@ -5192,19 +5192,31 @@ function getNatalPillars(birthdate, timeStr, cityData) {
 }
 
 /* 生年月日（文字列）しか渡されない関数のために、画面上の「あなた／相手」のどちらの時刻かを探す */
+/* 0時/23時ボタンで選んだ内容を「あなた／相手」ごとに覚える（生年月日と時刻が変わったら無効） */
+window._yakChoice = {};
+function setYakChoice(who, bd, time, val) {
+  if (!window._yakChoice) window._yakChoice = {};
+  window._yakChoice[who] = { bd: bd || '', time: (time || '').replace(/[^0-9]/g, ''), val: !!val };
+}
+function getYakChoice(who, bd, time) {
+  var c = window._yakChoice && window._yakChoice[who];
+  if (!c) return undefined;
+  if (c.bd !== (bd || '') || c.time !== (time || '').replace(/[^0-9]/g, '')) return undefined;
+  return c.val;
+}
 function getNatalTimeForBd(bd) {
   var meEl = document.getElementById('birthdate');
   var meBd = (meEl && meEl.value) ? meEl.value : '';
   var isMe = !!bd && (bd === meBd || bd === window._nyBirthdateMe);
   var isPt = !!bd && !!window._compatBdB && bd === window._compatBdB;
   if (isMe && isPt) { isPt = (window.__buildIsPartner === true); isMe = !isPt; }
-  if (isPt) { return { time: window._compatBirthTime || '', city: window._compatCityData || null }; }
-  if (isMe) { return { time: window._normalBirthTime || '', city: window._normalCityData || null }; }
-  return { time: '', city: null };
+  if (isPt) { return { time: window._compatBirthTime || '', city: window._compatCityData || null, who: 'partner' }; }
+  if (isMe) { return { time: window._normalBirthTime || '', city: window._normalCityData || null, who: 'me' }; }
+  return { time: '', city: null, who: '' };
 }
 function getNatalPillarsForBd(bd) {
   var t = getNatalTimeForBd(bd);
-  return getNatalPillars(bd, t.time, t.city);
+  return getNatalPillars(bd, t.time, t.city, t.who ? getYakChoice(t.who, bd, t.time) : undefined);
 }
 
 /* =======================================================
@@ -9859,6 +9871,8 @@ function toggleAccordion(id) {
             var _cd = window._normalCityData;
             var _ts = (_t||'').replace(':','').replace(/[^0-9]/g,'');
             if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(_ts, !_ts, bd, _cd);
+            var _ychOp = getYakChoice('me', bd, _t);
+            if(_ychOp !== undefined) window._yakodoki = _ychOp;
             cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, false, undefined, window._searchedFriendNameMe);
               setTimeout(function(){ addSignLabelsToMeishiki(); }, 100);
           }
@@ -10830,6 +10844,8 @@ function switchShichuuCard(view) {
   var _timeStr4 = (_t || '').replace(':','').replace(/[^0-9]/g,'');
   var _unknownTime = !_timeStr4 || _timeStr4.length < 4;
   if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(_timeStr4, _unknownTime, bd, _cd);
+  var _ychSw = getYakChoice(isPartner ? 'partner' : 'me', bd, _t);
+  if(_ychSw !== undefined) window._yakodoki = _ychSw;
   container.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner, undefined, isPartner ? window._searchedFriendNamePartner : window._searchedFriendNameMe);
   // 星座ラベルを注入
   if(!isPartner && typeof lt_getSunSign === 'function') {
@@ -16864,10 +16880,10 @@ function buildShichuuCompatHTML(bdA, bdB, ov) {
   var SHI12 = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
 
   // 命式取得（出生時刻・出生地を考慮：23時以降は夜子時＝翌日の日柱）
-  function getMeishiki(bd, timeStr, cityData) {
+  function getMeishiki(bd, timeStr, cityData, who) {
     var parts = bd.split('-');
     if(parts.length < 3) return null;
-    var np = getNatalPillars(bd, timeStr, cityData);
+    var np = getNatalPillars(bd, timeStr, cityData, who ? getYakChoice(who, bd, timeStr) : undefined);
     var year_p = np.year_p;
     var month_p = np.month_p;
     var day_p = np.day_p;
@@ -16879,8 +16895,8 @@ function buildShichuuCompatHTML(bdA, bdB, ov) {
     };
   }
 
-  var mA = getMeishiki(bdA, (ov && ov.A) ? ov.A : window._normalBirthTime, (ov && ov.A) ? null : window._normalCityData);
-  var mB = getMeishiki(bdB, (ov && ov.B) ? ov.B : window._compatBirthTime, (ov && ov.B) ? null : window._compatCityData);
+  var mA = getMeishiki(bdA, (ov && ov.A) ? ov.A : window._normalBirthTime, (ov && ov.A) ? null : window._normalCityData, (ov && ov.A) ? '' : 'me');
+  var mB = getMeishiki(bdB, (ov && ov.B) ? ov.B : window._compatBirthTime, (ov && ov.B) ? null : window._compatCityData, (ov && ov.B) ? '' : 'partner');
   if(!mA || !mB || !mA.day_p || !mB.day_p) return '';
 
   var nikA = mA.nikkan, nikB = mB.nikkan;
@@ -16985,17 +17001,25 @@ function buildShichuuCompatHTML(bdA, bdB, ov) {
   var html = '';
 
   // どの日柱で計算したかを表示（23時以降生まれの人がいる場合）
-  function _yakNote(who, m) {
+  function _yakBtn(whoKey, label, active) {
+    return '<button onclick="event.stopPropagation();setYakodokiFor(\'' + whoKey + '\',' + (label === '23時' ? 'true' : 'false') + ')" style="padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;margin-left:4px;border:1px solid ' + (active ? 'var(--sk-gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (active ? 'var(--sk-gold)' : 'transparent') + ';color:' + (active ? '#000' : 'var(--muted)') + ';font-weight:' + (active ? '700' : '400') + ';">' + label + '</button>';
+  }
+  function _yakNote(who, whoKey, m) {
     var tm = ('0' + m.hourVal).slice(-2) + ':' + ('0' + m.minVal).slice(-2);
     var st = m.solar ? ('0' + m.solar.getHours()).slice(-2) + ':' + ('0' + m.solar.getMinutes()).slice(-2) : tm;
     var tmLabel = (m.deltaMin ? tm + '生まれ・真太陽時' + st : tm + '生まれ');
-    return '<div style="font-size:11px;color:var(--muted);line-height:1.6;">・' + who + '（' + tmLabel + '）：23時以降のため、翌日の日柱「' + KAN10[m.day_p.kan] + SHI12[m.day_p.shi] + '」で計算しています</div>';
+    var pil = KAN10[m.day_p.kan] + SHI12[m.day_p.shi];
+    var msg = m.yak ? ('23時以降のため、翌日の日柱「' + pil + '」で計算しています') : ('0時切替のため、当日の日柱「' + pil + '」で計算しています');
+    return '<div style="font-size:11px;color:var(--muted);line-height:1.8;">・' + who + '（' + tmLabel + '）：' + msg + _yakBtn(whoKey, '23時', m.yak) + _yakBtn(whoKey, '0時', !m.yak) + '</div>';
   }
-  if (mA.yak || mB.yak) {
+  /* 真太陽時で23時以降の人がいるときは、0時/23時のどちらで計算するか選べるようにする */
+  var _aIs23 = !!(mA.solar && mA.solar.getHours() >= 23);
+  var _bIs23 = !!(mB.solar && mB.solar.getHours() >= 23);
+  if (_aIs23 || _bIs23) {
     html += '<div style="margin-bottom:12px;padding:8px 12px;background:rgba(184,150,46,0.08);border-radius:10px;border:1px solid rgba(184,150,46,0.25);">';
     html += '<div style="font-size:11px;color:var(--sk-gold-light);font-weight:700;margin-bottom:4px;">⏰ 夜子時（真太陽時で23時以降）の扱い</div>';
-    if (mA.yak) html += _yakNote('あなた', mA);
-    if (mB.yak) html += _yakNote('相手', mB);
+    if (_aIs23) html += _yakNote('あなた', 'me', mA);
+    if (_bIs23) html += _yakNote('相手', 'partner', mB);
     html += '</div>';
   }
 
@@ -21762,6 +21786,11 @@ window._yakodoki = false; // デフォルト0時
 
 function setYakodoki(enabled) {
   window._yakodoki = enabled;
+  /* 選んだ0時/23時を、いま表示中の人（あなた／相手）の分として覚える（相性・年運・月運などもこれに従う） */
+  var _yWho = (window._currentShichuuView === 'partner') ? 'partner' : 'me';
+  var _yBd = (_yWho === 'partner') ? window._compatBdB : (window._nyBirthdateMe || (document.getElementById('birthdate') ? document.getElementById('birthdate').value : ''));
+  var _yTm = (_yWho === 'partner') ? window._compatBirthTime : window._normalBirthTime;
+  setYakChoice(_yWho, _yBd, _yTm, enabled);
   // ボタン方式のスタイル更新（全ボタン）
   document.querySelectorAll('#yak-btn-23').forEach(function(btn){
     btn.style.background = enabled ? 'var(--gold)' : 'transparent';
@@ -21806,6 +21835,8 @@ function setYakodoki(enabled) {
     // 開閉状態に関わらず常に再描画（次回開いたとき正しく表示されるよう）
     cardBody.innerHTML = buildShichuuCardHTML(bd, _t, _cd, isPartner, false, isPartner ? window._searchedFriendNamePartner : window._searchedFriendNameMe);
               setTimeout(function(){ addSignLabelsToMeishiki(); }, 100);
+    /* 相性・年運・月運・九年サイクルなど、ほかのカードにも選んだ0時/23時を反映する */
+    yakodokiRefreshAll();
   } else if(bd && typeof buildShichuuCardHTML === 'function') {
     if(typeof switchShichuuCard === 'function') {
       switchShichuuCard(isPartner ? 'partner' : 'me');
@@ -21823,6 +21854,38 @@ function setYakodoki(enabled) {
       }
     }
   }
+}
+
+/* 相性カードから、あなた／相手のどちらかの0時/23時を切り替える */
+function setYakodokiFor(who, enabled) {
+  var bd = (who === 'partner') ? window._compatBdB : (window._nyBirthdateMe || (document.getElementById('birthdate') ? document.getElementById('birthdate').value : ''));
+  var tm = (who === 'partner') ? window._compatBirthTime : window._normalBirthTime;
+  setYakChoice(who, bd, tm, enabled);
+  yakodokiRefreshAll();
+}
+
+/* 0時/23時を切り替えたあと、表示中の鑑定結果を同じ入力で作り直す（開いていたカードと位置は元に戻す） */
+function yakodokiRefreshAll() {
+  try {
+    var res = document.getElementById('result');
+    if(!res || res.style.display === 'none' || typeof autoCalculate !== 'function') return;
+    var openIds = [];
+    var bodies = document.querySelectorAll('.accordion-body.open');
+    for(var i = 0; i < bodies.length; i++){
+      if(bodies[i].id && bodies[i].id.indexOf('abody-') === 0) openIds.push(bodies[i].id.slice(6));
+    }
+    var yPos = window.pageYOffset || 0;
+    autoCalculate();
+    for(var j = 0; j < openIds.length; j++){
+      var id = openIds[j];
+      if(id === 'shichuu-card' && typeof toggleAccordion === 'function'){ toggleAccordion(id); continue; }
+      var bb = document.getElementById('abody-' + id), bt = document.getElementById('abtn-' + id);
+      if(bb) bb.classList.add('open');
+      if(bt) bt.classList.add('open');
+    }
+    setTimeout(function(){ window.scrollTo(0, yPos); }, 150);
+    setTimeout(function(){ window.scrollTo(0, yPos); }, 800);
+  } catch(e) { console.error('yakodokiRefreshAll error:', e); }
 }
 
 function showYakodokiToggle() {
