@@ -6031,7 +6031,9 @@ function checkShichuuShi(shiA, shiB) {
   // 三合
   for(var i=0;i<SHI_RELATIONS.sango.length;i++){
     var sg = SHI_RELATIONS.sango[i];
-    if(sg.group.indexOf(shiA)>=0 && sg.group.indexOf(shiB)>=0 && shiA!==shiB)
+    /* 旺支（子午卯酉）を含む組み合わせ＝半会だけを三合として数える（寅×戌・申×辰・亥×未・巳×丑の拱合は数えない） */
+    if(sg.group.indexOf(shiA)>=0 && sg.group.indexOf(shiB)>=0 && shiA!==shiB &&
+       ('子午卯酉'.indexOf(shiA)>=0 || '子午卯酉'.indexOf(shiB)>=0))
       results.push({type:'三合', color:'#ff6b9d', score:sg.score});
   }
   // 六合
@@ -7287,7 +7289,12 @@ function getPalaceData(honmei, palace, targetYear) {
 /* ======= 四柱推命の年運スコア化（十二運＋通変星＋合冲刑害破） ======= */
 var SHICHUU_JYU12_SCORE = {'長生':60,'沐浴':40,'冠帯':70,'建禄':90,'帝旺':100,'衰':50,'病':30,'死':20,'墓':15,'絶':10,'胎':35,'養':45};
 var SHICHUU_HENSEI_MOD  = {'比肩':5,'劫財':-3,'食神':10,'傷官':0,'偏財':6,'正財':10,'偏官':-6,'正官':7,'偏印':2,'印綬':9};
-var SHICHUU_REL_MOD     = {'三合':15,'六合':15,'冲':-15,'刑':-10,'害':-8,'破':-8};
+/* 2026-10-15 年運・月運が甘すぎた（◎が約5割）ため調整：
+   ・三合は旺支（子午卯酉）を含む半会だけを数え、加点を15→8に下げた（旺支のない寅×戌などの拱合は数えない）
+   ・六合の加点を15→10に下げた
+   ・通変星の補正表は平均が+4で全員に約+12点の下駄が乗っていたため、半分（2）だけ引く */
+var SHICHUU_REL_MOD     = {'三合':8,'六合':10,'冲':-15,'刑':-10,'害':-8,'破':-8};
+var SHICHUU_HENSEI_OFFSET = 2;
 
 function calcShichuuYearScore(birthdate, targetYear) {
   try {
@@ -7314,7 +7321,7 @@ function calcShichuuYearScore(birthdate, targetYear) {
     var henseiMod = SHICHUU_HENSEI_MOD[hensei1] !== undefined ? SHICHUU_HENSEI_MOD[hensei1] : 0;
     /* 実占の重み付けに合わせて再計算：①通変星を主役、③十二運は補助的な扱いに縮小、④合冲刑害破はそのまま */
     var jyu12Contribution = Math.round((jyu12Base - 55) * 0.3);
-    var henseiContribution = henseiMod * 3;
+    var henseiContribution = (henseiMod - SHICHUU_HENSEI_OFFSET) * 3;
     var rawScore = 50 + jyu12Contribution + henseiContribution + relSum;
     var score = Math.min(100, Math.max(0, Math.round(rawScore)));
     return { score: score, hensei: hensei1, jyu12: jyu3, rels: relList, jyu12Base: jyu12Base, henseiMod: henseiMod, relSum: relSum, jyu12Contribution: jyu12Contribution, henseiContribution: henseiContribution };
@@ -7352,7 +7359,7 @@ function calcShichuuMonthScore(birthdate, kYear, mo) {
     var henseiMod = SHICHUU_HENSEI_MOD[hensei1] !== undefined ? SHICHUU_HENSEI_MOD[hensei1] : 0;
     /* 実占の重み付けに合わせて再計算：①通変星を主役、③十二運は補助的な扱いに縮小、④合冲刑害破はそのまま */
     var jyu12Contribution = Math.round((jyu12Base - 55) * 0.3);
-    var henseiContribution = henseiMod * 3;
+    var henseiContribution = (henseiMod - SHICHUU_HENSEI_OFFSET) * 3;
     var rawScore = 50 + jyu12Contribution + henseiContribution + relSum;
     var score = Math.min(100, Math.max(0, Math.round(rawScore)));
     return { score: score, hensei: hensei1, jyu12: jyu3, rels: relList, jyu12Base: jyu12Base, henseiMod: henseiMod, relSum: relSum,
