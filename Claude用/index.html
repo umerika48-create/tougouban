@@ -9855,7 +9855,7 @@ function toggleAccordion(id) {
           var bd = window._nyBirthdateMe || (document.getElementById('birthdate') ? document.getElementById('birthdate').value : '');
           if(bd && typeof buildShichuuCardHTML === 'function') {
             // 23時モードのときは時刻を無視
-            var _t = (window._yakodoki === true) ? 'FORCE_UNKNOWN' : window._normalBirthTime;
+            var _t = window._normalBirthTime; /* 23時モードでも時刻はそのまま使う（夜子時の判定はbuildShichuuCardHTML側） */
             var _cd = window._normalCityData;
             var _ts = (_t||'').replace(':','').replace(/[^0-9]/g,'');
             if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(_ts, !_ts, bd, _cd);
@@ -9931,7 +9931,12 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
       _yakLabel = (typeof window._yakodoki !== 'undefined' && window._yakodoki === true) ? '（23時以降）' : '（正午）';
     }
     var birthStr=yr+'年'+mo+'月'+da+'日'+(unknownTime ? _yakLabel : '　'+('0'+hourVal).slice(-2)+':'+('0'+minVal).slice(-2));
-    if(!unknownTime && _si && _si.deltaMin){ birthStr += '（真太陽時 '+('0'+solarDT.getHours()).slice(-2)+':'+('0'+solarDT.getMinutes()).slice(-2)+'）'; }
+    if(!unknownTime && _si && _si.deltaMin){
+      /* 真太陽時で日付がまたぐときは「前日」「翌日」を付ける */
+      var _solDayDiff = Math.round((Date.UTC(solarDT.getFullYear(),solarDT.getMonth(),solarDT.getDate()) - Date.UTC(birthDT.getFullYear(),birthDT.getMonth(),birthDT.getDate())) / 86400000);
+      var _solDayTag = _solDayDiff < 0 ? '前日' : (_solDayDiff > 0 ? '翌日' : '');
+      birthStr += '（真太陽時 '+_solDayTag+('0'+solarDT.getHours()).slice(-2)+':'+('0'+solarDT.getMinutes()).slice(-2)+'）';
+    }
     // 大運は性別を選んだあとに計算する（男女ボタン・buildDaunSectionHTML）。日本時間の壁時計（時刻不明のときは正午）で計算
     var _daunWrapId = 'daun-wrap-' + (window._daunSeq = (window._daunSeq || 0) + 1);
     window._daunCtx[_daunWrapId] = { birthDT: birthDT, year_p: year_p, month_p: month_p, yr: yr, nik: (day_p ? day_p.kan : 0),
@@ -16893,7 +16898,7 @@ function buildShichuuCompatHTML(bdA, bdB, ov) {
     var results = [];
     // 三合
     for(var _i0=0;_i0<SHI_RELATIONS.sango.length;_i0++){var sg=SHI_RELATIONS.sango[_i0];
-      if(sg.group.indexOf(shiA)!==-1 && sg.group.indexOf(shiB)!==-1) {
+      if(sg.group.indexOf(shiA)!==-1 && sg.group.indexOf(shiB)!==-1 && shiA!==shiB) {
         results.push({type:'三合', name:sg.name, desc:sg.desc, score:sg.score, color:'#ff6b9d'});
       }
     }
@@ -20427,7 +20432,11 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   });
   var _toggleHTML = '<div style="margin-bottom:8px;padding:6px 10px;background:rgba(184,150,46,0.08);border-radius:8px;display:flex;align-items:center;justify-content:space-between;">' + '<div style="display:flex;align-items:center;gap:6px;">' + '<button onclick="setYakodoki(true)" id="yak-btn-23" style="padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (window._yakodoki === true ? 'var(--sk-gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (window._yakodoki === true ? 'var(--sk-gold)' : 'transparent') + ';color:' + (window._yakodoki === true ? '#000' : 'var(--sk-silver-dim)') + ';font-weight:' + (window._yakodoki === true ? '700' : '400') + ';">23時</button>' + '<button onclick="setYakodoki(false)" id="yak-btn-0" style="padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (window._yakodoki === false ? 'var(--sk-gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (window._yakodoki === false ? 'var(--sk-gold)' : 'transparent') + ';color:' + (window._yakodoki === false ? '#000' : 'var(--sk-silver-dim)') + ';font-weight:' + (window._yakodoki === false ? '700' : '400') + ';">0時</button>' + '</div>' + '</div>';
   // 生年月日表示文字列を生成（birthStrは既に「1986年4月30日 13:17 福岡」形式）
-  var _bsParts = birthStr.trim().split(/\s+/);
+  /* 「（真太陽時 前日23:47）」は先に取り出しておく（残すと時刻・出生地と取り違えて括弧が重なる） */
+  var _bsSolar = '';
+  var _bsSolM = birthStr.match(/（真太陽時\s*([^）]*)）/);
+  if (_bsSolM) { _bsSolar = _bsSolM[1]; }
+  var _bsParts = birthStr.replace(/（真太陽時\s*[^）]*）/, '').trim().split(/\s+/);
   var _bsPlace = '';
   var _bsTime = '';
   // 時刻（HH:MM形式）と出生地を抽出
@@ -20454,6 +20463,7 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
   var _bsDatePart = _bsYrM ? "".concat(_bsYrM[1], "\u5E74").concat(_bsYrM[2], "\u6708").concat(_bsYrM[3], "\u65E5") : _bsParts[0];
   var _birthDisplay = _bsDatePart;
   if (_bsTime) _birthDisplay += ' ' + _bsTime;
+  if (_bsSolar) _birthDisplay += '（真太陽時 ' + _bsSolar + '）';
   if (_bsPlace) _birthDisplay += '（' + _bsPlace + '）';
   if (_bsAge) _birthDisplay += '（' + _bsAge + '）';
   var html = (hideTabs ? '' : _toggleHTML) + "\n  <div class=\"result-title fade-in\">\n    <h2>\u547D \u5F0F \u8868</h2>\n    <div class=\"person-name\">".concat(_birthDisplay, "\u751F</div>\n    ").concat(personName ? '<div style="font-size:0.75rem;letter-spacing:0.3em;color:var(--sk-silver);margin-top:0.4rem;">' + personName + '</div>' : '', "\n  </div>\n\n  <div class=\"meishiki-wrapper fade-in\">\n    <table class=\"meishiki-table ").concat(noHourClass, "\">\n      ").concat(tableRows, "\n    </table>\n  </div>\n\n  <div style=\"display:flex;gap:8px;justify-content:center;margin:10px 0;\">\n    <button onclick=\"showTsuuhenseiRanking(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(184,150,46,.4);background:rgba(184,150,46,.1);color:var(--sk-gold-light);font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDCCA \u8A55\u4FA1</button>\n    <button onclick=\"showTsuuhenseiFullAnalysis(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(168,154,255,.5);background:rgba(168,154,255,.1);color:#b8a8ff;font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDD0D \u89E3\u6790</button>\n    <button onclick=\"showTsuuhenseiJobFit(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(120,200,150,.5);background:rgba(120,200,150,.1);color:#8fe0b0;font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDCBC \u9069\u8077</button>\n    <button onclick=\"showTsuuhenseiPartnerFit(").concat(_engArgs, ")\" style=\"padding:5px 14px;border-radius:12px;border:1px solid rgba(240,150,180,.5);background:rgba(240,150,180,.1);color:#f5a8c0;font-size:11px;font-weight:700;cursor:pointer;\">\uD83D\uDC91 \u5408\u3046\u4EBA</button>\n  </div>\n\n  <div class=\"kuubo-card fade-in\">\n    <div class=\"kuubo-title\">\u7A7A \u4EA1\uFF08\u5929 \u4E2D \u6BBA\uFF09</div>\n    <div class=\"kuubo-content\">\n      <div class=\"kuubo-shi\">\n        ").concat(kuuboNames.map(function (s) {
@@ -21780,13 +21790,13 @@ function setYakodoki(enabled) {
   var bd, _t, _cd;
   if(isPartner) {
     bd = window._compatBdB;
-    // 23時モード(enabled=true)のときは時刻なしとして計算
-    _t = enabled ? 'FORCE_UNKNOWN' : window._compatBirthTime;
+    // 23時モードでも時刻はそのまま使う（時刻がわかる人の時柱が消えないように。夜子時の判定はbuildShichuuCardHTML側）
+    _t = window._compatBirthTime;
     _cd = window._compatCityData;
   } else {
     bd = window._nyBirthdateMe || document.getElementById('birthdate').value;
-    // 23時モード(enabled=true)のときは時刻なしとして計算
-    _t = enabled ? 'FORCE_UNKNOWN' : window._normalBirthTime;
+    // 23時モードでも時刻はそのまま使う（時刻がわかる人の時柱が消えないように。夜子時の判定はbuildShichuuCardHTML側）
+    _t = window._normalBirthTime;
     _cd = window._normalCityData;
   }
   var cardBody = document.getElementById('shichuu-card-body');
@@ -21805,9 +21815,8 @@ function setYakodoki(enabled) {
     // calculateShichuuを再実行して命式を再描画
     if(!isPartner && typeof calculateShichuu === 'function') {
       if(window._lastShichuuOpts) {
-        // 23時モードのとき時刻を上書き
+        // 23時モードでも時刻はそのまま使う（夜子時の判定はcalculateShichuu側）
         var reOpts = Object.assign({}, window._lastShichuuOpts);
-        if(enabled) { reOpts.timeStr4 = ''; reOpts.placeOffset = 0; }
         calculateShichuu(reOpts);
       } else {
         autoCalculate();
