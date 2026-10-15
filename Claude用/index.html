@@ -5172,11 +5172,15 @@ function getNatalPillars(birthdate, timeStr, cityData, yakMode) {
   }
   var year_p, month_p, day_p, hour_p = null, yak = false, solar = null, deltaMin = 0, jstDate = null;
   if (unknown) {
-    var noon = new Date(yr, mo - 1, da, 12, 0, 0, 0);
+    /* 時刻不明：0時モード＝正午で計算。23時モード（yakMode===true）＝23:30として、年柱・月柱は23:30時点、日柱は翌日。
+       命式カード・友達リストと同じ扱い（時刻不明のときの既定は0時モード） */
+    var yakU = (yakMode === true);
+    var noon = new Date(yr, mo - 1, da, yakU ? 23 : 12, yakU ? 30 : 0, 0, 0);
     jstDate = noon;
     year_p = calcNenchu(noon);
     month_p = calcGetschu(noon, year_p.kan);
-    day_p = calcNicchu(noon);
+    day_p = calcNicchu(yakU ? new Date(yr, mo - 1, da + 1, 0, 30, 0, 0) : noon);
+    yak = yakU;
   } else {
     var si = getSolarTimeInfo(yr, mo, da, hourVal, minVal, cityData);
     solar = si.solar; deltaMin = si.deltaMin; jstDate = si.jst;
@@ -5400,11 +5404,14 @@ function getHenseiColor(henseiName, isShinkyou) {
 }
 
 function getShichuuShinYoujin(birthdate) {
-  var meishiki = getSanmeiMeishiki(birthdate);
+  /* 命式カード・年運・月運と同じ四柱（節入りは時刻で判定、日柱は真太陽時・夜子時の選択どおり）を使う。
+     以前は日付だけの簡易命式を使っており、節入り日や深夜0時前後の出生でカードと食い違っていた */
   var _npY = getNatalPillarsForBd(birthdate);
-  if (_npY.yak) { /* 23時以降生まれは夜子時＝翌日の日柱 */
-    meishiki = { year: meishiki.year, month: meishiki.month, day: JIKKAN[_npY.day_p.kan] + JUNISHI[_npY.day_p.shi] };
-  }
+  var meishiki = {
+    year:  JIKKAN[_npY.year_p.kan]  + JUNISHI[_npY.year_p.shi],
+    month: JIKKAN[_npY.month_p.kan] + JUNISHI[_npY.month_p.shi],
+    day:   JIKKAN[_npY.day_p.kan]   + JUNISHI[_npY.day_p.shi]
+  };
   var dayStem = meishiki.day[0];
   var dayEl = STEM_EL_SANMEI[dayStem];
   var branchEl = {'子':'水','丑':'土','寅':'木','卯':'木','辰':'土','巳':'火','午':'火','未':'土','申':'金','酉':'金','戌':'土','亥':'水'};
@@ -9923,11 +9930,11 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
     // 出生地による時刻補正：真太陽時（経度＋均時差）。節入りの判定（年柱・月柱）は補正せず時計の時刻で行う
     var _cityData=optCityData!==undefined?optCityData:window._normalCityData;
     var _si = unknownTime ? null : getSolarTimeInfo(yr,mo,da,hourVal,minVal,_cityData);
-    var birthDT = unknownTime ? new Date(yr,mo-1,da,12,0,0,0) : _si.jst;   // 年柱・月柱用
-    var solarDT = unknownTime ? birthDT : _si.solar;                          // 日柱・時柱用（真太陽時）
-
     // 夜子時対応（_yakodokiの設定に従う）。判定は真太陽時が23時以降かどうか
     var _yak = (typeof window._yakodoki !== 'undefined') ? window._yakodoki : true;
+    /* 時刻不明：0時モード＝正午、23時モード＝23:30として年柱・月柱を判定（getNatalPillars・友達リストと同じ） */
+    var birthDT = unknownTime ? new Date(yr,mo-1,da,_yak?23:12,_yak?30:0,0,0) : _si.jst;   // 年柱・月柱用
+    var solarDT = unknownTime ? birthDT : _si.solar;                          // 日柱・時柱用（真太陽時）
     var nicchiDate=solarDT;
     if(!unknownTime && _yak && solarDT.getHours()>=23){
       nicchiDate=new Date(solarDT.getFullYear(),solarDT.getMonth(),solarDT.getDate()+1,0,30,0,0);
