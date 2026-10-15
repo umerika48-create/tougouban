@@ -21885,15 +21885,26 @@ function yakodokiRefreshAll() {
     }
     var yPos = window.pageYOffset || 0;
     autoCalculate();
-    for(var j = 0; j < openIds.length; j++){
-      var id = openIds[j];
-      if(id === 'shichuu-card' && typeof toggleAccordion === 'function'){ toggleAccordion(id); continue; }
-      var bb = document.getElementById('abody-' + id), bt = document.getElementById('abtn-' + id);
-      if(bb) bb.classList.add('open');
-      if(bt) bt.classList.add('open');
-    }
-    setTimeout(function(){ window.scrollTo(0, yPos); }, 150);
-    setTimeout(function(){ window.scrollTo(0, yPos); }, 800);
+    /* 開いていたカードを「必ず開いた状態」にそろえる。
+       toggleAccordion は開閉を反転するだけなので、再描画で既に開いていると逆に閉じてしまう。
+       そのため、開いていなければ開く、という判定にする。
+       再描画の一部は setTimeout で遅れて走るため、時間をおいてもう一度そろえる */
+    var _restoreOpen = function(){
+      for(var j = 0; j < openIds.length; j++){
+        var id = openIds[j];
+        var bb = document.getElementById('abody-' + id), bt = document.getElementById('abtn-' + id);
+        if(!bb) continue;
+        if(id === 'shichuu-card' && !bb.classList.contains('open') && typeof toggleAccordion === 'function'){
+          toggleAccordion(id); /* 中身の初期化も走る（開いていないときだけ呼ぶ） */
+          continue;
+        }
+        bb.classList.add('open');
+        if(bt) bt.classList.add('open');
+      }
+    };
+    _restoreOpen();
+    setTimeout(function(){ _restoreOpen(); window.scrollTo(0, yPos); }, 150);
+    setTimeout(function(){ _restoreOpen(); window.scrollTo(0, yPos); }, 800);
   } catch(e) { console.error('yakodokiRefreshAll error:', e); }
 }
 
