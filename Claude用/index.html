@@ -17940,7 +17940,7 @@ var FRIEND_DATA = [
 {id:"msabgkw7j4g2",name:"凪人",date:"2022-08-15",time:"17:49",timeUnknown:false,place:"福岡",category:"友達の子供",memo:"(きゃん)",addedAt:1785585426631,visible:true},
 {id:"msabhnchsif8",name:"キノピー",date:"1978-07-13",time:"",timeUnknown:true,place:"",category:"友達（♂）",memo:"",addedAt:1785585476465,visible:true},
 {id:"msabj809hmvw",name:"さくちゃん",date:"2014-09-20",time:"",timeUnknown:false,place:"福岡",category:"友達の子供",memo:"やぁC",addedAt:1785585549897,visible:true},
-{id:"msabk52yt156",name:"てっちゃん",date:"1986-04-25",time:"",timeUnknown:true,place:"福岡",category:"友達（♂）",memo:"",addedAt:1785585592762,visible:true},
+{id:"msabk52yt156",name:"てつ",date:"1986-04-25",time:"",timeUnknown:true,place:"福岡",category:"友達（♂）",memo:"きゃん",addedAt:1785585592762,visible:true},
 {id:"msabl8e9ilrz",name:"パパ",date:"1932-04-26",time:"",timeUnknown:false,place:"福岡",category:"身内",memo:"",addedAt:1785585643713,visible:true},
 {id:"msabmaddex2i",name:"ママ",date:"1936-07-23",time:"",timeUnknown:false,place:"韓国？",category:"身内",memo:"",addedAt:1785585692929,visible:true},
 {id:"msabn5trf0n8",name:"ふゆみ",date:"1986-11-29",time:"",timeUnknown:false,place:"福岡",category:"友達",memo:"",addedAt:1785585733695,visible:true},
@@ -17988,11 +17988,156 @@ var FRIEND_DATA = [
 {id:"mazqx1ah6",name:"深町佳代子",date:"1964-02-24",time:"",timeUnknown:true,place:"",category:"お客様",memo:"",addedAt:1791084428872,visible:true},
 {id:"mv0rpdm94aj9",name:"松本きょうへい(りい元カレ)",date:"1996-11-18",time:"02:03",timeUnknown:false,place:"福岡市",category:"友達（♂）",memo:"",addedAt:1791538396209,visible:true},
 {id:"mv1t4cosrf4i",name:"はるかちん",date:"1987-02-10",time:"",timeUnknown:true,place:"",category:"友達",memo:"",addedAt:1791601240637,visible:true},
-{id:"mv4uizxm6am5",name:"高山彩夏",date:"1990-06-28",time:"05:55",timeUnknown:false,place:"福岡市",category:"未分類",memo:"5:55か5:50",addedAt:1791785002090,visible:true}
+{id:"mv4uizxm6am5",name:"高山彩夏",date:"1990-06-28",time:"05:55",timeUnknown:false,place:"福岡市",category:"お客様",memo:"5:55か5:50",addedAt:1791785002090,visible:true},
+{id:"mv90ct6uawim",name:"おーやん",date:"1968-01-20",time:"08:00",timeUnknown:false,place:"鹿児島市",category:"仕事関係",memo:"",addedAt:1792036655814,visible:true}
 ];
 
 /* localStorageに保存された友達データがあれば、それで上書きする */
-/* localStorage読み込み無効化：HTMLデータを正として使用 */
+/* localStorage読み込み無効化：埋め込みデータは予備。通常は下の自動同期でサーバーの最新を使う */
+
+/* ======= 友達データ帳サーバーとの自動同期 =======
+   正しいデータは「友達データ帳」のサーバー。ここに書き込まれている FRIEND_DATA は、
+   サーバーに届かないとき用の予備データ。アプリを開いたとき・画面に戻ったとき・
+   管理画面の「今すぐ同期」で、サーバーの最新に置き換える（IDで照合。名前では照合しない）。 */
+var FRIEND_SERVER_URL = 'https://cloudflare-friend-data-pages.umerika48.workers.dev/api/data-light';
+window._friendSync = { state: 'idle', at: 0, count: 0, added: [], updated: [], removed: [], skipped: 0, error: '' };
+var _friendSyncBusy = false;
+
+function _friendSyncIsValid(f){
+  return !!(f && typeof f.id === 'string' && f.id && typeof f.name === 'string' && f.name &&
+            typeof f.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(f.date));
+}
+function _friendSyncSame(a, b){
+  var keys = ['name','date','time','timeUnknown','place','category','memo'];
+  for(var i = 0; i < keys.length; i++){
+    if(String(a[keys[i]] === undefined ? '' : a[keys[i]]) !== String(b[keys[i]] === undefined ? '' : b[keys[i]])) return false;
+  }
+  return true;
+}
+function _friendSyncStatusText(){
+  var s = window._friendSync;
+  var tm = '';
+  if(s.at){ var d = new Date(s.at); tm = ('0'+d.getHours()).slice(-2) + ':' + ('0'+d.getMinutes()).slice(-2); }
+  if(s.state === 'loading') return '⏳ サーバーから最新を取得中…';
+  if(s.state === 'ok') return '✅ サーバーと同期済み：' + FRIEND_DATA.length + '人（' + tm + '）' + (s.skipped ? '　※形式が不正な' + s.skipped + '件は除外' : '');
+  if(s.state === 'error') return '⚠ サーバーに接続できませんでした。予備データ' + FRIEND_DATA.length + '人で動作中（' + s.error + '）';
+  return '予備データ' + FRIEND_DATA.length + '人（未同期）';
+}
+function _friendSyncRefreshUI(){
+  var el = document.getElementById('friend-sync-status');
+  if(el){
+    el.textContent = _friendSyncStatusText();
+    el.style.color = (window._friendSync.state === 'error') ? '#f59e0b' : '#7ee787';
+  }
+  var listEl = document.getElementById('friend-data-list');
+  if(listEl && typeof buildFriendDataListHTML === 'function'){
+    var cat = (window._friendCategoryFilter && window._friendCategoryFilter !== '全員') ? window._friendCategoryFilter : null;
+    try { listEl.innerHTML = buildFriendDataListHTML(FRIEND_DATA, cat); } catch(e) {}
+  }
+  var rawEl = document.getElementById('friend-data-raw');
+  if(rawEl) rawEl.textContent = JSON.stringify(FRIEND_DATA, null, 2);
+}
+function _friendSyncToast(msg){
+  try {
+    var t = document.createElement('div');
+    t.style.cssText = 'position:fixed;left:50%;bottom:24px;transform:translateX(-50%);max-width:88%;padding:10px 16px;border-radius:12px;background:rgba(20,18,40,.95);border:1px solid rgba(201,168,76,.6);color:#f0e6c8;font-size:12px;line-height:1.6;z-index:99998;text-align:center;white-space:pre-line;';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(function(){ if(t.parentNode) t.parentNode.removeChild(t); }, 5000);
+  } catch(e) {}
+}
+
+function _friendSyncApply(list){
+  /* 検査：形式が正しい人だけ取り込む。IDの重複は先に出たほうだけ */
+  var valid = [], seen = {}, skipped = 0, i;
+  for(i = 0; i < list.length; i++){
+    var f = list[i];
+    if(!_friendSyncIsValid(f) || seen.hasOwnProperty(f.id)){ skipped++; continue; }
+    seen[f.id] = true; valid.push(f);
+  }
+  if(valid.length === 0) throw new Error('サーバーのデータが空でした');
+  if(FRIEND_DATA.length >= 10 && valid.length < FRIEND_DATA.length * 0.5) throw new Error('人数が極端に少ないため反映を見送りました（' + valid.length + '人）');
+
+  /* 変更点を数える（IDで照合） */
+  var oldById = {}, added = [], updated = [], removed = [];
+  for(i = 0; i < FRIEND_DATA.length; i++) oldById[FRIEND_DATA[i].id] = FRIEND_DATA[i];
+  for(i = 0; i < valid.length; i++){
+    var o = oldById[valid[i].id];
+    if(!o) added.push(valid[i].name);
+    else if(!_friendSyncSame(o, valid[i])) updated.push(valid[i].name);
+  }
+  for(i = 0; i < FRIEND_DATA.length; i++){ if(!seen.hasOwnProperty(FRIEND_DATA[i].id)) removed.push(FRIEND_DATA[i].name); }
+
+  /* 画面上で一時的に「非表示」にしていた設定は、同じIDの人に引き継ぐ（保存はされない設定） */
+  var next = [];
+  for(i = 0; i < valid.length; i++){
+    var n = {}, k;
+    for(k in valid[i]){ if(valid[i].hasOwnProperty(k)) n[k] = valid[i][k]; }
+    if(oldById[n.id] && oldById[n.id].hidden === true) n.hidden = true;
+    next.push(n);
+  }
+  /* 配列そのものは入れ替えず、中身だけ置き換える（ほかの処理が持っている参照を壊さないため） */
+  FRIEND_DATA.length = 0;
+  for(i = 0; i < next.length; i++) FRIEND_DATA.push(next[i]);
+
+  /* 命式の計算結果などのキャッシュを捨てる */
+  FRIEND_MEISHIKI_CACHE = null; window._friendMeishikiCache = {};
+  window._togoGroups = null;
+  return { added: added, updated: updated, removed: removed, skipped: skipped };
+}
+
+function syncFriendDataFromServer(manual){
+  if(_friendSyncBusy) return;
+  _friendSyncBusy = true;
+  window._friendSync.state = 'loading';
+  _friendSyncRefreshUI();
+  var xhr = new XMLHttpRequest();
+  var done = false;
+  function fail(msg){
+    if(done) return; done = true; _friendSyncBusy = false;
+    window._friendSync.state = 'error'; window._friendSync.error = msg; window._friendSync.at = new Date().getTime();
+    _friendSyncRefreshUI();
+    if(manual) _friendSyncToast('友達データを取得できませんでした：' + msg);
+  }
+  xhr.open('GET', FRIEND_SERVER_URL + '?t=' + new Date().getTime(), true);
+  xhr.timeout = 12000;
+  xhr.onload = function(){
+    if(done) return;
+    if(xhr.status !== 200){ fail('HTTP ' + xhr.status); return; }
+    var data;
+    try { data = JSON.parse(xhr.responseText); } catch(e) { fail('データを読み取れません'); return; }
+    if(!(data instanceof Array)){ fail('データの形式が違います'); return; }
+    var r;
+    try { r = _friendSyncApply(data); } catch(e2) { fail(e2.message || '反映できません'); return; }
+    done = true; _friendSyncBusy = false;
+    window._friendSync = { state: 'ok', at: new Date().getTime(), count: FRIEND_DATA.length, added: r.added, updated: r.updated, removed: r.removed, skipped: r.skipped, error: '' };
+    _friendSyncRefreshUI();
+    var changes = r.added.length + r.updated.length + r.removed.length;
+    if(changes > 0){
+      var parts = [];
+      if(r.added.length) parts.push('追加 ' + r.added.slice(0,3).join('・') + (r.added.length > 3 ? ' ほか' + (r.added.length - 3) + '人' : ''));
+      if(r.updated.length) parts.push('更新 ' + r.updated.slice(0,3).join('・') + (r.updated.length > 3 ? ' ほか' + (r.updated.length - 3) + '人' : ''));
+      if(r.removed.length) parts.push('削除 ' + r.removed.slice(0,3).join('・') + (r.removed.length > 3 ? ' ほか' + (r.removed.length - 3) + '人' : ''));
+      _friendSyncToast('友達データを最新にしました（' + FRIEND_DATA.length + '人）\n' + parts.join(' ／ '));
+    } else if(manual){
+      _friendSyncToast('友達データは最新です（' + FRIEND_DATA.length + '人）');
+    }
+  };
+  xhr.onerror = function(){ fail('通信できません'); };
+  xhr.ontimeout = function(){ fail('時間切れ'); };
+  try { xhr.send(); } catch(e3) { fail('通信できません'); }
+}
+
+/* 起動時と、アプリに戻ってきたとき（前回から2分以上たっていれば）に同期する */
+(function(){
+  function kick(){ syncFriendDataFromServer(false); }
+  if(document.readyState === 'loading'){ document.addEventListener('DOMContentLoaded', kick); } else { setTimeout(kick, 0); }
+  document.addEventListener('visibilitychange', function(){
+    if(document.visibilityState === 'visible' && (new Date().getTime() - (window._friendSync.at || 0)) > 120000) syncFriendDataFromServer(false);
+  });
+})();
+/* ======= 友達データ帳サーバーとの自動同期 END ======= */
+
 
 /* 友達データ管理モーダルを開く */
 function openFriendDataManager(){
@@ -18001,6 +18146,10 @@ function openFriendDataManager(){
     + '<div style="font-size:14px;font-weight:700;color:var(--gold,#c9a84c);margin-bottom:10px;">👥 友達データ管理</div>'
     + '<div style="font-size:11px;color:var(--muted);margin-bottom:10px;line-height:1.7;">「友達データ帳」アプリで「JSONで出力」（全員）または「新規登録分だけ出力」した内容をここに貼り付けてください。idが一致する人は情報を更新し、一致しない人は新規追加されます（既存データが消えることはありません）。※この画面での変更は一時的なもので、恒久的に保存するにはClaudeにファイルへ反映してもらう必要があります。</div>'
     + '<textarea id="friend-data-paste" placeholder="ここにJSONを貼り付け" style="width:100%;min-height:160px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.15);border-radius:8px;color:var(--text);font-family:monospace;font-size:11px;padding:8px;box-sizing:border-box;"></textarea>'
+    + '<div style="display:flex;align-items:center;gap:8px;margin:0 0 10px;flex-wrap:wrap;">'
+    + '<div id="friend-sync-status" style="font-size:11px;color:#7ee787;flex:1;min-width:160px;line-height:1.6;">' + _friendSyncStatusText() + '</div>'
+    + '<button onclick="syncFriendDataFromServer(true)" style="padding:6px 12px;border-radius:8px;border:1px solid rgba(126,231,135,.5);background:rgba(126,231,135,.1);color:#7ee787;font-size:11px;font-weight:700;cursor:pointer;">🔄 今すぐ同期</button>'
+    + '</div>'
     + '<div id="friend-data-status" style="font-size:11px;color:#7ee787;margin-top:6px;min-height:16px;"></div>'
     + '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;">'
     + '<button onclick="saveFriendDataFromPaste()" style="flex:1;padding:10px;border-radius:8px;border:none;background:var(--gold,#c9a84c);color:#241d10;font-weight:700;font-size:12px;cursor:pointer;">貼り付けた内容で上書き保存</button>'    + '<button onclick="resetAllFriendData()" style="padding:10px 14px;border-radius:8px;border:1px solid rgba(255,80,80,.4);background:rgba(255,80,80,.1);color:#ff8080;font-weight:700;font-size:12px;cursor:pointer;">全リセット</button>'
