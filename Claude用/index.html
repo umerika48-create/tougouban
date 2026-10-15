@@ -9857,6 +9857,19 @@ function toggleRokkuDetail(id, event) {
 }
 
 /* =======================================================
+   ■ 0時/23時の切替で再鑑定している間は、自動スクロールを止める
+   ======================================================= */
+window._yakKeepScroll = false;
+function _autoScroll(el, opts) {
+  if (window._yakKeepScroll) return; /* 切替の再描画中は、見ていた位置から動かさない */
+  try { el.scrollIntoView(opts); } catch (e) { try { el.scrollIntoView(); } catch (e2) {} }
+}
+/* ページ全体に scroll-behavior:smooth がかかっているため、位置を戻すときは「即時」を明示する */
+function _jumpScrollTo(y) {
+  try { window.scrollTo({ top: y, left: 0, behavior: 'instant' }); } catch (e) { window.scrollTo(0, y); }
+}
+
+/* =======================================================
    ■ アコーディオン
    ======================================================= */
 function toggleAccordion(id) {
@@ -9893,7 +9906,7 @@ function toggleAccordion(id) {
         }
       }
     }
-    setTimeout(function(){ body.scrollIntoView({behavior:'smooth', block:'nearest'}); }, 50);
+    setTimeout(function(){ _autoScroll(body, {behavior:'smooth', block:'nearest'}); }, 50);
   }
 }
 
@@ -10358,7 +10371,7 @@ function calculateCompat() {
   var rd = document.getElementById('result');
   rd.innerHTML = html;
   rd.style.display = 'block';
-  rd.scrollIntoView({behavior:'smooth', block:'start'});
+  _autoScroll(rd, {behavior:'smooth', block:'start'});
 
   // 四柱推命カードの初期表示（あなた視点）
   if(typeof switchShichuuCard === 'function') {
@@ -12140,7 +12153,7 @@ function switchCompatTab(tab, source) {
   }
 
   /* 表示されたwrapが画面に見えるようスクロール */
-  setTimeout(function(){ wrap.scrollIntoView({behavior:'smooth', block:'start'}); }, 30);
+  setTimeout(function(){ _autoScroll(wrap, {behavior:'smooth', block:'start'}); }, 30);
 
   /* 方位盤・月盤を描画 */
   setTimeout(function() {
@@ -13105,7 +13118,7 @@ function calculate() {
       var mb=document.getElementById('monthBar');
       if(yb) yb.style.width=toWidth(yd.score);
       if(mb) mb.style.width=toWidth(md.score);
-      resultEl.scrollIntoView({behavior:'smooth',block:'start'});
+      _autoScroll(resultEl, {behavior:'smooth',block:'start'});
       KyuseiEnhanced.renderAll('enhanced-wrap', honmei, kYear, kMonth);
       // 夜子時トグルを表示
       if(typeof showYakodokiToggle === 'function') showYakodokiToggle();
@@ -20677,7 +20690,7 @@ function calculateShichuu(opts){
   var resultDiv=document.getElementById('shichuu-result')||document.getElementById('result');
   resultDiv.innerHTML = html + buildUnseiHTML(dauResult, yr, day_p ? day_p.kan : 0);
   resultDiv.style.display = 'block';
-  resultDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  _autoScroll(resultDiv, { behavior: 'smooth', block: 'start' });
   // 夜子時トグルを表示＆デフォルト状態を時刻に合わせる
   if(typeof showYakodokiToggle === 'function') showYakodokiToggle();
   if(typeof updateYakodokiDefault === 'function') updateYakodokiDefault(_ts4, unknownTime);
@@ -21928,6 +21941,12 @@ function yakodokiRefreshAll() {
       if(bodies[i].id && bodies[i].id.indexOf('abody-') === 0) openIds.push(bodies[i].id.slice(6));
     }
     var yPos = window.pageYOffset || 0;
+    /* 再描画の途中で画面が一時的に短くなると、ブラウザが位置を上に詰めてしまう。
+       終わるまで今の高さを保つ */
+    var _body = document.body, _oldMinH = _body.style.minHeight;
+    _body.style.minHeight = Math.max(document.documentElement.scrollHeight, _body.scrollHeight) + 'px';
+    /* 再鑑定の途中で走る自動スクロール（相性結果の先頭へ移動など）を止める */
+    window._yakKeepScroll = true;
     /* 紫の「あなた／相手」タブで開いていた個人鑑定（命式カードもここ）を覚えておく。
        再鑑定すると中身が空になり開閉の記録もリセットされるため、あとで開き直す */
     var _tabKey = window._compatTabOpenState || null;
@@ -21955,9 +21974,18 @@ function yakodokiRefreshAll() {
       }
     };
     _restoreOpen();
-    setTimeout(function(){ _restoreOpen(); window.scrollTo(0, yPos); }, 150);
-    setTimeout(function(){ _restoreOpen(); window.scrollTo(0, yPos); }, 800);
-  } catch(e) { console.error('yakodokiRefreshAll error:', e); }
+    _jumpScrollTo(yPos);
+    setTimeout(function(){ _restoreOpen(); _jumpScrollTo(yPos); }, 150);
+    setTimeout(function(){
+      _restoreOpen(); _jumpScrollTo(yPos);
+      window._yakKeepScroll = false;
+      _body.style.minHeight = _oldMinH;
+    }, 900);
+  } catch(e) {
+    window._yakKeepScroll = false;
+    try { document.body.style.minHeight = ''; } catch(e3) {}
+    console.error('yakodokiRefreshAll error:', e);
+  }
 }
 
 function showYakodokiToggle() {
