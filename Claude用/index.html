@@ -21928,7 +21928,15 @@ function yakodokiRefreshAll() {
       if(bodies[i].id && bodies[i].id.indexOf('abody-') === 0) openIds.push(bodies[i].id.slice(6));
     }
     var yPos = window.pageYOffset || 0;
+    /* 紫の「あなた／相手」タブで開いていた個人鑑定（命式カードもここ）を覚えておく。
+       再鑑定すると中身が空になり開閉の記録もリセットされるため、あとで開き直す */
+    var _tabKey = window._compatTabOpenState || null;
     autoCalculate();
+    if(_tabKey && typeof switchCompatTab === 'function'){
+      var _tp = _tabKey.split('_');
+      window._compatTabOpenState = null; /* 記録が残ったままだと「閉じる」側に動いてしまう */
+      try { switchCompatTab(_tp[1], _tp[0] === 'top' ? 'top' : undefined); } catch(e2) { console.error('reopen personal tab error:', e2); }
+    }
     /* 開いていたカードを「必ず開いた状態」にそろえる。
        toggleAccordion は開閉を反転するだけなので、再描画で既に開いていると逆に閉じてしまう。
        そのため、開いていなければ開く、という判定にする。
