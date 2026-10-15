@@ -12241,8 +12241,45 @@ var CITY_COORDS = {
   '沖縄':{'lat':26.2124,'lon':127.6809,'tz':9},'沖縄県':{'lat':26.2124,'lon':127.6809,'tz':9},
 };
 
+/* 出生地の表記ゆれ対応。
+   従来どおりの完全一致を最優先し、見つからないときだけ次を順に試す（既存の結果は変わらない）:
+   ・「福岡市」「福岡市博多区」→ 市より前の「福岡」
+   ・「徳島県徳島市」「北海道札幌市」→ 市の名前 →（なければ）都道府県の座標
+   ・「アメリカ(ニューヨーク・マンハッタン）」「New York, USA」→ かっこ・「・」・読点で区切って順に */
+function _cityTry(c) {
+  c = String(c || '').replace(/^\s+|\s+$/g, '');
+  if (!c) return null;
+  var hit = CITY_COORDS[c.toLowerCase()] || CITY_COORDS[c];
+  if (hit) return hit;
+  var m = c.match(/^(.+?)市/);
+  if (m && m[1]) {
+    hit = CITY_COORDS[m[1].toLowerCase()] || CITY_COORDS[m[1]];
+    if (hit) return hit;
+  }
+  return null;
+}
 function lookupCity(name) {
-  return CITY_COORDS[name.trim().toLowerCase()] || CITY_COORDS[name.trim()] || null;
+  var raw = String(name == null ? '' : name).replace(/^\s+|\s+$/g, '');
+  var hit = CITY_COORDS[raw.toLowerCase()] || CITY_COORDS[raw];
+  if (hit) return hit;
+  if (!raw) return null;
+  var s = raw.replace(/（/g, '(').replace(/）/g, ')').replace(/　/g, ' ');
+  var parts = s.split(/[()・,、，\/]+/);
+  for (var i = 0; i < parts.length; i++) {
+    var p = parts[i].replace(/^\s+|\s+$/g, '');
+    if (!p) continue;
+    hit = _cityTry(p);
+    if (hit) return hit;
+    var pNoSp = p.replace(/\s+/g, '');
+    var pm = pNoSp.match(/^(北海道|.{2,3}[都府県])(.+)$/);
+    if (pm) {
+      hit = _cityTry(pm[2]) || _cityTry(pm[1]);
+    } else {
+      hit = _cityTry(pNoSp);
+    }
+    if (hit) return hit;
+  }
+  return null;
 }
 
 function runHoroscope() {
