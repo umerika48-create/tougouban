@@ -21522,10 +21522,9 @@ function openHjMemo() {
   if (!isOpen) {
     ta.dataset.key = key;
     ta.value = MEMO_DATA[key] || '';
-    // 非同期でストレージから読み込み
-    loadMemoStorage(key).then(function(val) {
-      if(val) { ta.value = val; MEMO_DATA[key] = val; }
-    });
+    // ストレージから読み込み（loadMemoStorageは同期で文字列を返す）
+    var val = loadMemoStorage(key);
+    if(val) { ta.value = val; MEMO_DATA[key] = val; }
     ta.focus();
   }
 }
