@@ -17697,6 +17697,21 @@ var HENSEI_LABELS = {
 };
 /* ======= 通変星ラベルデータ END ======= */
 
+/* ======= 蔵干星の一言ラベル ======= */
+var ZOUGAN_HITOKOTO = {
+  '比肩': '自分を信じる、マイペースな面',
+  '劫財': '負けず嫌いで、仲間思いな面',
+  '食神': 'のんびり楽しむ、おおらかな面',
+  '傷官': '感性がするどい、こだわり強めな面',
+  '偏財': '人づきあいが広い、フットワークが軽い面',
+  '正財': 'コツコツ進める、堅実な面',
+  '偏官': '行動力があって、勝負強い面',
+  '正官': 'まじめで、責任感がある面',
+  '偏印': 'ひらめきが強い、個性的な面',
+  '印綬': 'やさしくて、物知りな面'
+};
+/* ======= 蔵干星の一言ラベル END ======= */
+
 /* ======= 月干フレーズ（月干が日干に与える影響） ======= */
 var MOON_KAN_PHRASE = {
   // 日干甲
@@ -21425,7 +21440,15 @@ function openHenseiPanel(name, context){
         + '</div>';
     }
   }
-  document.getElementById('hjDesc').innerHTML = hFriendHTML + labelHTML + html + (serifHTML ? '<details style="margin-top:8px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">💬 鑑定セリフを見る</summary>' + serifHTML + '</details>' : '');
+  // 蔵干星から開いたときだけ、一番上に「この面の一言」を表示
+  var zouganHitokotoHTML = '';
+  if(context && context.indexOf('蔵干星') !== -1 && typeof ZOUGAN_HITOKOTO !== 'undefined' && ZOUGAN_HITOKOTO[name]){
+    zouganHitokotoHTML = '<div style="margin-bottom:10px;padding:8px 12px;background:rgba(255,215,0,0.08);border-radius:10px;border:1px solid rgba(255,215,0,0.25);">'
+      +'<div style="font-size:10px;color:var(--sk-gold-light);margin-bottom:3px;">この蔵干星の一言</div>'
+      +'<div style="font-size:14px;font-weight:700;color:var(--text);">'+ZOUGAN_HITOKOTO[name]+'</div>'
+      +'</div>';
+  }
+  document.getElementById('hjDesc').innerHTML = zouganHitokotoHTML + hFriendHTML + labelHTML + html + (serifHTML ? '<details style="margin-top:8px;"><summary style="font-size:11px;color:var(--muted);cursor:pointer;">💬 鑑定セリフを見る</summary>' + serifHTML + '</details>' : '');
   document.getElementById('hjContext').innerHTML = '<span style="font-size:12px;color:var(--sk-silver-dim);">' + context + '</span> <button onclick="showTenkanZouganTable()" style="font-size:9px;padding:1px 6px;border-radius:4px;background:rgba(168,154,255,0.1);border:1px solid rgba(168,154,255,0.3);color:#b8a8ff;cursor:pointer;">天干vs蔵干</button>';
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
