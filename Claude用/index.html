@@ -22613,6 +22613,403 @@ function toggleSakurakoText(btn) {
   if(problems.length > 0) console.error('⚠ ROKKU_UNMEISU異常検出: ' + problems.join(', '));
 })();
 
+
+/* =======================================================
+   文章の編集機能（編集モード）
+   - アプリ内の辞書（大文字の変数）にある日本語の文章を、すべて編集できる
+   - 編集した分だけをKVに保存（/api/texts）。元の文章はコードに残るので、いつでも元に戻せる
+   - サーバーに届かないとき（オフライン版など）は、この端末のlocalStorageだけで動く
+   ES5のみ（iOS Safari）
+   ======================================================= */
+var TEXTEDIT = (function () {
+  var API = '/api/texts';
+  var LS_CACHE = 'togoTextOverrides';   // { key: text }  最後に分かったサーバーの内容＋この端末の編集
+  var LS_PENDING = 'togoTextPending';   // { set:{key:text}, reset:[key] }  サーバーに送れていない分
+  var EXCLUDE = { FRIEND_DATA: 1, MEMO_DATA: 1, CITY_COORDS: 1, SEKKI: 1, SETSUIRI_TABLE: 1, TEXTEDIT: 1 };
+  var MIN_LEN = 6;          // 文章の一部だけをタップしたとき、探す対象にする最小の文字数
+  var MIN_EXACT = 3;        // 表示がその文章と完全に同じときは、これより短くても対象にする（ラベルなど）
+  // 計算や判定に使う表（名前どうしの対応など）は、編集の対象にしない
+  var EXCLUDE_RE = /(_GROUP|_NEXT|_MAP|_ENGINE|_COLOR|_COEFF|_POINT|_SCORE|_MOD|_START|_IDX|_COORDS)$/;
+  var active = false;
+  var applied = {};         // key -> true（いま上書きしている場所）
+  var orig = {};            // key -> 元の文章
+  var curIndex = null;      // 現在の文章 -> [key,...]（タップ検索用。必要なときに作る）
+  var curKeys = null;
+
+  function lsGet(name, dflt) {
+    try { var s = localStorage.getItem(name); return s ? JSON.parse(s) : dflt; } catch (e) { return dflt; }
+  }
+  function lsSet(name, val) {
+    try { localStorage.setItem(name, JSON.stringify(val)); } catch (e) {}
+  }
+
+  /* ---------- 辞書の探索 ---------- */
+  function hasJa(s) { return /[぀-ヿ㐀-鿿]/.test(s); }
+  function plain(s) { return String(s).replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim(); }
+
+  function rootNames() {
+    var names = [];
+    var all = Object.keys(window);
+    for (var i = 0; i < all.length; i++) {
+      var n = all[i];
+      if (!/^[A-Z][A-Z0-9_]+$/.test(n) || EXCLUDE[n] || EXCLUDE_RE.test(n)) continue;
+      var v;
+      try { v = window[n]; } catch (e) { continue; }
+      if (v && typeof v === 'object') names.push(n);
+    }
+    return names;
+  }
+
+  // callback(key, pathArray, string) をすべての日本語の文章に対して呼ぶ
+  function walkAll(cb) {
+    var names = rootNames();
+    for (var i = 0; i < names.length; i++) {
+      walk(window[names[i]], [names[i]], 0, cb, []);
+    }
+  }
+  function walk(node, path, depth, cb, seen) {
+    if (depth > 7 || seen.indexOf(node) !== -1) return;
+    seen.push(node);
+    var isArr = Array.isArray(node);
+    var keys = isArr ? null : Object.keys(node);
+    var len = isArr ? node.length : keys.length;
+    for (var i = 0; i < len; i++) {
+      var k = isArr ? i : keys[i];
+      var v;
+      try { v = node[k]; } catch (e) { continue; }
+      var p = path.concat([k]);
+      if (typeof v === 'string') {
+        if (v.length >= 2 && hasJa(v)) cb(JSON.stringify(p), p, v);
+      } else if (v && typeof v === 'object') {
+        walk(v, p, depth + 1, cb, seen);
+      }
+    }
+    seen.pop();
+  }
+
+  function getAt(path) {
+    var o = window[path[0]];
+    for (var i = 1; i < path.length; i++) {
+      if (o == null) return undefined;
+      o = o[path[i]];
+    }
+    return o;
+  }
+  function setAt(path, val) {
+    var o = window[path[0]];
+    for (var i = 1; i < path.length - 1; i++) {
+      if (o == null) return false;
+      o = o[path[i]];
+    }
+    if (o == null || typeof o[path[path.length - 1]] !== 'string') return false;
+    o[path[path.length - 1]] = val;
+    return true;
+  }
+  function pathOf(key) {
+    try { var p = JSON.parse(key); return Array.isArray(p) ? p : null; } catch (e) { return null; }
+  }
+
+  /* ---------- 上書きの適用・解除 ---------- */
+  function applyKey(key, text) {
+    var p = pathOf(key);
+    if (!p) return false;
+    var cur = getAt(p);
+    if (typeof cur !== 'string') return false;      // コードが変わって場所がなくなった
+    if (!(key in orig)) orig[key] = cur;
+    if (!setAt(p, text)) return false;
+    applied[key] = true;
+    return true;
+  }
+  function revertKey(key) {
+    if (!(key in orig)) { delete applied[key]; return; }
+    var p = pathOf(key);
+    if (p) setAt(p, orig[key]);
+    delete applied[key];
+  }
+  // items = 全体の最新の状態。含まれないものは元に戻す
+  function applyAll(items) {
+    var k;
+    for (k in applied) { if (applied.hasOwnProperty(k) && !(k in items)) revertKey(k); }
+    for (k in items) { if (items.hasOwnProperty(k)) applyKey(k, items[k]); }
+    curIndex = null;
+  }
+
+  /* ---------- サーバーとの通信 ---------- */
+  function api(method, path, body) {
+    var opt = { method: method, headers: {} };
+    if (body) { opt.headers['Content-Type'] = 'application/json'; opt.body = JSON.stringify(body); }
+    return fetch(API + path, opt).then(function (res) {
+      return res.json().then(function (j) {
+        if (!res.ok) throw new Error(j && j.error ? j.error : 'HTTP ' + res.status);
+        return j;
+      });
+    });
+  }
+  function flushPending() {
+    var pend = lsGet(LS_PENDING, null);
+    if (!pend) return Promise.resolve();
+    var chain = Promise.resolve();
+    if (pend.set && Object.keys(pend.set).length) {
+      chain = chain.then(function () { return api('POST', '/set', { items: pend.set }); });
+    }
+    if (pend.reset && pend.reset.length) {
+      chain = chain.then(function () { return api('POST', '/reset', { keys: pend.reset }); });
+    }
+    return chain.then(function () { lsSet(LS_PENDING, null); });
+  }
+  function addPending(setItems, resetKeys) {
+    var pend = lsGet(LS_PENDING, null) || { set: {}, reset: [] };
+    var k;
+    for (k in setItems) {
+      if (!setItems.hasOwnProperty(k)) continue;
+      pend.set[k] = setItems[k];
+      var ix = pend.reset.indexOf(k); if (ix !== -1) pend.reset.splice(ix, 1);
+    }
+    for (var i = 0; i < resetKeys.length; i++) {
+      delete pend.set[resetKeys[i]];
+      if (pend.reset.indexOf(resetKeys[i]) === -1) pend.reset.push(resetKeys[i]);
+    }
+    lsSet(LS_PENDING, pend);
+  }
+  function loadFromServer() {
+    return flushPending().then(function () { return api('GET', ''); }).then(function (j) {
+      var items = (j && j.items) || {};
+      lsSet(LS_CACHE, items);
+      applyAll(items);
+      return true;
+    });
+  }
+
+  /* ---------- 画面（ボタン・バナー・編集ウィンドウ） ---------- */
+  function el(tag, css, html) {
+    var d = document.createElement(tag);
+    if (css) d.style.cssText = css;
+    if (html != null) d.innerHTML = html;
+    return d;
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  var toastTimer = null;
+  function toast(msg) {
+    var t = document.getElementById('te-toast');
+    if (!t) {
+      t = el('div', 'position:fixed;left:50%;bottom:84px;transform:translateX(-50%);max-width:86vw;padding:9px 16px;border-radius:12px;background:rgba(20,16,36,0.96);border:1px solid rgba(232,201,106,0.5);color:#fff;font-size:12px;line-height:1.6;z-index:100003;text-align:center;');
+      t.id = 'te-toast';
+      document.body.appendChild(t);
+    }
+    t.textContent = msg;
+    t.style.display = 'block';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.style.display = 'none'; }, 3200);
+  }
+
+  function buildUi() {
+    if (document.getElementById('te-fab')) return;
+    var style = document.createElement('style');
+    style.textContent = 'body.te-on *{cursor:pointer;}'
+      + '#te-bar{position:fixed;top:0;left:0;right:0;z-index:100001;display:none;padding:6px 10px;background:rgba(232,201,106,0.96);color:#1a1530;font-size:11px;line-height:1.5;align-items:center;gap:8px;justify-content:space-between;}'
+      + 'body.te-on #te-bar{display:flex;}'
+      + '#te-bar button{font-size:11px;padding:3px 9px;border-radius:8px;border:1px solid rgba(26,21,48,0.4);background:rgba(255,255,255,0.7);color:#1a1530;}';
+    document.head.appendChild(style);
+    var fab = el('button', 'position:fixed;left:10px;bottom:14px;width:38px;height:38px;border-radius:50%;border:1px solid rgba(232,201,106,0.6);background:rgba(20,16,36,0.85);color:#e8c96a;font-size:17px;z-index:100000;opacity:0.7;padding:0;', '✏️');
+    fab.id = 'te-fab';
+    fab.title = '文章の編集モード';
+    fab.onclick = function (ev) { ev.stopPropagation(); toggle(); };
+    document.body.appendChild(fab);
+    var bar = el('div', null, '<span>✏️ 編集モード：直したい文章をタップ</span><span><button id="te-reset-all">すべて元に戻す</button> <button id="te-end">終了</button></span>');
+    bar.id = 'te-bar';
+    document.body.appendChild(bar);
+    document.getElementById('te-end').onclick = function (ev) { ev.stopPropagation(); toggle(false); };
+    document.getElementById('te-reset-all').onclick = function (ev) { ev.stopPropagation(); resetAll(); };
+  }
+
+  function toggle(force) {
+    active = (typeof force === 'boolean') ? force : !active;
+    document.body.classList.toggle('te-on', active);
+    var fab = document.getElementById('te-fab');
+    if (fab) fab.style.opacity = active ? '1' : '0.7';
+    if (active) toast('編集モードです。直したい文章をタップしてください');
+  }
+
+  /* ---------- タップした文章を探す ---------- */
+  function buildCurIndex() {
+    curIndex = {};   // plain文字列 -> [key]
+    curKeys = [];    // plain文字列の一覧
+    walkAll(function (key, p, v) {
+      var s = plain(v);
+      if (s.length < MIN_EXACT) return;
+      if (!curIndex[s]) { curIndex[s] = []; if (s.length >= MIN_LEN) curKeys.push(s); }
+      if (curIndex[s].indexOf(key) === -1) curIndex[s].push(key);
+    });
+  }
+  function findMatch(elm) {
+    if (!curIndex) buildCurIndex();
+    var cur = elm, depth = 0;
+    while (cur && cur !== document.body && depth < 7) {
+      var t = plain(cur.textContent || '');
+      if (t.length >= MIN_EXACT && t.length < 4000) {
+        if (curIndex.hasOwnProperty(t)) return { text: t, keys: curIndex[t] };
+        // 「 」や（ ）などの飾りを外した形でも、完全に一致するか見る
+        var t2 = t.replace(/^[「『【（(・\s]+|[」』】）)・\s]+$/g, '');
+        if (t2 !== t && t2.length >= MIN_EXACT && curIndex.hasOwnProperty(t2)) return { text: t2, keys: curIndex[t2] };
+      }
+      if (t.length >= MIN_LEN && t.length < 4000) {
+        var best = null;
+        for (var i = 0; i < curKeys.length; i++) {
+          var s = curKeys[i];
+          if (s.length * 10 < t.length * 6) continue;     // 要素の文字数の6割以上を占めるものだけ
+          if (s.length <= t.length && t.indexOf(s) !== -1) {
+            if (!best || s.length > best.length) best = s;
+          }
+        }
+        if (best) return { text: best, keys: curIndex[best] };
+      }
+      cur = cur.parentNode;
+      depth++;
+    }
+    return null;
+  }
+
+  /* ---------- 編集ウィンドウ ---------- */
+  function closeEditor() {
+    var o = document.getElementById('te-overlay');
+    if (o && o.parentNode) o.parentNode.removeChild(o);
+  }
+  function openEditor(match) {
+    closeEditor();
+    var keys = match.keys;
+    var firstPath = pathOf(keys[0]);
+    var curText = getAt(firstPath);
+    var anyEdited = false, i;
+    for (i = 0; i < keys.length; i++) if (applied[keys[i]]) anyEdited = true;
+    var where = firstPath ? firstPath.join(' › ') : '';
+    var multi = keys.length > 1
+      ? '<div style="font-size:11px;color:#f8a;margin-bottom:8px;line-height:1.6;">⚠️ 同じ文章がほかに ' + (keys.length - 1) + ' か所あります。保存すると、すべて同時に変わります。</div>' : '';
+    var ov = el('div', 'position:fixed;inset:0;z-index:100002;background:rgba(5,3,14,0.78);display:flex;align-items:center;justify-content:center;padding:14px;');
+    ov.id = 'te-overlay';
+    var box = el('div', 'width:100%;max-width:560px;max-height:92vh;overflow:auto;background:#17122b;border:1px solid rgba(232,201,106,0.5);border-radius:14px;padding:14px;color:#eee;');
+    box.innerHTML = '<div style="font-size:13px;font-weight:700;color:#e8c96a;margin-bottom:4px;">✏️ 文章を編集' + (anyEdited ? '（編集済み）' : '') + '</div>'
+      + '<div style="font-size:10px;color:#9a93b8;margin-bottom:8px;word-break:break-all;">場所：' + esc(where) + '</div>'
+      + multi
+      + '<textarea id="te-ta" style="width:100%;box-sizing:border-box;min-height:140px;padding:9px;border-radius:8px;border:1px solid rgba(255,255,255,0.25);background:#0d0a18;color:#fff;font-size:14px;line-height:1.7;"></textarea>'
+      + '<div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">'
+      + '<button id="te-save" style="flex:1;min-width:110px;padding:10px;border-radius:10px;border:1px solid #e8c96a;background:#e8c96a;color:#1a1530;font-weight:700;font-size:13px;">保存</button>'
+      + (anyEdited ? '<button id="te-revert" style="flex:1;min-width:110px;padding:10px;border-radius:10px;border:1px solid rgba(255,120,120,0.6);background:transparent;color:#f99;font-size:13px;">元に戻す</button>' : '')
+      + '<button id="te-cancel" style="flex:1;min-width:90px;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.3);background:transparent;color:#ddd;font-size:13px;">キャンセル</button>'
+      + '</div>';
+    ov.appendChild(box);
+    document.body.appendChild(ov);
+    var ta = document.getElementById('te-ta');
+    ta.value = curText;
+    ov.onclick = function (ev) { ev.stopPropagation(); };
+    box.onclick = function (ev) { ev.stopPropagation(); };
+    document.getElementById('te-cancel').onclick = function (ev) { ev.stopPropagation(); closeEditor(); };
+    document.getElementById('te-save').onclick = function (ev) {
+      ev.stopPropagation();
+      saveText(keys, curText, ta.value);
+    };
+    var rv = document.getElementById('te-revert');
+    if (rv) rv.onclick = function (ev) { ev.stopPropagation(); revertText(keys); };
+  }
+
+  // いま開いているパネルなどの画面上の文章を、その場で差し替える（タグを含む文章は開き直しで反映）
+  function replaceOnScreen(oldTxt, newTxt) {
+    var oldP = plain(oldTxt), newP = plain(newTxt);
+    if (!oldP || oldP === newP) return;
+    var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT, null, false);
+    var n;
+    while ((n = w.nextNode())) {
+      if (n.nodeValue && n.nodeValue.indexOf(oldP) !== -1 && !(n.parentNode && n.parentNode.id === 'te-ta')) {
+        n.nodeValue = n.nodeValue.split(oldP).join(newP);
+      }
+    }
+  }
+
+  function saveText(keys, oldText, newText) {
+    if (newText === oldText) { closeEditor(); return; }
+    var items = {}, i, cache = lsGet(LS_CACHE, {});
+    for (i = 0; i < keys.length; i++) {
+      if (applyKey(keys[i], newText)) { items[keys[i]] = newText; cache[keys[i]] = newText; }
+    }
+    curIndex = null;
+    lsSet(LS_CACHE, cache);
+    replaceOnScreen(oldText, newText);
+    closeEditor();
+    api('POST', '/set', { items: items }).then(function () {
+      toast('保存しました');
+    }).catch(function () {
+      addPending(items, []);
+      toast('この端末には保存しました（サーバーには送れていません。次に開いたとき再送します）');
+    });
+  }
+
+  function revertText(keys) {
+    var cache = lsGet(LS_CACHE, {}), i, resetKeys = [], oldText = getAt(pathOf(keys[0])), newText = oldText;
+    for (i = 0; i < keys.length; i++) {
+      if (applied[keys[i]]) {
+        revertKey(keys[i]);
+        delete cache[keys[i]];
+        resetKeys.push(keys[i]);
+      }
+    }
+    if (orig[keys[0]] != null) newText = orig[keys[0]];
+    curIndex = null;
+    lsSet(LS_CACHE, cache);
+    replaceOnScreen(oldText, newText);
+    closeEditor();
+    if (!resetKeys.length) return;
+    api('POST', '/reset', { keys: resetKeys }).then(function () {
+      toast('元の文章に戻しました');
+    }).catch(function () {
+      addPending({}, resetKeys);
+      toast('この端末では元に戻しました（サーバーには送れていません。次に開いたとき再送します）');
+    });
+  }
+
+  function resetAll() {
+    var n = Object.keys(applied).length;
+    if (!n) { toast('編集した文章はありません'); return; }
+    if (!window.confirm('編集した ' + n + ' か所を、すべて元の文章に戻します。よろしいですか？')) return;
+    applyAll({});
+    lsSet(LS_CACHE, {});
+    lsSet(LS_PENDING, null);
+    api('POST', '/reset', { all: true }).then(function () {
+      toast('すべて元に戻しました。開いているパネルは開き直してください');
+    }).catch(function () {
+      addPending({}, []);
+      toast('この端末では元に戻しました（サーバーには送れませんでした）');
+    });
+  }
+
+  /* ---------- 画面のタップを受ける ---------- */
+  function onClick(ev) {
+    if (!active) return;
+    var t = ev.target;
+    if (!t || !t.closest) return;
+    if (t.closest('#te-overlay') || t.closest('#te-fab') || t.closest('#te-bar') || t.closest('#te-toast')) return;
+    var m = findMatch(t);
+    if (!m) return;       // 編集できる文章ではない → ふだんどおりの動作（パネルを開くなど）
+    ev.preventDefault();
+    ev.stopPropagation();
+    openEditor(m);
+  }
+
+  function init() {
+    // 1) まず、この端末に残っている内容を即反映
+    applyAll(lsGet(LS_CACHE, {}));
+    // 2) 画面の部品
+    buildUi();
+    document.addEventListener('click', onClick, true);
+    // 3) サーバーの最新を取り込む（届かなければ、この端末の内容のまま）
+    loadFromServer().catch(function () {});
+  }
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
+  else { setTimeout(init, 0); }
+
+  return { toggle: toggle, applyAll: applyAll, _applied: function () { return applied; }, _walk: walkAll, _find: findMatch };
+})();
+/* ======= 文章の編集機能 END ======= */
 </script>
 
 <div class="hj-overlay" id="hjOverlay" onclick="closeHjPanel()"></div>
