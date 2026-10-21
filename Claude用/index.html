@@ -1771,6 +1771,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
     <div style="text-align:center;margin-top:8px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
       <button type="button" onclick="openFriendDataManager()" style="padding:5px 14px;border-radius:12px;border:1px solid rgba(201,168,76,.4);background:rgba(201,168,76,.1);color:#c9a84c;font-size:11px;font-weight:700;cursor:pointer;">👥 友達データ管理</button>
       <button type="button" onclick="openStudyMode()" style="padding:5px 14px;border-radius:12px;border:1px solid rgba(168,154,255,.5);background:rgba(168,154,255,.1);color:#b8a8ff;font-size:11px;font-weight:700;cursor:pointer;">📖 勉強モード</button>
+      <button type="button" onclick="if(window.TEXTEDIT){TEXTEDIT.toggle();}else{alert('編集機能を読み込めていません');}" style="padding:5px 14px;border-radius:12px;border:1px solid rgba(232,201,106,.6);background:rgba(232,201,106,.12);color:#e8c96a;font-size:11px;font-weight:700;cursor:pointer;">✏️ 文章を編集</button>
     </div>
   </header>
 
@@ -1867,7 +1868,8 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
 
   <footer>
     Produced by Sakuraco<br>
-    立春（2月4日）を年の切替
+    立春（2月4日）を年の切替<br>
+    <span style="font-size:9px;opacity:.5;">版 2026-10-20 編集機能つき</span>
   </footer>
 </div>
 
