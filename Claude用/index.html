@@ -499,6 +499,9 @@ body.label-style-d .cycle-label {
   font-family: 'Shippori Mincho', serif; font-size: 22px; font-weight: 700;
   color: var(--gold); line-height: 1;
 }
+/* 星座が日の途中で変わる人：時刻入力済みなら該当側を光らせ、もう一方を薄くする */
+.sg-on{font-weight:700;text-shadow:0 0 6px currentColor,0 0 14px currentColor;}
+.sg-off{opacity:.45;}
 .core-num-detail {
   display: none; text-align: left;
   padding: 8px 12px; margin-top: 6px;
@@ -14301,9 +14304,33 @@ function runLovetype(){
   rd.style.display="block";
   rd.scrollIntoView({behavior:"smooth",block:"start"});
 }
+/* 星座が日の途中で変わる人：出生時刻(JST入力値)が入っている場合のみ、該当する星座を光らせ、もう一方は薄くする。
+   時刻未入力の人は従来どおり「A or B」を同じ見た目で表示する。 */
+function lt_birthMinutes(birthdate){
+  var t=null;
+  try{ t=getNatalTimeForBd(birthdate).time; }catch(e){ t=null; }
+  if(!t) return null;
+  var m=/^(\d{1,2}):?(\d{2})$/.exec(String(t));
+  if(!m) return null;
+  var hh=+m[1], mi=+m[2];
+  if(hh>23||mi>59) return null;
+  return hh*60+mi;
+}
+function lt_signLabel(prefix, signA, signB, uncertain, transHour, transMin, nextDay, bm){
+  if(!uncertain||!signB) return prefix+'\u00a0'+signA;
+  var hit=null;
+  if(bm!==null&&bm!==undefined&&transHour!==null&&transHour!==undefined){
+    if(nextDay) hit='A';
+    else hit=(bm<transHour*60+(transMin||0))?'A':'B';
+  }
+  if(hit===null) return prefix+'\u00a0'+signA+' or '+signB;
+  var on='<span class="sg-on">', off='<span class="sg-off">';
+  return prefix+'\u00a0'+(hit==='A'?on:off)+signA+'</span> or '+(hit==='B'?on:off)+signB+'</span>';
+}
 function lt_buildBadges(birthdate){
   var p=lt_parseDt(birthdate.replace(/-/g,"/"));
   if(!p) return "";
+  var _bm=lt_birthMinutes(birthdate);
   var sunObj=lt_getSunSign(p.y,p.mo,p.d);
   var moon=lt_getMoonSign(p.y,p.mo,p.d);
   var venusObj=lt_getVenusSign(p.ymd);var venus=venusObj.sign;
@@ -14319,13 +14346,13 @@ function lt_buildBadges(birthdate){
   var pad=function(n){return n<10?"0"+n:String(n);};
   var h="";
   h+='<div style="margin:10px 0 4px;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;">';
-  h+='<span onclick="toggleCoreNum(\''+(sunId)+'\')" style="'+st+'background:rgba(255,215,0,.1);border:1px solid #e8c97a;color:#e8c97a;">太陽 '+(sunObj.uncertain?sunObj.sign+' or '+sunObj.alt:sunObj.sign)+'</span>';
-  h+='<span onclick="toggleCoreNum(\''+(moonId)+'\')" style="'+st+'background:rgba(180,180,220,.1);border:1px solid #b4b4dc;color:#c8c8f0;">月 '+(moon.uncertain?moon.sign+' or '+moon.alt:moon.sign)+'</span>';
-  h+='<span onclick="toggleCoreNum(\'lt-venus-detail\')" style="'+st+'background:rgba(168,154,255,.12);border:1px solid #a89aff;color:#c8bcff;">金星 '+(venusObj.uncertain?venus+' or '+venusObj.altSign:venus)+'</span>';
+  h+='<span onclick="toggleCoreNum(\''+(sunId)+'\')" style="'+st+'background:rgba(255,215,0,.1);border:1px solid #e8c97a;color:#e8c97a;">'+lt_signLabel('太陽',sunObj.sign,sunObj.alt,sunObj.uncertain,sunObj.transition?sunObj.transition.hour:null,sunObj.transition?sunObj.transition.min:0,sunObj.transition?!!sunObj.transition.nextDay:false,_bm)+'</span>';
+  h+='<span onclick="toggleCoreNum(\''+(moonId)+'\')" style="'+st+'background:rgba(180,180,220,.1);border:1px solid #b4b4dc;color:#c8c8f0;">'+lt_signLabel('月',moon.sign,moon.alt,moon.uncertain,moon.transition?moon.transition.hour:null,moon.transition?moon.transition.min:0,moon.transition?!!moon.transition.nextDay:false,_bm)+'</span>';
+  h+='<span onclick="toggleCoreNum(\'lt-venus-detail\')" style="'+st+'background:rgba(168,154,255,.12);border:1px solid #a89aff;color:#c8bcff;">'+lt_signLabel('金星',venus,venusObj.altSign,venusObj.uncertain,venusObj.transHour,venusObj.transMin,venusObj.nextDay,_bm)+'</span>';
   h+='<span onclick="toggleCoreNum(\'lt-mars-detail\')" style="'+st+'background:rgba(232,160,96,.12);border:1px solid #e8a060;color:#e8a060;">火星 '+mars+'</span>';
   if(mercury){
-    var mercLabel=mercuryObj.uncertain?mercury+" or "+mercuryObj.altSign:mercury;
-    h+='<span onclick="toggleCoreNum(\'lt-mercury-detail\')" style="'+st+'background:rgba(100,200,180,.12);border:1px solid #64c8b4;color:#64c8b4;">水星 '+mercLabel+'</span>';
+    var mercLabel=lt_signLabel('水星',mercury,mercuryObj.altSign,mercuryObj.uncertain,mercuryObj.transHour,mercuryObj.transMin,mercuryObj.nextDay,_bm);
+    h+='<span onclick="toggleCoreNum(\'lt-mercury-detail\')" style="'+st+'background:rgba(100,200,180,.12);border:1px solid #64c8b4;color:#64c8b4;">'+mercLabel+'</span>';
   }
   h+='</div>';
   h+='<div class="core-num-detail" id="'+sunId+'">';
