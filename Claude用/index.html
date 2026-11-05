@@ -21506,20 +21506,20 @@ var HAI_PLANET_HOUSE = {
     'キロン': '学びや価値観にまつわる繊細な部分を持つ分、同じ悩みを持つ人を導く力に変わっていきます。'
   }
 };
-function buildHouseAI(houseNum, items, cuspSignName) {
+/* 鑑定文をブロック（段落）の配列として組み立てる */
+function haiBlocks(houseNum, items, cuspSignName) {
   var theme = HAI_THEME[houseNum] || '';
   var cuspSign = HAI_SIGN[cuspSignName];
   var strengths = [];
-  var html = '';
-  var P = 'font-size:12px;line-height:1.8;color:var(--text);margin:0 0 10px;';
+  var blocks = [];
   var intro = '第' + houseNum + 'ハウスは、' + theme + 'がテーマの場所ですよ。';
   if (cuspSign) {
     intro += '入口が' + cuspSignName + 'なので、このテーマには「' + cuspSign.m + '」で向き合います。' + cuspSign.g + '。';
     strengths.push(cuspSign.s);
   }
-  html += '<p style="' + P + '">' + intro + '</p>';
+  blocks.push({ head: '', text: intro });
   if (items.length === 0) {
-    html += '<p style="' + P + '">天体が入っていないハウスは、入口のサインの色がそのまま出やすい場所です。力まなくても、自然体で進めます。</p>';
+    blocks.push({ head: '', text: '天体が入っていないハウスは、入口のサインの色がそのまま出やすい場所です。力まなくても、自然体で進めます。' });
   }
   items.forEach(function (it) {
     var sg = HAI_SIGN[it.sign];
@@ -21531,23 +21531,263 @@ function buildHouseAI(houseNum, items, cuspSignName) {
       body += ' ' + it.name + 'が' + it.sign + 'なので、' + role + 'も「' + sg.m + '」で表に出てきます。';
       if (strengths.indexOf(sg.s) === -1) strengths.push(sg.s);
     }
-    html += '<div style="margin-bottom:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">'
-      + '<div style="font-size:10px;color:var(--sk-gold-light);font-weight:700;margin-bottom:4px;">'
-      + (it.sym || '') + ' ' + it.name + '（' + it.sign + (it.deg ? ' ' + it.deg : '') + '）</div>'
-      + '<p style="font-size:12px;line-height:1.8;color:var(--text);margin:0;">' + body + '</p></div>';
+    blocks.push({ head: (it.sym || '') + ' ' + it.name + '（' + it.sign + (it.deg ? ' ' + it.deg : '') + '）', text: body });
   });
   if (strengths.length >= 2) {
-    html += '<p style="' + P + 'padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">' + strengths[0] + 'と、' + strengths[1] + '。この2つがそろっているのが、あなたの心強いところですよ。</p>';
+    blocks.push({ head: '', text: strengths[0] + 'と、' + strengths[1] + '。この2つがそろっているのが、あなたの心強いところですよ。' });
   } else if (strengths.length === 1) {
-    html += '<p style="' + P + 'padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">' + strengths[0] + '。それがこの場所での、あなたの心強いところですよ。</p>';
+    blocks.push({ head: '', text: strengths[0] + '。それがこの場所での、あなたの心強いところですよ。' });
   }
+  return blocks;
+}
+
+/* ======= 鑑定文のマーカー =======
+   ・文をタップ：その1文にマーカー（もう一度タップで消える）
+   ・文字を選んで色をタップ：選んだ範囲にマーカー
+   ・保存：Cloudflare KV（/api/marks）＋この端末（localStorage）。同じ組み合わせなら同じマーカーが出る */
+var HAI_COLORS = { y: 'rgba(255,224,60,0.38)', p: 'rgba(255,120,180,0.38)', b: 'rgba(110,200,255,0.38)' };
+var HAI_COLOR_SOLID = { y: '#ffe03c', p: '#ff78b4', b: '#6ec8ff' };
+var HAI_LS = 'tougouban-hai-marks';
+var haiSaveTimer = null;
+var haiSelLast = { at: 0, spans: null };
+
+function haiHash(str) {
+  var h = 2166136261;
+  for (var i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = (h + (h << 1) + (h << 4) + (h << 7) + (h << 8) + (h << 24)) >>> 0;
+  }
+  return ('00000000' + h.toString(16)).slice(-8);
+}
+function haiLsGet(key) {
+  try { var o = JSON.parse(localStorage.getItem(HAI_LS) || '{}'); return o[key] || null; } catch (e) { return null; }
+}
+function haiLsSet(key, rec) {
+  try { var o = JSON.parse(localStorage.getItem(HAI_LS) || '{}'); o[key] = rec; localStorage.setItem(HAI_LS, JSON.stringify(o)); } catch (e) {}
+}
+function haiSentences(text) {
+  var out = [], s = 0, i;
+  for (i = 0; i < text.length; i++) {
+    if (text.charAt(i) === '。') {
+      var e = i + 1;
+      while (e < text.length && text.charAt(e) === ' ') e++;
+      out.push([s, e]);
+      s = e;
+      i = e - 1;
+    }
+  }
+  if (s < text.length) out.push([s, text.length]);
+  return out;
+}
+function haiColsToMarks(st) {
+  var marks = [];
+  st.blocks.forEach(function (b, i) {
+    var cols = st.cols[i], k = 0;
+    while (k < cols.length) {
+      if (!cols[k]) { k++; continue; }
+      var c = cols[k], s = k;
+      while (k < cols.length && (cols[k] === c || b.text.charAt(k) === ' ')) k++;
+      var e = k;
+      while (e > s && b.text.charAt(e - 1) === ' ') e--;
+      marks.push({ i: i, s: s, e: e, c: c, t: b.text.substring(s, e) });
+    }
+  });
+  return marks;
+}
+function haiMarksToCols(st, marks) {
+  st.cols = st.blocks.map(function (b) { var a = []; for (var k = 0; k < b.text.length; k++) a.push(''); return a; });
+  (marks || []).forEach(function (m) {
+    var b = st.blocks[m.i];
+    if (!b || !HAI_COLORS[m.c]) return;
+    var s = m.s, e = m.e;
+    if (b.text.substring(s, e) !== m.t) {
+      var idx = b.text.indexOf(m.t);
+      if (idx < 0) return;
+      s = idx; e = idx + m.t.length;
+    }
+    for (var k = s; k < e; k++) if (b.text.charAt(k) !== ' ') st.cols[m.i][k] = m.c;
+  });
+}
+function haiStatus(msg) {
+  var el = document.getElementById('hai-status');
+  if (el) el.textContent = msg;
+}
+function haiPersist() {
+  var st = window._haiState;
+  if (!st) return;
+  st.dirty = true;
+  var marks = haiColsToMarks(st);
+  var ts = new Date().toISOString();
+  haiLsSet(st.key, { marks: marks, updatedAt: ts });
+  haiStatus('保存中…');
+  if (haiSaveTimer) clearTimeout(haiSaveTimer);
+  var key = st.key;
+  haiSaveTimer = setTimeout(function () {
+    fetch('/api/marks/set', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key: key, marks: marks })
+    }).then(function (r) { return r.json(); }).then(function (d) {
+      haiStatus(d && d.ok ? '保存しました' : 'この端末にのみ保存しました');
+    }).catch(function () { haiStatus('この端末にのみ保存しました（通信できません）'); });
+  }, 500);
+}
+function haiPaint(i, s, e, color) {
+  var st = window._haiState, b = st.blocks[i];
+  if (!b) return;
+  for (var k = s; k < e; k++) if (b.text.charAt(k) !== ' ') st.cols[i][k] = color || '';
+}
+function haiBlockHtml(st, i) {
+  var b = st.blocks[i], cols = st.cols[i], html = '';
+  haiSentences(b.text).forEach(function (se) {
+    html += '<span class="hai-s" data-i="' + i + '" data-s="' + se[0] + '" data-e="' + se[1] + '">';
+    var k = se[0];
+    while (k < se[1]) {
+      var c = cols[k] || '', j = k;
+      while (j < se[1] && (cols[j] || '') === c) j++;
+      var seg = b.text.substring(k, j);
+      html += c ? '<mark style="background:' + HAI_COLORS[c] + ';color:inherit;border-radius:3px;padding:0 1px;">' + seg + '</mark>' : seg;
+      k = j;
+    }
+    html += '</span>';
+  });
   return html;
 }
-function generateHouseAI() {
-  var st = window._hjHouseAI;
-  var el = document.getElementById('house-ai-result');
+function haiRender() {
+  var st = window._haiState, el = document.getElementById('house-ai-result');
   if (!st || !el) return;
-  el.innerHTML = buildHouseAI(st.houseNum, st.items, st.cuspSignName);
+  var chip = 'width:24px;height:24px;border-radius:50%;cursor:pointer;display:inline-block;box-sizing:border-box;';
+  var bar = '<div id="hai-bar" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;">'
+    + '<span style="font-size:13px;">🖍</span>';
+  ['y', 'p', 'b'].forEach(function (c) {
+    var on = !st.eraser && st.color === c;
+    bar += '<span class="hai-chip" data-act="c:' + c + '" style="' + chip + 'background:' + HAI_COLOR_SOLID[c] + ';border:2px solid ' + (on ? '#fff' : 'rgba(255,255,255,0.18)') + ';"></span>';
+  });
+  bar += '<span class="hai-chip" data-act="e" style="padding:2px 9px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (st.eraser ? 'var(--sk-gold-light)' : 'rgba(255,255,255,0.25)') + ';color:' + (st.eraser ? 'var(--sk-gold-light)' : 'var(--muted)') + ';">消す</span>'
+    + '<span class="hai-chip" data-act="x" style="margin-left:auto;font-size:10px;color:var(--muted);text-decoration:underline;cursor:pointer;">全部消す</span></div>'
+    + '<div style="font-size:9px;color:var(--muted);margin-bottom:8px;line-height:1.6;">文をタップでマーカー／文字を選んで色をタップで範囲指定　<span id="hai-status"></span></div>';
+  var html = bar;
+  st.blocks.forEach(function (b, i) {
+    var P = 'font-size:12px;line-height:1.9;color:var(--text);margin:0;-webkit-user-select:text;user-select:text;';
+    if (b.head) {
+      html += '<div style="margin-bottom:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);">'
+        + '<div style="font-size:10px;color:var(--sk-gold-light);font-weight:700;margin-bottom:4px;">' + b.head + '</div>'
+        + '<p class="hai-p" data-i="' + i + '" style="' + P + '">' + haiBlockHtml(st, i) + '</p></div>';
+    } else {
+      var last = (i === st.blocks.length - 1 && i > 0);
+      html += '<p class="hai-p" data-i="' + i + '" style="' + P + 'margin-bottom:10px;' + (last ? 'padding-top:8px;border-top:1px solid rgba(255,255,255,0.08);' : '') + '">' + haiBlockHtml(st, i) + '</p>';
+    }
+  });
+  el.innerHTML = html;
+}
+/* いま選んでいる文字の範囲を、段落ごとの位置（文字数）に変換する */
+function haiSelectionSpans() {
+  var sel = window.getSelection && window.getSelection();
+  if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return null;
+  var range = sel.getRangeAt(0);
+  var root = document.getElementById('house-ai-result');
+  if (!root || !root.contains(range.commonAncestorContainer)) return null;
+  var spans = [];
+  var ps = root.querySelectorAll('.hai-p');
+  for (var n = 0; n < ps.length; n++) {
+    var p = ps[n];
+    if (!range.intersectsNode(p)) continue;
+    var len = p.textContent.length, s = 0, e = len, r;
+    if (p.contains(range.startContainer)) { r = document.createRange(); r.selectNodeContents(p); r.setEnd(range.startContainer, range.startOffset); s = r.toString().length; }
+    if (p.contains(range.endContainer)) { r = document.createRange(); r.selectNodeContents(p); r.setEnd(range.endContainer, range.endOffset); e = r.toString().length; }
+    if (e > s) spans.push({ i: parseInt(p.getAttribute('data-i'), 10), s: s, e: e });
+  }
+  return spans.length ? spans : null;
+}
+function haiApplyColor(color) {
+  var st = window._haiState;
+  var spans = haiSelectionSpans();
+  if (!spans && haiSelLast.spans && (Date.now() - haiSelLast.at) < 1000) spans = haiSelLast.spans;
+  if (!spans) return false;
+  spans.forEach(function (sp) { haiPaint(sp.i, sp.s, sp.e, color); });
+  haiSelLast.spans = null;
+  try { window.getSelection().removeAllRanges(); } catch (e) {}
+  haiPersist();
+  haiRender();
+  return true;
+}
+function haiOnChip(act) {
+  var st = window._haiState;
+  if (!st) return;
+  if (act.indexOf('c:') === 0) {
+    st.color = act.substring(2);
+    st.eraser = false;
+    if (!haiApplyColor(st.color)) haiRender();
+  } else if (act === 'e') {
+    if (haiApplyColor('')) return;
+    st.eraser = !st.eraser;
+    haiRender();
+  } else if (act === 'x') {
+    if (!window.confirm('この鑑定文のマーカーを全部消しますか？')) return;
+    haiMarksToCols(st, []);
+    haiPersist();
+    haiRender();
+  }
+}
+function haiOnSentenceTap(span) {
+  var st = window._haiState;
+  if (!st) return;
+  var i = parseInt(span.getAttribute('data-i'), 10), s = parseInt(span.getAttribute('data-s'), 10), e = parseInt(span.getAttribute('data-e'), 10);
+  var b = st.blocks[i], all = true, any = false;
+  for (var k = s; k < e; k++) {
+    if (b.text.charAt(k) === ' ') continue;
+    any = true;
+    if (st.cols[i][k] !== st.color) all = false;
+  }
+  haiPaint(i, s, e, (st.eraser || (any && all)) ? '' : st.color);
+  haiPersist();
+  haiRender();
+}
+function haiBindOnce() {
+  if (window._haiBound) return;
+  window._haiBound = true;
+  document.addEventListener('selectionchange', function () {
+    var sp = haiSelectionSpans();
+    if (sp) { haiSelLast.spans = sp; haiSelLast.at = Date.now(); }
+  });
+  /* 色のボタンは、押しても文字の選択が外れないようにする */
+  document.addEventListener('pointerdown', function (ev) {
+    var t = ev.target && ev.target.closest ? ev.target.closest('.hai-chip') : null;
+    if (t) ev.preventDefault();
+  }, true);
+  document.addEventListener('click', function (ev) {
+    var t = ev.target && ev.target.closest ? ev.target : null;
+    if (!t) return;
+    var chipEl = t.closest('.hai-chip');
+    if (chipEl) { haiOnChip(chipEl.getAttribute('data-act')); return; }
+    var sp = t.closest('.hai-s');
+    if (sp && document.getElementById('house-ai-result') && document.getElementById('house-ai-result').contains(sp)) {
+      if (haiSelectionSpans() || (Date.now() - haiSelLast.at) < 400) return;
+      haiOnSentenceTap(sp);
+    }
+  });
+}
+function generateHouseAI() {
+  var st0 = window._hjHouseAI;
+  var el = document.getElementById('house-ai-result');
+  if (!st0 || !el) return;
+  haiBindOnce();
+  var sig = st0.houseNum + '|' + st0.cuspSignName + '|' + st0.items.map(function (it) { return it.name + ':' + it.sign; }).join(';');
+  var key = 'h' + st0.houseNum + '-' + haiHash(sig);
+  var st = { key: key, blocks: haiBlocks(st0.houseNum, st0.items, st0.cuspSignName), cols: [], color: 'y', eraser: false, dirty: false };
+  var local = haiLsGet(key);
+  haiMarksToCols(st, local ? local.marks : []);
+  window._haiState = st;
+  haiRender();
+  /* サーバー（KV）のマーカーを取りに行く。スマホとPCで同じものが出る */
+  fetch('/api/marks?key=' + encodeURIComponent(key)).then(function (r) { return r.json(); }).then(function (d) {
+    if (!d || window._haiState !== st || st.dirty) return;
+    if (d.marks && (!local || (d.updatedAt && d.updatedAt > local.updatedAt))) {
+      haiMarksToCols(st, d.marks);
+      haiLsSet(key, { marks: d.marks, updatedAt: d.updatedAt });
+      haiRender();
+    }
+  }).catch(function () {});
 }
 /* ======= ハウス鑑定文 END ======= */
 /* アスペクト表の度数（グリッドのセル・一覧の行）をタップした時に、辞典のアスペクト解釈文を表示する */

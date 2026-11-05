@@ -21,12 +21,22 @@
 //  POST /api/texts/reset    … 元に戻す。body: { keys: [key, ...] }  または { all: true }
 //  GET  /api/texts/backups  … バックアップ一覧
 //  POST /api/texts/restore  … バックアップから復元。body: { key: "..." }
+//
+// 【AI鑑定文のマーカー】（ハウスパネルの「✨ AI鑑定」に引いたマーカー）
+//  鑑定文の組み合わせごとに、KVの別々のキー（'tougouban-mark:<key>'）で保存する。
+//  1件ずつ独立しているので、ほかのマーカーを巻き込んで上書きすることがない。
+//  書き込みの直前の内容は 'tougouban-mark-prev:<key>' に1世代だけ残す。
+//  GET  /api/marks?key=K    … { marks: [...], updatedAt }
+//  POST /api/marks/set      … body: { key, marks: [{i,s,e,c,t}, ...] }（marks が空ならマーカーを削除）
 
 const KV_KEY = 'tougouban-text-overrides';
 const BACKUP_PREFIX = 'tougouban-text-overrides-backup-';
 const MAX_BACKUPS = 30;
 const MAX_TEXT_LENGTH = 20000;   // 1か所あたりの文字数の上限
 const MAX_ITEMS = 5000;          // 編集できる箇所数の上限
+const MARK_PREFIX = 'tougouban-mark:';
+const MARK_PREV_PREFIX = 'tougouban-mark-prev:';
+const MAX_MARKS = 200;          // 1つの鑑定文に引けるマーカー数の上限
 
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
@@ -117,6 +127,27 @@ function validateItems(items) {
   });
 }
 
+function validateMarkKey(key) {
+  if (typeof key !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(key)) {
+    throw new BadRequest('key が不正です');
+  }
+}
+
+function validateMarks(marks) {
+  if (!Array.isArray(marks)) throw new BadRequest('marks は配列で送ってください');
+  if (marks.length > MAX_MARKS) throw new BadRequest('マーカーが多すぎます（上限 ' + MAX_MARKS + '）');
+  return marks.map(function (m) {
+    if (!m || typeof m !== 'object') throw new BadRequest('marks の形が不正です');
+    const i = m.i, s = m.s, e = m.e;
+    if (!Number.isInteger(i) || !Number.isInteger(s) || !Number.isInteger(e) || i < 0 || s < 0 || e <= s) {
+      throw new BadRequest('marks の位置が不正です');
+    }
+    if (typeof m.c !== 'string' || m.c.length > 8) throw new BadRequest('marks の色が不正です');
+    if (typeof m.t !== 'string' || m.t.length > 2000) throw new BadRequest('marks の文字が不正です');
+    return { i: i, s: s, e: e, c: m.c, t: m.t };
+  });
+}
+
 /* ---------- ルーティング ---------- */
 
 async function handleApi(request, env, url) {
@@ -155,6 +186,31 @@ async function handleApi(request, env, url) {
     }
     const saved = await writeItems(env, next, cur.raw);
     return json({ ok: true, count: Object.keys(saved.items).length, updatedAt: saved.updatedAt });
+  }
+
+  if (path === '/api/marks' && method === 'GET') {
+    const key = url.searchParams.get('key') || '';
+    validateMarkKey(key);
+    const raw = await env.TEXT_KV.get(MARK_PREFIX + key);
+    if (!raw) return json({ marks: [], updatedAt: null });
+    const obj = JSON.parse(raw);
+    return json({ marks: obj.marks || [], updatedAt: obj.updatedAt || null });
+  }
+
+  if (path === '/api/marks/set' && method === 'POST') {
+    const body = await readBody(request);
+    validateMarkKey(body.key);
+    const marks = validateMarks(body.marks);
+    const kvKey = MARK_PREFIX + body.key;
+    const prev = await env.TEXT_KV.get(kvKey);
+    if (prev) await env.TEXT_KV.put(MARK_PREV_PREFIX + body.key, prev);
+    if (!marks.length) {
+      await env.TEXT_KV.delete(kvKey);
+      return json({ ok: true, count: 0 });
+    }
+    const updatedAt = new Date().toISOString();
+    await env.TEXT_KV.put(kvKey, JSON.stringify({ marks, updatedAt }));
+    return json({ ok: true, count: marks.length, updatedAt });
   }
 
   if (path === '/api/texts/backups' && method === 'GET') {
