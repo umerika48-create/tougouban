@@ -21874,6 +21874,8 @@ function openHenseiPanel(name, context){
   var d = HENSEI_DESC[name];
   if(!d) return;
   document.getElementById('hjTitle').textContent = name + '（' + d.image + '）';
+  document.getElementById('hjTitle').dataset.memoKey = 'memo_hensei_' + name;
+  document.getElementById('hjTitle').dataset.memoTitle = document.getElementById('hjTitle').textContent;
   document.getElementById('hjYomi').textContent = '（' + d.yomi + '）';
   document.getElementById('hjBadge').textContent = d.keyword;
   // ラベル表示
@@ -22100,7 +22102,7 @@ function saveHjMemo() {
 
 function openHjMemo() {
   var titleEl = document.getElementById('hjTitle');
-  var key = titleEl.dataset.memoKey || ('memo_' + titleEl.textContent.replace(/[^\w\u3000-\u9fff\uff00-\uffef]/g,'_'));
+  var key = (titleEl.dataset.memoKey && titleEl.dataset.memoTitle === titleEl.textContent && titleEl.dataset.memoKey) || ('memo_' + titleEl.textContent.replace(/[^\w\u3000-\u9fff\uff00-\uffef]/g,'_'));
   var wrap = document.getElementById('hj-memo-wrap');
   var ta = document.getElementById('hj-memo-text');
   var isOpen = wrap.style.display === 'block';
@@ -22154,6 +22156,7 @@ function openKanPanel(kanName, colIdx, monthShi, ownShi){
 
   document.getElementById('hjTitle').textContent = colLabels[colIdx] + 'の' + kanName + '　' + nd.image + '　' + nd.gogyo + '（' + (gogyoYomi[nd.gogyo]||'') + '）・' + nd.inyo;
   document.getElementById('hjTitle').dataset.memoKey = 'kan_' + kanName + '_' + colIdx;
+  document.getElementById('hjTitle').dataset.memoTitle = document.getElementById('hjTitle').textContent;
   document.getElementById('hjYomi').textContent = '';
   document.getElementById('hjBadge').textContent = '';
 
@@ -22557,6 +22560,7 @@ function openShiPanel(shiName, colIdx, dayKan){
   document.getElementById('hjDesc').innerHTML = juniunHTML + shiFriendHTML + shiLabelHTML + shiDetailHTML;
   document.getElementById('hjContext').innerHTML = '';
   document.getElementById('hjTitle').dataset.memoKey = 'memo_shi_' + shiName + '_' + colIdx2;
+  document.getElementById('hjTitle').dataset.memoTitle = document.getElementById('hjTitle').textContent;
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
 }
