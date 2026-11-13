@@ -10056,7 +10056,10 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
         window._pendingMoonTrans = (_moon && _moon.transition) ? _moon.transition : null;
       } catch(e) {}
     }
-    var _resultHTML = renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime,hideTabs,personName);
+    /* このカードが「あなた」「相手」のどちらのものかを、0時/23時ボタンに持たせる（画面の状態に頼らない） */
+    window.__yakBuildWho = isPartner ? 'partner' : 'me';
+    var _resultHTML;
+    try { _resultHTML = renderResult(year_p,month_p,day_p,hour_p,birthStr,unknownTime,hideTabs,personName); } finally { window.__yakBuildWho = ''; }
     // 基本性格カードを折りたたみ式にして五行バランスカードより後に移動
     _resultHTML = reorderResultCards(_resultHTML);
     // 星座ラベルを追加（DOM操作）
@@ -20740,7 +20743,8 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
     var gc = kanClass(KAN10.indexOf(k));
     return "<span class=\"tenkan-pill ".concat(gc, "\" onclick=\"toggleTenkan('td_").concat(k, "', this)\">").concat(k, " ").concat(d.gogyo).concat(d.inyo, "</span>");
   });
-  var _toggleHTML = '<div style="margin-bottom:8px;padding:6px 10px;background:rgba(184,150,46,0.08);border-radius:8px;display:flex;align-items:center;justify-content:space-between;">' + '<div style="display:flex;align-items:center;gap:6px;">' + '<button onclick="setYakodoki(true)" id="yak-btn-23" style="padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (window._yakodoki === true ? 'var(--sk-gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (window._yakodoki === true ? 'var(--sk-gold)' : 'transparent') + ';color:' + (window._yakodoki === true ? '#000' : 'var(--sk-silver-dim)') + ';font-weight:' + (window._yakodoki === true ? '700' : '400') + ';">23時</button>' + '<button onclick="setYakodoki(false)" id="yak-btn-0" style="padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (window._yakodoki === false ? 'var(--sk-gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (window._yakodoki === false ? 'var(--sk-gold)' : 'transparent') + ';color:' + (window._yakodoki === false ? '#000' : 'var(--sk-silver-dim)') + ';font-weight:' + (window._yakodoki === false ? '700' : '400') + ';">0時</button>' + '</div>' + '</div>';
+  var _yakWhoArg = window.__yakBuildWho ? (",'" + window.__yakBuildWho + "'") : '';
+  var _toggleHTML = '<div style="margin-bottom:8px;padding:6px 10px;background:rgba(184,150,46,0.08);border-radius:8px;display:flex;align-items:center;justify-content:space-between;">' + '<div style="display:flex;align-items:center;gap:6px;">' + '<button onclick="setYakodoki(true' + _yakWhoArg + ')" id="yak-btn-23" style="padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (window._yakodoki === true ? 'var(--sk-gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (window._yakodoki === true ? 'var(--sk-gold)' : 'transparent') + ';color:' + (window._yakodoki === true ? '#000' : 'var(--sk-silver-dim)') + ';font-weight:' + (window._yakodoki === true ? '700' : '400') + ';">23時</button>' + '<button onclick="setYakodoki(false' + _yakWhoArg + ')" id="yak-btn-0" style="padding:2px 8px;border-radius:10px;font-size:10px;cursor:pointer;border:1px solid ' + (window._yakodoki === false ? 'var(--sk-gold)' : 'rgba(184,150,46,0.3)') + ';background:' + (window._yakodoki === false ? 'var(--sk-gold)' : 'transparent') + ';color:' + (window._yakodoki === false ? '#000' : 'var(--sk-silver-dim)') + ';font-weight:' + (window._yakodoki === false ? '700' : '400') + ';">0時</button>' + '</div>' + '</div>';
   // 生年月日表示文字列を生成（birthStrは既に「1986年4月30日 13:17 福岡」形式）
   /* 「（真太陽時 前日23:47）」は先に取り出しておく（残すと時刻・出生地と取り違えて括弧が重なる） */
   var _bsSolar = '';
@@ -22644,8 +22648,11 @@ function toggleShi(id, pill){
 /* ======= 夜子時（23時切り替え）設定 ======= */
 window._yakodoki = false; // デフォルト0時
 
-function setYakodoki(enabled) {
+function setYakodoki(enabled, who) {
   window._yakodoki = enabled;
+  /* 押されたボタンは、カードを作った人（あなた／相手）のものとして扱う。
+     who が渡されないときだけ、内部の表示記録を見る（記録は紫タブの切替などで古くなることがある） */
+  if (who === 'me' || who === 'partner') { window._currentShichuuView = who; }
   /* 選んだ0時/23時を、いま表示中の人（あなた／相手）の分として覚える（相性・年運・月運などもこれに従う） */
   var _yWho = (window._currentShichuuView === 'partner') ? 'partner' : 'me';
   var _yBd = (_yWho === 'partner') ? window._compatBdB : (window._nyBirthdateMe || (document.getElementById('birthdate') ? document.getElementById('birthdate').value : ''));
@@ -22744,6 +22751,8 @@ function yakodokiRefreshAll() {
     /* 紫の「あなた／相手」タブで開いていた個人鑑定（命式カードもここ）を覚えておく。
        再鑑定すると中身が空になり開閉の記録もリセットされるため、あとで開き直す */
     var _tabKey = window._compatTabOpenState || null;
+    /* カード内の「あなた／相手」小ボタンで見ていた人。紫タブの記録とは別物なので、別に覚えて最後に戻す */
+    var _viewKeep = (window._currentShichuuView === 'partner') ? 'partner' : 'me';
     autoCalculate();
     if(_tabKey && typeof switchCompatTab === 'function'){
       var _tp = _tabKey.split('_');
@@ -22765,6 +22774,10 @@ function yakodokiRefreshAll() {
         }
         bb.classList.add('open');
         if(bt) bt.classList.add('open');
+      }
+      /* 紫タブの記録に引きずられて、カードが別の人に切り替わっていたら、見ていた人に戻す */
+      if(window._currentShichuuView !== _viewKeep && typeof switchShichuuCard === 'function' && document.getElementById('sc-btn-me')){
+        try { switchShichuuCard(_viewKeep); } catch(e4) { console.error('restore card view error:', e4); }
       }
     };
     _restoreOpen();
