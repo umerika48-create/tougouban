@@ -1899,7 +1899,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   <footer>
     Produced by Sakuraco<br>
     立春（2月4日）を年の切替<br>
-    <span style="font-size:9px;opacity:.5;">版 2026-11-15b インド占星術デザイン</span>
+    <span style="font-size:9px;opacity:.5;">版 2026-11-16 夏時間の自動判定</span>
   </footer>
 </div>
 
@@ -3365,7 +3365,7 @@ function buildSynastryHTML(bdA, bdB) {
     var unknown = (t4.length !== 4);
     var hh = 12, mi = 0, tz = 9;
     if (!unknown) { hh = parseInt(t4.slice(0,2),10); mi = parseInt(t4.slice(2,4),10); if (hh>23||mi>59) { unknown = true; hh = 12; mi = 0; } }
-    if (!unknown && cityData && typeof cityData.tz === 'number') tz = cityData.tz;
+    if (!unknown && cityData && typeof cityData.tz === 'number') tz = getTzInfo(cityData, yy, mm, dd, hh, mi).tz;
     var u = new Date(Date.UTC(yy, mm-1, dd, hh, mi) - tz*3600000);
     return { y:u.getUTCFullYear(), m:u.getUTCMonth()+1, d:u.getUTCDate(), h:u.getUTCHours()+u.getUTCMinutes()/60, unknown:unknown };
   }
@@ -5172,11 +5172,61 @@ function getEquationOfTimeMin(jdUT) {
   return E * (180 / Math.PI) * 4;
 }
 
+/* ======= 夏時間の自動判定 =======
+   出生地の地域名（海外は CITY_COORDS の zone、日本は Asia/Tokyo）と、端末に入っている時差の記録（Intl）から、
+   その日時の現地の時差を求める。日本の1948〜1951年の夏時間、海外の夏時間に対応。
+   出生地がわからないとき・1900年より前・端末が対応していないときは、これまでどおり固定の時差（tz）を使う。
+   沖縄は、当時は本土の夏時間の対象外だったため、zone を空にして固定のままにしている */
+var _TZ_FMT_CACHE = {};
+function _tzZoneName(cityData) {
+  if (!cityData) return null;
+  if (typeof cityData.zone === 'string') return cityData.zone || null;
+  return (cityData.tz === 9) ? 'Asia/Tokyo' : null;
+}
+function _tzZoneOffsetH(zone, utcMs) {
+  if (typeof Intl === 'undefined' || !Intl.DateTimeFormat) return null;
+  var f = _TZ_FMT_CACHE[zone];
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-US', { timeZone: zone, hour12: false, year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric' });
+    if (!f.formatToParts) return null;
+    _TZ_FMT_CACHE[zone] = f;
+  }
+  var parts = f.formatToParts(new Date(utcMs)), o = {}, i;
+  for (i = 0; i < parts.length; i++) { o[parts[i].type] = parseInt(parts[i].value, 10); }
+  if (isNaN(o.year) || isNaN(o.month) || isNaN(o.day) || isNaN(o.hour) || isNaN(o.minute)) return null;
+  var asUtc = Date.UTC(o.year, o.month - 1, o.day, o.hour % 24, o.minute, o.second || 0);
+  return (asUtc - Math.floor(utcMs / 1000) * 1000) / 3600000;
+}
+/* 戻り値 { tz: その日時の時差（時間）, base: 表の固定の時差, diff: tz - base（夏時間なら +1） } */
+function getTzInfo(cityData, y, mo, d, hh, mi) {
+  var base = (cityData && typeof cityData.tz === 'number') ? cityData.tz : 9;
+  var out = { tz: base, base: base, diff: 0 };
+  var zone = _tzZoneName(cityData);
+  if (!zone || !(y >= 1900)) return out;
+  try {
+    var local = Date.UTC(y, mo - 1, d, hh || 0, mi || 0);
+    var o1 = _tzZoneOffsetH(zone, local - base * 3600000);
+    if (o1 === null || isNaN(o1)) return out;
+    var o2 = _tzZoneOffsetH(zone, local - o1 * 3600000);
+    if (o2 === null || isNaN(o2)) return out;
+    if (Math.abs(o2 * 4 - Math.round(o2 * 4)) > 1e-6 || Math.abs(o2 - base) > 2) return out;
+    out.tz = o2; out.diff = o2 - base;
+  } catch (e) {}
+  return out;
+}
+function getTzNote(info) {
+  if (!info || !info.diff) return '';
+  var t = (info.tz >= 0 ? '+' : '') + info.tz;
+  return (info.diff > 0 ? '夏時間として計算（世界時との差 ' : '当時の現地の時差で計算（世界時との差 ') + t + '時間）';
+}
+/* ======= 夏時間の自動判定 END ======= */
+
 /* 出生時刻（現地の時計）から、四柱推命に必要な2種類の時刻を返す
    ・jst   : 年柱・月柱の節入り判定用。節入りは「太陽の位置で決まる全世界共通の瞬間」なので、補正せず時計の時刻（日本時間に換算）で比べる
    ・solar : 日柱・時柱用の真太陽時 ＝ 世界時 ＋ 経度×4分 ＋ 均時差（出生地がわかるときだけ補正。海外の標準時もtzで考慮） */
 function getSolarTimeInfo(yr, mo, da, hourVal, minVal, cityData) {
-  var tz = (cityData && typeof cityData.tz === 'number') ? cityData.tz : 9;
+  var tzInfo = getTzInfo(cityData, yr, mo, da, hourVal, minVal);
+  var tz = tzInfo.tz;
   var hasPlace = !!(cityData && typeof cityData.lon === 'number');
   var deltaMin = 0;
   if (hasPlace) {
@@ -5187,7 +5237,7 @@ function getSolarTimeInfo(yr, mo, da, hourVal, minVal, cityData) {
   return {
     solar: new Date(yr, mo - 1, da, hourVal, minVal + deltaMin, 0, 0),
     jst: new Date(yr, mo - 1, da, hourVal, minVal + Math.round((9 - tz) * 60), 0, 0),
-    deltaMin: deltaMin, hasPlace: hasPlace
+    deltaMin: deltaMin, hasPlace: hasPlace, tzInfo: tzInfo
   };
 }
 
@@ -6706,7 +6756,9 @@ function buildNormalAspectBody(birthdate, isPartner) {
   var cityData = _cData || null;
 
   var moon = lt_getMoonSign(y, mo, d);
-  var _moonHourUT = hasTime ? (birthHourDec - (cityData ? cityData.tz : 9)) : (12 - (cityData ? cityData.tz : 9));
+  var _tzInfo = getTzInfo(cityData, y, mo, d, hasTime ? birthHour : 12, hasTime ? birthMin : 0);
+  var _tzH = _tzInfo.tz;
+  var _moonHourUT = hasTime ? (birthHourDec - _tzH) : (12 - _tzH);
   var moonLonVal = lt_moonLon(y, mo, d, _moonHourUT);
   /* 出生時刻が分かっている場合は、runHoroscope()と同様に精密経度からサイン名を決め直す
      （日付のみで判定する簡易ロジックのままだと、月がサインを跨ぐ日に食い違いが生じるため） */
@@ -6722,7 +6774,7 @@ function buildNormalAspectBody(birthdate, isPartner) {
   }
   var ascmc = null;
   if (hasTime && cityData) {
-    var hourUtc = birthHourDec - cityData.tz;
+    var hourUtc = birthHourDec - _tzH;
     ascmc = lt_getAscMC(y, mo, d, hourUtc, cityData.lat, cityData.lon);
   }
   var p = {
@@ -10008,7 +10060,7 @@ function buildShichuuCardHTML(birthdate, optTime, optCityData, isPartner, hideTa
       /* 真太陽時で日付がまたぐときは「前日」「翌日」を付ける */
       var _solDayDiff = Math.round((Date.UTC(solarDT.getFullYear(),solarDT.getMonth(),solarDT.getDate()) - Date.UTC(birthDT.getFullYear(),birthDT.getMonth(),birthDT.getDate())) / 86400000);
       var _solDayTag = _solDayDiff < 0 ? '前日' : (_solDayDiff > 0 ? '翌日' : '');
-      birthStr += '（真太陽時 '+_solDayTag+('0'+solarDT.getHours()).slice(-2)+':'+('0'+solarDT.getMinutes()).slice(-2)+'）';
+      birthStr += '（真太陽時 '+_solDayTag+('0'+solarDT.getHours()).slice(-2)+':'+('0'+solarDT.getMinutes()).slice(-2)+((_si.tzInfo && _si.tzInfo.diff > 0) ? '・夏時間' : '')+'）';
     }
     // 大運は性別を選んだあとに計算する（男女ボタン・buildDaunSectionHTML）。日本時間の壁時計（時刻不明のときは正午）で計算
     var _daunWrapId = 'daun-wrap-' + (window._daunSeq = (window._daunSeq || 0) + 1);
@@ -12232,16 +12284,16 @@ var CITY_COORDS = {
   '神戸':{'lat':34.6901,'lon':135.1955,'tz':9},'kobe':{'lat':34.6901,'lon':135.1955,'tz':9},
   '横浜':{'lat':35.4437,'lon':139.6380,'tz':9},'yokohama':{'lat':35.4437,'lon':139.6380,'tz':9},
   '仙台':{'lat':38.2682,'lon':140.8694,'tz':9},'sendai':{'lat':38.2682,'lon':140.8694,'tz':9},
-  '那覇':{'lat':26.2124,'lon':127.6809,'tz':9},'naha':{'lat':26.2124,'lon':127.6809,'tz':9},
-  'new york':{'lat':40.7128,'lon':-74.0060,'tz':-5},'ニューヨーク':{'lat':40.7128,'lon':-74.0060,'tz':-5},
-  'london':{'lat':51.5074,'lon':-0.1278,'tz':0},'ロンドン':{'lat':51.5074,'lon':-0.1278,'tz':0},
-  'paris':{'lat':48.8566,'lon':2.3522,'tz':1},'パリ':{'lat':48.8566,'lon':2.3522,'tz':1},
-  'los angeles':{'lat':34.0522,'lon':-118.2437,'tz':-8},'ロサンゼルス':{'lat':34.0522,'lon':-118.2437,'tz':-8},
-  'sydney':{'lat':-33.8688,'lon':151.2093,'tz':10},'シドニー':{'lat':-33.8688,'lon':151.2093,'tz':10},
+  '那覇':{'lat':26.2124,'lon':127.6809,'tz':9,'zone':''},'naha':{'lat':26.2124,'lon':127.6809,'tz':9,'zone':''},
+  'new york':{'lat':40.7128,'lon':-74.0060,'tz':-5,'zone':'America/New_York'},'ニューヨーク':{'lat':40.7128,'lon':-74.0060,'tz':-5,'zone':'America/New_York'},
+  'london':{'lat':51.5074,'lon':-0.1278,'tz':0,'zone':'Europe/London'},'ロンドン':{'lat':51.5074,'lon':-0.1278,'tz':0,'zone':'Europe/London'},
+  'paris':{'lat':48.8566,'lon':2.3522,'tz':1,'zone':'Europe/Paris'},'パリ':{'lat':48.8566,'lon':2.3522,'tz':1,'zone':'Europe/Paris'},
+  'los angeles':{'lat':34.0522,'lon':-118.2437,'tz':-8,'zone':'America/Los_Angeles'},'ロサンゼルス':{'lat':34.0522,'lon':-118.2437,'tz':-8,'zone':'America/Los_Angeles'},
+  'sydney':{'lat':-33.8688,'lon':151.2093,'tz':10,'zone':'Australia/Sydney'},'シドニー':{'lat':-33.8688,'lon':151.2093,'tz':10,'zone':'Australia/Sydney'},
   'seoul':{'lat':37.5665,'lon':126.9780,'tz':9},'ソウル':{'lat':37.5665,'lon':126.9780,'tz':9},
-  'taipei':{'lat':25.0330,'lon':121.5654,'tz':8},'台北':{'lat':25.0330,'lon':121.5654,'tz':8},
-  'shanghai':{'lat':31.2304,'lon':121.4737,'tz':8},'上海':{'lat':31.2304,'lon':121.4737,'tz':8},
-  'beijing':{'lat':39.9042,'lon':116.4074,'tz':8},'北京':{'lat':39.9042,'lon':116.4074,'tz':8},
+  'taipei':{'lat':25.0330,'lon':121.5654,'tz':8,'zone':'Asia/Taipei'},'台北':{'lat':25.0330,'lon':121.5654,'tz':8,'zone':'Asia/Taipei'},
+  'shanghai':{'lat':31.2304,'lon':121.4737,'tz':8,'zone':'Asia/Shanghai'},'上海':{'lat':31.2304,'lon':121.4737,'tz':8,'zone':'Asia/Shanghai'},
+  'beijing':{'lat':39.9042,'lon':116.4074,'tz':8,'zone':'Asia/Shanghai'},'北京':{'lat':39.9042,'lon':116.4074,'tz':8,'zone':'Asia/Shanghai'},
   /* ── 47都道府県（県庁所在地の座標） ── */
   '北海道':{'lat':43.0642,'lon':141.3469,'tz':9},
   '青森':{'lat':40.8244,'lon':140.7400,'tz':9},'青森県':{'lat':40.8244,'lon':140.7400,'tz':9},
@@ -12289,7 +12341,7 @@ var CITY_COORDS = {
   '大分':{'lat':33.2382,'lon':131.6126,'tz':9},'大分県':{'lat':33.2382,'lon':131.6126,'tz':9},
   '宮崎':{'lat':31.9111,'lon':131.4239,'tz':9},'宮崎県':{'lat':31.9111,'lon':131.4239,'tz':9},
   '鹿児島':{'lat':31.5602,'lon':130.5581,'tz':9},'鹿児島県':{'lat':31.5602,'lon':130.5581,'tz':9},
-  '沖縄':{'lat':26.2124,'lon':127.6809,'tz':9},'沖縄県':{'lat':26.2124,'lon':127.6809,'tz':9},
+  '沖縄':{'lat':26.2124,'lon':127.6809,'tz':9,'zone':''},'沖縄県':{'lat':26.2124,'lon':127.6809,'tz':9,'zone':''},
 };
 
 /* 出生地の表記ゆれ対応。
@@ -12374,12 +12426,15 @@ function runHoroscope() {
   var sun     = lt_getSunSign(y, mo, d);
   /* 太陽黄経：pyswisseph精度テーブルから取得（時刻補間あり） */
   /* 時刻不明の場合は、ASC/MC計算と同じ「現地時間正午」を仮定してUTに変換する（他の天体の補間もこの値を使うため統一） */
-  var _sunHourUT = hasTime ? (birthHourDec - (cityData ? cityData.tz : 9)) : (12 - (cityData ? cityData.tz : 9));
+  var _tzInfo = getTzInfo(cityData, y, mo, d, hasTime ? birthHour : 12, hasTime ? birthMin : 0);
+  var _tzH = _tzInfo.tz;
+  if (cityData && placeResult && getTzNote(_tzInfo)) { placeResult.textContent += '　' + getTzNote(_tzInfo); }
+  var _sunHourUT = hasTime ? (birthHourDec - _tzH) : (12 - _tzH);
   var _sunLonTable = getSunLon(y, mo, d, _sunHourUT);
   var sunLon = (_sunLonTable !== null) ? _sunLonTable : lt_sunLon(y, mo, d, _sunHourUT);
   var moon    = lt_getMoonSign(y, mo, d);
   /* moonLon: lt_moonLon はUT(世界時)で計算するため、JSTの場合は-9時間して渡す。時刻不明時も現地正午基準に統一 */
-  var _moonHourUT = hasTime ? (birthHourDec - (cityData ? cityData.tz : 9)) : (12 - (cityData ? cityData.tz : 9));
+  var _moonHourUT = hasTime ? (birthHourDec - _tzH) : (12 - _tzH);
   var moonLon = lt_moonLon(y, mo, d, _moonHourUT);
   var mercury = lt_getMercurySign(ymd);
   var venus   = lt_getVenusSign(ymd);   /* lt_getVenusSign は ymd(数値) を受け付ける */
@@ -12449,7 +12504,7 @@ function runHoroscope() {
   /* ASC・MC */
   var ascmc = null;
   if (hasTime && cityData) {
-    var hourUtc = birthHourDec - cityData.tz;
+    var hourUtc = birthHourDec - _tzH;
     ascmc = lt_getAscMC(y, mo, d, hourUtc, cityData.lat, cityData.lon);
   }
 
@@ -22082,13 +22137,13 @@ function jyCalc(bd, timeStr, cityData){
   var hasTime=false, hh=12, mi=0;
   var tm = String(timeStr||'').match(/^(\d{1,2}):?(\d{2})$/);
   if(tm){ hh=+tm[1]; mi=+tm[2]; hasTime=true; }
-  var tz = cityData ? cityData.tz : 9;
+  var tzInfo = getTzInfo(cityData, y, mo, d, hh, mi), tz = tzInfo.tz;
   var hourLocal = hh + mi/60;
   var u = jyUT(y,mo,d,hourLocal,tz), T = jyT(u.ms);
   var ay = jyAyanamsa(T), off = ay + jyNutation(T);
   var tables = [null,null,LON_MARS_0UT,LON_MERCURY_0UT,LON_JUPITER_0UT,LON_VENUS_0UT,LON_SATURN_0UT];
   var names = ['太陽','月','火星','水星','木星','金星','土星','ラーフ','ケートゥ'];
-  var res = { y:y, mo:mo, d:d, hasTime:hasTime, hh:hh, mi:mi, tz:tz, city:cityData||null, ayan:ay, birthMs:u.ms, grahas:[], missing:false };
+  var res = { y:y, mo:mo, d:d, hasTime:hasTime, hh:hh, mi:mi, tz:tz, city:cityData||null, ayan:ay, birthMs:u.ms, grahas:[], missing:false, tzNote:(cityData?getTzNote(tzInfo):'') };
   var i, trop, g, t2;
   for(i=0;i<9;i++){
     trop=null; g=null;
@@ -22230,6 +22285,7 @@ function jySummaryTile(icon, label, main, sub, tabIdx){
 function jySummaryTabHTML(c){
   var h='', i, names=[], seen={}, m=c.moonCands[0], d=jyCurDasha(c);
   var ring='display:inline-block;width:36px;height:36px;line-height:36px;border-radius:50%;font-weight:700;text-align:center;';
+  if(c.tzNote) h+='<div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:8px;">🕐 '+jyEsc(c.tzNote)+'</div>';
   if(!c.nakUncertain){
     h+=jySummaryTile(jyBadge(3,36), '月のナクシャトラ（生まれ持った心）', jyEsc(JY_NAK[m.nak].n), jyEsc(JY_NAK[m.nak].h), 1);
   } else {
@@ -22319,6 +22375,7 @@ function jyRashiTabHTML(c){
   var h='', i, g, td='padding:6px 5px;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap;font-size:11px;';
   if(!c.hasTime) h+='<div style="font-size:11px;color:#fbbf24;line-height:1.7;margin-bottom:8px;">生まれた時刻がわからないため、正午の位置で表示しています。月は半日で約6.5°動くので、月の星座とナクシャトラは変わることがあります。ラグナとハウスは出せません。</div>';
   else if(!c.lagna) h+='<div style="font-size:11px;color:#fbbf24;line-height:1.7;margin-bottom:8px;">出生地がわからないため、ラグナとハウスは出せません。</div>';
+  if(c.tzNote) h+='<div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:8px;">🕐 '+jyEsc(c.tzNote)+'</div>';
   if(c.missing) h+='<div style="font-size:11px;color:#fbbf24;line-height:1.7;margin-bottom:8px;">この生年月日は、火星・水星・木星・金星・土星が計算の範囲外です（1940年より前など）。太陽・月・ラーフ・ケートゥだけを表示しています。</div>';
   h+=jyChartHTML(c);
   h+='<table style="width:100%;border-collapse:collapse;margin-top:10px;">';
