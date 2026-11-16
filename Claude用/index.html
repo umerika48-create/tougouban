@@ -1899,7 +1899,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   <footer>
     Produced by Sakuraco<br>
     立春（2月4日）を年の切替<br>
-    <span style="font-size:9px;opacity:.5;">版 2026-11-15 インド占星術つき</span>
+    <span style="font-size:9px;opacity:.5;">版 2026-11-15b インド占星術デザイン</span>
   </footer>
 </div>
 
@@ -21968,39 +21968,48 @@ var JY_NAK = [
 ];
 /* 9惑星（ダシャーの支配星の順: ケートゥ→金星→太陽→月→火星→ラーフ→木星→土星→水星） */
 var JY_DASHA_LORD = [
-  {n:'ケートゥ', c:'ケ', h:'手放して、身軽になる時期',
+  {n:'ケートゥ', k:'手放しと直感', c:'ケ', h:'手放して、身軽になる時期',
    s:'いらなくなったものを手放し、心の中を整理する時期です。ひとりの時間と、直感を信じることが、次の扉を開いてくれます。'},
-  {n:'金星', c:'金', h:'愛と楽しみが広がる時期',
+  {n:'金星', k:'愛と楽しみ', c:'金', h:'愛と楽しみが広がる時期',
    s:'恋愛・結婚・美しいもの・お金の豊かさがテーマになる時期です。人とのご縁を楽しみ、好きなことに素直になるほど、運が育ちます。'},
-  {n:'太陽', c:'日', h:'自分らしさを表に出す時期',
+  {n:'太陽', k:'自分らしさ', c:'日', h:'自分らしさを表に出す時期',
    s:'自分の軸がはっきりして、人前に立つ機会が増える時期です。自信を持って決めることと、堂々とふるまうことが、道を明るくします。'},
-  {n:'月', c:'月', h:'心と暮らしを育てる時期',
+  {n:'月', k:'心', c:'月', h:'心と暮らしを育てる時期',
    s:'気持ち・家庭・人とのつながりがテーマになる時期です。心が安らぐ場所を整え、やさしさを受け取るほど、運が満ちていきます。'},
-  {n:'火星', c:'火', h:'行動して、勝ち取る時期',
+  {n:'火星', k:'行動力', c:'火', h:'行動して、勝ち取る時期',
    s:'エネルギーが高まり、挑戦したくなる時期です。迷うより動くことと、体を動かして熱を上手に使うことが、成果につながります。'},
-  {n:'ラーフ', c:'ラ', h:'新しい世界へ踏み出す時期',
+  {n:'ラーフ', k:'強い願い', c:'ラ', h:'新しい世界へ踏み出す時期',
    s:'今までにない経験や、強い願いが動き出す時期です。未知の世界への好奇心と、地に足をつける意識の両方が、あなたを大きくします。'},
-  {n:'木星', c:'木', h:'学びと恵みが広がる時期',
+  {n:'木星', k:'恵みと学び', c:'木', h:'学びと恵みが広がる時期',
    s:'成長・学び・結婚や子どもなど、人生の恵みがテーマになる時期です。良い先生や仲間とのご縁を大切にするほど、世界が広がります。'},
-  {n:'土星', c:'土', h:'こつこつ積み上げる時期',
+  {n:'土星', k:'責任と努力', c:'土', h:'こつこつ積み上げる時期',
    s:'責任や努力がテーマになる時期です。あせらず続けることと、基礎を固めることが、あとで揺るがない実りになります。'},
-  {n:'水星', c:'水', h:'学んで、伝えて、つながる時期',
+  {n:'水星', k:'知性と言葉', c:'水', h:'学んで、伝えて、つながる時期',
    s:'勉強・仕事・コミュニケーションがテーマになる時期です。情報を集めて言葉にすることと、器用に動くことが、チャンスを呼びます。'}
 ];
 var JY_DASHA_YEAR_COEFF = [7,20,6,10,7,18,16,19,17];
 /* 出生図に並べる順（太陽・月・火星・水星・木星・金星・土星・ラーフ・ケートゥ）→ JY_DASHA_LORD の番号 */
 var JY_GRAHA_IDX = [2,3,4,8,6,1,7,5,0];
+/* 惑星の色（JY_DASHA_LORD と同じ順） */
+var JY_GRAHA_COLOR = ['#c9925e','#f7a8d2','#f6b73c','#e3e9f7','#f2675f','#a3abbd','#f3d552','#8a98e6','#62d391'];
+/* 星座の色（火・地・風・水） */
+var JY_ELEM_COLOR = ['rgba(248,113,113,.14)','rgba(134,239,172,.11)','rgba(253,224,71,.10)','rgba(125,211,252,.13)'];
+var JY_SIGN_SYM = ['\u2648\uFE0E','\u2649\uFE0E','\u264A\uFE0E','\u264B\uFE0E','\u264C\uFE0E','\u264D\uFE0E','\u264E\uFE0E','\u264F\uFE0E','\u2650\uFE0E','\u2651\uFE0E','\u2652\uFE0E','\u2653\uFE0E'];
+/* 12ハウスのテーマ */
+var JY_HOUSE = ['自分自身・体・第一印象','お金・家族・言葉','努力・発信・きょうだい','家・母・心の安らぎ','恋愛・子ども・創造','日々の務め・健康・乗りこえる力','結婚・パートナー','深い絆・変化・受けつぐもの','幸運・学び・先生','仕事・社会での役割','願いの実現・仲間・収入','手放し・癒やし・遠い世界'];
+/* ラグナ（12星座）の一言 */
+var JY_LAGNA = ['まっすぐで、行動の早い印象','おだやかで、安心感のある印象','軽やかで、話しやすい印象','やさしく、面倒見のいい印象','堂々として、華のある印象','きちんとして、気がきく印象','上品で、感じのいい印象','静かで、芯の強い印象','明るく、おおらかな印象','落ち着いて、頼れる印象','個性的で、さっぱりした印象','やわらかく、やさしい印象'];
 var JY_SIGN_SHORT = ['牡羊','牡牛','双子','蟹','獅子','乙女','天秤','蠍','射手','山羊','水瓶','魚'];
 /* 相性（アシュタ・クータ 36点） */
 var JY_KUTA = [
-  {n:'ヴァルナ', m:1, s:'心の成長の段階が合うか、を見ます。'},
-  {n:'ヴァシャ', m:2, s:'おたがいに引き合う力と、歩み寄りやすさを見ます。'},
-  {n:'ターラー', m:3, s:'ふたりでいる時の運の流れと、元気でいられるかを見ます。'},
-  {n:'ヨーニ', m:4, s:'本能的な相性と、ふれあいの心地よさを見ます。'},
-  {n:'グラハ・マイトリー', m:5, s:'考え方が合うか、友だちのように話せるかを見ます。'},
-  {n:'ガナ', m:6, s:'生まれ持った気質が合うかを見ます。'},
-  {n:'バクート', m:7, s:'気持ちの流れと、暮らしの歩調が合うかを見ます。'},
-  {n:'ナーディ', m:8, s:'体質とエネルギーの相性を見ます。'}
+  {n:'ヴァルナ', m:1, s:'心の成長の段階が合うか、を見ます。', a:'考え方の深め方がちがうふたりです。相手のペースを尊重すると、学び合える関係になります。'},
+  {n:'ヴァシャ', m:2, s:'おたがいに引き合う力と、歩み寄りやすさを見ます。', a:'どちらかが合わせすぎないことが大切です。小さなことも相談して決めると、心地よく続きます。'},
+  {n:'ターラー', m:3, s:'ふたりでいる時の運の流れと、元気でいられるかを見ます。', a:'いそがしい時ほど、ふたりで休む時間を取ると、流れが整います。'},
+  {n:'ヨーニ', m:4, s:'本能的な相性と、ふれあいの心地よさを見ます。', a:'心地よい距離やふれあい方がちがうふたりです。好きなことと苦手なことを言葉で伝え合うと、安心が育ちます。'},
+  {n:'グラハ・マイトリー', m:5, s:'考え方が合うか、友だちのように話せるかを見ます。', a:'考え方のちがいは、新しい見方をくれます。相手の話を最後まで聞くと、わかり合えます。'},
+  {n:'ガナ', m:6, s:'生まれ持った気質が合うかを見ます。', a:'気質のテンポがちがうふたりです。相手のやり方を変えようとしないことが、いちばんの思いやりになります。'},
+  {n:'バクート', m:7, s:'気持ちの流れと、暮らしの歩調が合うかを見ます。', a:'気持ちの波や暮らしのリズムがちがうふたりです。お金や予定のことは、早めに話し合うと安心です。'},
+  {n:'ナーディ', m:8, s:'体質とエネルギーの相性を見ます。', a:'体質が似ているふたりです。食事や睡眠など、体をいたわる習慣をいっしょに整えると、支え合えます。'}
 ];
 var JY_KUTA_RANK = [
   {h:'とても良い相性', s:'伝統的な見方で、とても調和しやすい組み合わせです。自然体でいられることと、おたがいを高め合えることが、ふたりの強みですよ。'},
@@ -22165,6 +22174,12 @@ function jyDateStr(ms){ var dt=new Date(ms+9*3600000); return dt.getUTCFullYear(
 function jyAgeStr(ms, birthMs){ var a=(ms-birthMs)/(365.25*86400000); return a<0?'0':String(Math.floor(a)); }
 function jyDegStr(g){ return g.deg+'°'+jyPad(g.min)+"'"; }
 function jyNakLabel(g){ return '第'+(g.nak+1)+'宿 '+JY_NAK[g.nak].n; }
+/* 惑星の色つきの丸 */
+function jyBadge(lord, size, extra){
+  return '<span style="display:inline-block;width:'+size+'px;height:'+size+'px;line-height:'+size+'px;border-radius:50%;background:'+JY_GRAHA_COLOR[lord]
+    +';color:#1a1530;font-size:'+Math.round(size*0.56)+'px;font-weight:700;text-align:center;vertical-align:middle;margin:1px;box-shadow:0 0 6px rgba(0,0,0,.35);'+(extra||'')+'">'+jyEsc(JY_DASHA_LORD[lord].c)+'</span>';
+}
+function jyRootOf(el){ while(el && !(el.className && String(el.className).indexOf('jy-root')>=0)) el=el.parentNode; return el; }
 function jyNakBlock(m, small){
   var k=JY_NAK[m.nak], h='';
   h+='<div class="hj-hero"><div class="hj-hero-l">月のナクシャトラ　'+jyEsc(jyNakLabel(m))+(small?'':'（パダ'+m.pada+'）')+'</div>'
@@ -22185,47 +22200,117 @@ function jyNakTabHTML(c){
   }
   return h;
 }
+/* いまのダシャー（大きな流れと、その中の小さな流れ） */
+function jyCurDasha(c){
+  var now=(new Date()).getTime(), i, j, m, r={cur:null, sub:null, now:now};
+  if(!c.dasha) return r;
+  for(i=0;i<c.dasha.length;i++){ m=c.dasha[i]; if(now>=m.start&&now<m.end){ r.cur=m; for(j=0;j<9;j++){ if(now>=m.sub[j].start&&now<m.sub[j].end) r.sub=m.sub[j]; } } }
+  return r;
+}
+/* まとめ（開いてすぐ見える3つ） */
+function jySummaryTile(icon, label, main, sub, tabIdx){
+  return '<div onclick="jyTab(this,'+tabIdx+')" style="display:flex;align-items:center;gap:12px;padding:12px 12px;margin-bottom:8px;border-radius:12px;border:1px solid rgba(201,168,76,.35);background:rgba(255,255,255,.04);cursor:pointer;">'
+    +'<div style="flex:0 0 auto;width:40px;text-align:center;">'+icon+'</div>'
+    +'<div style="flex:1 1 auto;min-width:0;"><div style="font-size:10px;color:var(--sk-gold-light,#e8c96a);letter-spacing:.05em;margin-bottom:2px;">'+label+'</div>'
+    +'<div style="font-size:15px;font-weight:700;color:var(--text);line-height:1.5;">'+main+'</div>'
+    +(sub?'<div style="font-size:11px;color:var(--muted);line-height:1.6;margin-top:1px;">'+sub+'</div>':'')+'</div>'
+    +'<div style="flex:0 0 auto;color:rgba(232,201,106,.7);font-size:16px;">›</div></div>';
+}
+function jySummaryTabHTML(c){
+  var h='', i, names=[], seen={}, m=c.moonCands[0], d=jyCurDasha(c);
+  var ring='display:inline-block;width:36px;height:36px;line-height:36px;border-radius:50%;font-weight:700;text-align:center;';
+  if(!c.nakUncertain){
+    h+=jySummaryTile(jyBadge(3,36), '月のナクシャトラ（生まれ持った心）', jyEsc(JY_NAK[m.nak].n), jyEsc(JY_NAK[m.nak].h), 1);
+  } else {
+    for(i=0;i<c.moonCands.length;i++){ if(!seen[c.moonCands[i].nak]){ seen[c.moonCands[i].nak]=1; names.push(jyEsc(JY_NAK[c.moonCands[i].nak].n)); } }
+    h+=jySummaryTile(jyBadge(3,36), '月のナクシャトラ（生まれ持った心）', names.join(' か '), '生まれた時刻がわかると、1つに決まります。', 1);
+  }
+  if(c.lagna){
+    h+=jySummaryTile('<span style="'+ring+'background:linear-gradient(135deg,#f3dc8f,#c9a84c);color:#1a1530;font-size:18px;">'+JY_SIGN_SYM[c.lagna.sign]+'</span>', 'ラグナ（人生の入口・第一印象）', LT_SIGNS[c.lagna.sign], jyEsc(JY_LAGNA[c.lagna.sign]), 2);
+  } else {
+    h+=jySummaryTile('<span style="'+ring+'border:1px dashed rgba(232,201,106,.6);color:rgba(232,201,106,.7);font-size:16px;">？</span>', 'ラグナ（人生の入口・第一印象）', 'まだ出せません', '生まれた時刻と出生地がわかると出せます。', 2);
+  }
+  if(d.cur){
+    h+=jySummaryTile(jyBadge(d.cur.lord,36), 'いまの運気の流れ（ダシャー）',
+      jyEsc(JY_DASHA_LORD[d.cur.lord].n)+'期'+(d.sub?' − '+jyEsc(JY_DASHA_LORD[d.sub.lord].n)+'期':''),
+      jyEsc(JY_DASHA_LORD[d.cur.lord].h)+'（〜'+jyDateStr(d.cur.end)+'）', 3);
+  } else {
+    h+=jySummaryTile('<span style="'+ring+'border:1px dashed rgba(232,201,106,.6);color:rgba(232,201,106,.7);font-size:16px;">？</span>', 'いまの運気の流れ（ダシャー）', 'まだ出せません', '生まれた時刻がわかると出せます。', 3);
+  }
+  h+='<div style="font-size:10px;color:var(--muted);text-align:center;line-height:1.7;margin-top:2px;">タップすると、くわしい説明が開きます。</div>';
+  return h;
+}
 /* 南インド式（四角）の出生図。星座の位置は固定で、左上が魚座、時計回りに進む */
 function jyChartHTML(c){
   var cellSign=[[11,0,1,2],[10,-1,-1,3],[9,-1,-1,4],[8,7,6,5]];
-  var by=[], i, g, r, col, s, h='';
+  var by=[], i, g, r, col, s, h='', m=c.moonCands[0];
   for(i=0;i<12;i++) by.push([]);
   for(i=0;i<9;i++){ g=c.grahas[i]; if(!g) continue;
-    by[g.sign].push(JY_DASHA_LORD[g.lord].c+(g.retro?'<span style="font-size:8px;">R</span>':'')+((i===1&&c.signUncertain)?'?':'')); }
-  var tdBase='width:25%;height:68px;vertical-align:top;padding:3px 4px;border:1px solid rgba(201,168,76,.45);';
-  h+='<table style="width:100%;max-width:340px;margin:0 auto 8px;border-collapse:collapse;table-layout:fixed;">';
+    by[g.sign].push('<span style="white-space:nowrap;">'+jyBadge(g.lord, 22, (i===1&&c.signUncertain)?'outline:1px dashed #fff;':'')
+      +(g.retro?'<span style="font-size:8px;color:var(--muted);vertical-align:top;margin-left:-2px;">R</span>':'')+'</span>'); }
+  h+='<div style="max-width:352px;margin:0 auto 6px;padding:4px;border:1px solid rgba(232,201,106,.8);border-radius:14px;box-shadow:0 0 0 3px rgba(13,10,24,.6),0 0 0 4px rgba(232,201,106,.35),0 0 22px rgba(201,168,76,.22);background:rgba(13,10,24,.35);">';
+  h+='<table style="width:100%;border-collapse:separate;border-spacing:3px;table-layout:fixed;">';
   for(r=0;r<4;r++){
     h+='<tr>';
     for(col=0;col<4;col++){
       s=cellSign[r][col];
       if(s<0){
         if(r===1&&col===1){
-          h+='<td colspan="2" rowspan="2" style="text-align:center;vertical-align:middle;border:1px solid rgba(201,168,76,.45);font-size:10px;color:var(--muted);line-height:1.7;">'
-            +'ラーシ（出生図）<br>'+c.y+'/'+c.mo+'/'+c.d+(c.hasTime?' '+jyPad(c.hh)+':'+jyPad(c.mi):'')
-            +'<br>'+(c.lagna?'ラグナ：'+LT_SIGNS[c.lagna.sign]:'ラグナなし')+'</td>';
+          h+='<td colspan="2" rowspan="2" style="text-align:center;vertical-align:middle;border-radius:10px;padding:6px 4px;background:rgba(201,168,76,.07);border:1px solid rgba(201,168,76,.18);">'
+            +'<div style="font-size:8px;letter-spacing:.32em;color:rgba(232,201,106,.75);margin-bottom:4px;">RASHI</div>'
+            +'<div style="font-size:13px;font-weight:700;color:#ffe9a8;line-height:1.4;word-break:keep-all;">'+(c.nakUncertain?'月は時刻で<wbr>変わります':jyEsc(JY_NAK[m.nak].n).replace(/・/g,'・<wbr>'))+'</div>'
+            +(c.nakUncertain?'':'<div style="font-size:10px;color:var(--text);line-height:1.5;margin:2px 0 5px;">'+jyEsc(JY_NAK[m.nak].h)+'</div>')
+            +'<div style="font-size:9px;color:var(--muted);line-height:1.6;">'+c.y+'/'+c.mo+'/'+c.d+(c.hasTime?' '+jyPad(c.hh)+':'+jyPad(c.mi):' 時刻不明')
+            +'<br>'+(c.lagna?'ラグナ '+LT_SIGNS[c.lagna.sign]:'ラグナなし')+'</div></td>';
         }
         continue;
       }
       var isL = c.lagna && c.lagna.sign===s;
-      h+='<td style="'+tdBase+(isL?'background:rgba(201,168,76,.16);':'')+'">'
-        +'<div style="font-size:9px;color:var(--muted);display:flex;justify-content:space-between;"><span>'+JY_SIGN_SHORT[s]+'</span><span>'
-        +(c.lagna?(((s-c.lagna.sign+12)%12)+1):'')+'</span></div>'
-        +'<div style="font-size:13px;font-weight:700;color:var(--text);line-height:1.5;word-break:break-all;">'
-        +(isL?'<span style="color:#e8c96a;font-size:10px;">Asc </span>':'')+by[s].join(' ')+'</div></td>';
+      h+='<td class="jy-cell" onclick="jyCellTap(this,'+s+')" style="width:25%;height:72px;vertical-align:top;padding:4px 4px 3px;border-radius:8px;cursor:pointer;'
+        +(isL?'background:linear-gradient(135deg,rgba(243,220,143,.42),rgba(201,168,76,.14));border:1px solid #e8c96a;box-shadow:0 0 12px rgba(232,201,106,.5);'
+             :'background:'+JY_ELEM_COLOR[s%4]+';border:1px solid rgba(201,168,76,.22);')+'">'
+        +'<div style="display:flex;justify-content:space-between;align-items:center;font-size:9px;color:'+(isL?'#ffe9a8':'var(--muted)')+';line-height:1.2;margin-bottom:2px;">'
+        +'<span><span style="font-size:11px;color:rgba(232,201,106,.9);">'+JY_SIGN_SYM[s]+'</span> '+jyEsc(JY_SIGN_SHORT[s])+'</span>'
+        +'<span style="font-weight:700;">'+(c.lagna?(((s-c.lagna.sign+12)%12)+1):'')+'</span></div>'
+        +(isL?'<div style="font-size:8px;font-weight:700;color:#1a1530;background:#e8c96a;border-radius:8px;display:inline-block;padding:0 6px;line-height:13px;margin-bottom:1px;">ラグナ</div>':'')
+        +'<div style="line-height:1.1;">'+by[s].join('')+'</div></td>';
     }
     h+='</tr>';
   }
-  h+='</table>';
-  h+='<div style="font-size:9px;color:var(--muted);text-align:center;line-height:1.7;margin-bottom:12px;">日＝太陽　月　火　水　木　金　土　ラ＝ラーフ　ケ＝ケートゥ　R＝逆行　右上の数字＝ハウス</div>';
+  h+='</table></div>';
+  h+='<div style="font-size:9px;color:var(--muted);text-align:center;line-height:1.7;margin-bottom:6px;">右上の数字＝ハウス　R＝逆行　色＝火・地・風・水の星座</div>';
+  h+='<div class="jy-cell-info hj-box" style="min-height:38px;"><div style="font-size:11px;color:var(--muted);text-align:center;line-height:1.8;">マスをタップすると、そのハウスの意味と、入っている惑星が出ます。</div></div>';
   return h;
 }
+function jyCellInfoHTML(c, s){
+  var hn = c.lagna ? ((s-c.lagna.sign+12)%12)+1 : 0, h='', i, g, n=0;
+  h+='<div style="font-size:14px;font-weight:700;color:#ffe9a8;margin-bottom:4px;"><span style="font-size:15px;">'+JY_SIGN_SYM[s]+'</span> '+LT_SIGNS[s]+(hn?'　第'+hn+'ハウス':'')+((c.lagna&&c.lagna.sign===s)?'（ラグナ）':'')+'</div>';
+  if(hn) h+='<div style="font-size:12px;color:var(--text);line-height:1.7;margin-bottom:8px;">テーマ：'+jyEsc(JY_HOUSE[hn-1])+'</div>';
+  for(i=0;i<9;i++){
+    g=c.grahas[i]; if(!g||g.sign!==s) continue; n++;
+    h+='<div style="display:flex;align-items:flex-start;gap:8px;padding:7px 0;border-top:1px solid rgba(255,255,255,.07);">'
+      +'<div style="flex:0 0 auto;">'+jyBadge(g.lord,24)+'</div><div style="flex:1 1 auto;min-width:0;">'
+      +'<div style="font-size:12px;font-weight:700;color:var(--text);">'+jyEsc(g.name)+(g.retro?'（逆行）':'')+' <span style="font-weight:400;font-size:10px;color:var(--muted);">'+jyDegStr(g)+'　'+jyEsc(JY_NAK[g.nak].n)+'</span></div>'
+      +'<div style="font-size:12px;color:var(--text);line-height:1.7;">「'+jyEsc(JY_DASHA_LORD[g.lord].k)+'」の星'+(hn?'が、「'+jyEsc(JY_HOUSE[hn-1])+'」の場所にあります。':'です。')+'</div></div></div>';
+  }
+  if(!n) h+='<div style="font-size:12px;color:var(--muted);line-height:1.7;">このマスに惑星はありません。'+(hn?'惑星がなくても、このテーマが弱いわけではありません。':'')+'</div>';
+  return h;
+}
+function jyCellTap(el, s){
+  var root=jyRootOf(el); if(!root) return;
+  var c=(window._jyCalcs||{})[root.getAttribute('data-uid')]; if(!c) return;
+  var cells=root.querySelectorAll('.jy-cell'), i;
+  for(i=0;i<cells.length;i++) cells[i].style.outline='none';
+  el.style.outline='2px solid #ffe9a8';
+  var box=root.querySelector('.jy-cell-info'); if(box) box.innerHTML=jyCellInfoHTML(c, s);
+}
 function jyRashiTabHTML(c){
-  var h='', i, g, td='padding:4px 5px;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap;font-size:11px;';
+  var h='', i, g, td='padding:6px 5px;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap;font-size:11px;';
   if(!c.hasTime) h+='<div style="font-size:11px;color:#fbbf24;line-height:1.7;margin-bottom:8px;">生まれた時刻がわからないため、正午の位置で表示しています。月は半日で約6.5°動くので、月の星座とナクシャトラは変わることがあります。ラグナとハウスは出せません。</div>';
   else if(!c.lagna) h+='<div style="font-size:11px;color:#fbbf24;line-height:1.7;margin-bottom:8px;">出生地がわからないため、ラグナとハウスは出せません。</div>';
   if(c.missing) h+='<div style="font-size:11px;color:#fbbf24;line-height:1.7;margin-bottom:8px;">この生年月日は、火星・水星・木星・金星・土星が計算の範囲外です（1940年より前など）。太陽・月・ラーフ・ケートゥだけを表示しています。</div>';
   h+=jyChartHTML(c);
-  h+='<table style="width:100%;border-collapse:collapse;">';
+  h+='<table style="width:100%;border-collapse:collapse;margin-top:10px;">';
   h+='<tr><td style="'+td+'color:var(--muted);font-size:9px;">天体</td><td style="'+td+'color:var(--muted);font-size:9px;">星座</td><td style="'+td+'color:var(--muted);font-size:9px;">度数</td><td style="'+td+'color:var(--muted);font-size:9px;">ナクシャトラ</td><td style="'+td+'color:var(--muted);font-size:9px;text-align:right;">ハウス</td></tr>';
   if(c.lagna){
     h+='<tr><td style="'+td+'color:#e8c96a;font-weight:700;">ラグナ</td><td style="'+td+'font-weight:700;">'+LT_SIGNS[c.lagna.sign]+'</td><td style="'+td+'color:var(--muted);">'+jyDegStr(c.lagna)+'</td><td style="'+td+'color:var(--muted);">'+jyEsc(JY_NAK[c.lagna.nak].n)+' '+c.lagna.pada+'</td><td style="'+td+'text-align:right;color:var(--muted);">1</td></tr>';
@@ -22233,7 +22318,7 @@ function jyRashiTabHTML(c){
   for(i=0;i<9;i++){
     g=c.grahas[i];
     if(!g){ continue; }
-    h+='<tr><td style="'+td+'color:var(--text);">'+jyEsc(g.name)+(g.retro?' <span style="font-size:9px;color:var(--muted);">(R)</span>':'')+'</td>'
+    h+='<tr><td style="'+td+'color:var(--text);">'+jyBadge(g.lord,16)+' '+jyEsc(g.name)+(g.retro?' <span style="font-size:9px;color:var(--muted);">(R)</span>':'')+'</td>'
       +'<td style="'+td+'font-weight:700;color:var(--text);">'+LT_SIGNS[g.sign]+((i===1&&c.signUncertain)?'<span style="color:#fbbf24;">?</span>':'')+'</td>'
       +'<td style="'+td+'color:var(--muted);">'+jyDegStr(g)+'</td>'
       +'<td style="'+td+'color:var(--muted);">'+jyEsc(JY_NAK[g.nak].n)+' '+g.pada+((i===1&&c.nakUncertain)?'<span style="color:#fbbf24;">?</span>':'')+'</td>'
@@ -22243,63 +22328,86 @@ function jyRashiTabHTML(c){
   h+='<div style="font-size:9px;color:var(--muted);line-height:1.7;margin-top:8px;">サイデリアル方式（ラヒリ・アヤナームシャ '+c.ayan.toFixed(2)+'°）／ハウスはホールサイン／ラーフは平均交点。西洋占星術の星座より約24°手前になるので、星座が1つ前になることが多いです。</div>';
   return h;
 }
+/* 年表の帯。segs は {lord,start,end} の並び、t0〜t1 を100%にして、いまの位置に印をつける */
+function jyBarHTML(segs, t0, t1, now){
+  var h='<div style="position:relative;padding-top:13px;">', i, a, b, w, on, first=true;
+  if(now>=t0&&now<t1) h+='<div style="position:absolute;top:0;left:'+((now-t0)/(t1-t0)*100).toFixed(2)+'%;margin-left:-5px;width:10px;text-align:center;font-size:10px;line-height:12px;color:#fff;">▼</div>';
+  h+='<div style="display:flex;height:28px;border-radius:9px;overflow:hidden;border:1px solid rgba(232,201,106,.55);background:rgba(255,255,255,.04);">';
+  for(i=0;i<segs.length;i++){
+    a=Math.max(segs[i].start,t0); b=Math.min(segs[i].end,t1); if(b<=a) continue;
+    w=(b-a)/(t1-t0)*100; on=(now>=segs[i].start&&now<segs[i].end);
+    h+='<div style="width:'+w.toFixed(3)+'%;box-sizing:border-box;background:'+JY_GRAHA_COLOR[segs[i].lord]+';opacity:'+(on?'1':'.5')+';color:#1a1530;font-size:11px;font-weight:700;line-height:28px;text-align:center;overflow:hidden;white-space:nowrap;'
+      +(first?'':'border-left:1px solid rgba(13,10,24,.55);')+'">'+(w>=6?jyEsc(JY_DASHA_LORD[segs[i].lord].c):'')+'</div>';
+    first=false;
+  }
+  h+='</div></div>';
+  return h;
+}
 function jyDashaTabHTML(c){
-  var h='', now=(new Date()).getTime(), i, j, m, sb, cur=null, curSub=null;
+  var h='', i, j, m, sb, YEAR=365.25*86400000;
   if(!c.dasha){
     return '<div style="font-size:12px;color:#fbbf24;line-height:1.8;">ダシャー（運気の時期）は、月の細かい度数から計算します。生まれた時刻がわからないと、時期が数年単位でずれてしまうため、表示していません。</div>';
   }
-  for(i=0;i<c.dasha.length;i++){ m=c.dasha[i]; if(now>=m.start&&now<m.end){ cur=m; for(j=0;j<9;j++){ if(now>=m.sub[j].start&&now<m.sub[j].end) curSub=m.sub[j]; } } }
+  var d=jyCurDasha(c), cur=d.cur, curSub=d.sub, now=d.now, lab='font-size:10px;color:var(--muted);margin:0 0 2px;';
+  /* 一生の帯（0〜100歳） */
+  h+='<div style="'+lab+'">一生の流れ（0〜100歳）　▼＝いま</div>'+jyBarHTML(c.dasha, c.birthMs, c.birthMs+100*YEAR, now);
+  h+='<div style="position:relative;height:16px;font-size:9px;color:var(--muted);margin-bottom:12px;">';
+  for(i=0;i<=100;i+=20) h+='<span style="position:absolute;top:2px;'+(i===100?'right:0;':'left:'+i+'%;'+(i?'margin-left:-8px;':''))+'">'+i+(i===100?'歳':'')+'</span>';
+  h+='</div>';
   if(cur){
     var L=JY_DASHA_LORD[cur.lord];
-    h+='<div class="hj-hero"><div class="hj-hero-l">いまの大きな流れ　'+jyEsc(L.n)+'期（'+jyDateStr(cur.start)+' 〜 '+jyDateStr(cur.end)+'）</div><div class="hj-hero-t">'+jyEsc(L.h)+'</div></div>';
+    h+='<div class="hj-hero"><div class="hj-hero-l">いまの大きな流れ　'+jyBadge(cur.lord,16)+' '+jyEsc(L.n)+'期（'+jyDateStr(cur.start)+' 〜 '+jyDateStr(cur.end)+'）</div><div class="hj-hero-t">'+jyEsc(L.h)+'</div></div>';
     h+='<div class="hj-box"><div style="font-size:13px;line-height:1.8;color:var(--text);">'+jyEsc(L.s)+'</div></div>';
+    h+='<div style="'+lab+'margin-top:14px;">'+jyEsc(L.n)+'期の中の流れ　▼＝いま</div>'+jyBarHTML(cur.sub, cur.start, cur.end, now);
+    h+='<div style="display:flex;justify-content:space-between;font-size:9px;color:var(--muted);margin:3px 0 10px;"><span>'+jyDateStr(cur.start)+'</span><span>'+jyDateStr(cur.end)+'</span></div>';
     if(curSub){
       var S=JY_DASHA_LORD[curSub.lord];
-      h+='<div class="hj-box"><div style="font-size:10px;color:var(--sk-gold-light,#e8c96a);margin-bottom:4px;">その中の小さな流れ　'+jyEsc(L.n)+'期 − '+jyEsc(S.n)+'期（'+jyDateStr(curSub.start)+' 〜 '+jyDateStr(curSub.end)+'）</div>'
+      h+='<div class="hj-box"><div style="font-size:10px;color:var(--sk-gold-light,#e8c96a);margin-bottom:4px;">その中の小さな流れ　'+jyBadge(curSub.lord,16)+' '+jyEsc(S.n)+'期（'+jyDateStr(curSub.start)+' 〜 '+jyDateStr(curSub.end)+'）</div>'
         +'<div style="font-size:13px;font-weight:700;line-height:1.7;color:var(--text);">'+jyEsc(S.h)+'</div></div>';
     }
   }
-  var td='padding:5px 5px;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap;font-size:11px;';
-  h+='<div style="font-size:10px;color:var(--muted);margin:12px 0 4px;">一生の流れ（マハー・ダシャー）</div><table style="width:100%;border-collapse:collapse;">';
+  var td='padding:6px 5px;border-bottom:1px solid rgba(255,255,255,.06);white-space:nowrap;font-size:11px;';
+  h+='<details style="margin-top:10px;"><summary style="font-size:11px;color:var(--sk-gold-light,#e8c96a);cursor:pointer;padding:8px 0;">くわしい日付の表を見る</summary>';
+  h+='<div style="'+lab+'margin-top:6px;">一生の流れ（マハー・ダシャー）</div><table style="width:100%;border-collapse:collapse;">';
   for(i=0;i<c.dasha.length;i++){
     m=c.dasha[i]; var on=(m===cur);
-    h+='<tr style="'+(on?'background:rgba(201,168,76,.14);':'')+'"><td style="'+td+'font-weight:700;color:'+(on?'#ffe9a8':'var(--text)')+';">'+jyEsc(JY_DASHA_LORD[m.lord].n)+'期</td>'
+    h+='<tr style="'+(on?'background:rgba(201,168,76,.14);':'')+'"><td style="'+td+'font-weight:700;color:'+(on?'#ffe9a8':'var(--text)')+';">'+jyBadge(m.lord,16)+' '+jyEsc(JY_DASHA_LORD[m.lord].n)+'期</td>'
       +'<td style="'+td+'color:var(--muted);">'+jyDateStr(Math.max(m.start,c.birthMs))+' 〜 '+jyDateStr(m.end)+'</td>'
       +'<td style="'+td+'color:var(--muted);text-align:right;">'+jyAgeStr(m.start,c.birthMs)+'〜'+jyAgeStr(m.end,c.birthMs)+'歳</td></tr>';
   }
   h+='</table>';
   if(cur){
-    h+='<div style="font-size:10px;color:var(--muted);margin:12px 0 4px;">'+jyEsc(JY_DASHA_LORD[cur.lord].n)+'期の中の流れ（アンタル・ダシャー）</div><table style="width:100%;border-collapse:collapse;">';
+    h+='<div style="'+lab+'margin-top:12px;">'+jyEsc(JY_DASHA_LORD[cur.lord].n)+'期の中の流れ（アンタル・ダシャー）</div><table style="width:100%;border-collapse:collapse;">';
     for(j=0;j<9;j++){
       sb=cur.sub[j]; var on2=(sb===curSub);
-      h+='<tr style="'+(on2?'background:rgba(201,168,76,.14);':'')+'"><td style="'+td+'font-weight:700;color:'+(on2?'#ffe9a8':'var(--text)')+';">'+jyEsc(JY_DASHA_LORD[sb.lord].n)+'</td>'
+      h+='<tr style="'+(on2?'background:rgba(201,168,76,.14);':'')+'"><td style="'+td+'font-weight:700;color:'+(on2?'#ffe9a8':'var(--text)')+';">'+jyBadge(sb.lord,16)+' '+jyEsc(JY_DASHA_LORD[sb.lord].n)+'</td>'
         +'<td style="'+td+'color:var(--muted);">'+jyDateStr(sb.start)+' 〜 '+jyDateStr(sb.end)+'</td>'
-        +'<td style="'+td+'color:var(--muted);">'+jyEsc(JY_DASHA_LORD[sb.lord].h)+'</td></tr>';
+        +'<td style="'+td+'color:var(--muted);white-space:normal;">'+jyEsc(JY_DASHA_LORD[sb.lord].h)+'</td></tr>';
     }
     h+='</table>';
   }
+  h+='</details>';
   h+='<div style="font-size:9px;color:var(--muted);line-height:1.7;margin-top:8px;">ヴィムショッタリ・ダシャー（1年＝365.25日で計算）。生まれた時刻が4分ずれると、切り替わりの日が約1〜3週間ずれます。日付は目安として見てください。</div>';
   return h;
 }
-function jyTab(uid, idx){
-  var i, b, pn;
-  for(i=0;i<3;i++){
-    b=document.getElementById('jy-tab-'+uid+'-'+i); pn=document.getElementById('jy-pane-'+uid+'-'+i);
-    if(b) b.className='hj-tab'+(i===idx?' on':'');
-    if(pn) pn.style.display=(i===idx?'block':'none');
-  }
+function jyTab(el, idx){
+  var root=jyRootOf(el); if(!root) return;
+  var tabs=root.querySelectorAll('.jy-tabbtn'), panes=root.querySelectorAll('.jy-pane'), i;
+  for(i=0;i<tabs.length;i++) tabs[i].className='hj-tab jy-tabbtn'+(i===idx?' on':'');
+  for(i=0;i<panes.length;i++) panes[i].style.display=(i===idx?'block':'none');
   window._jyTabIdx=idx;
 }
 function jyBuildBody(birthdate, isPartner){
   var c;
   try { c = jyCalc(birthdate, isPartner?window._compatBirthTime:window._normalBirthTime, isPartner?window._compatCityData:window._normalCityData); } catch(e){ c=null; }
   if(!c || !c.moon) return '<div style="font-size:12px;color:var(--muted);">この生年月日は計算できませんでした。</div>';
-  var uid = birthdate.replace(/[^0-9]/g,'')+(isPartner?'p':''), cur = window._jyTabIdx||0, labels=['ナクシャトラ','出生図','ダシャー'], i, h='';
-  var panes=[jyNakTabHTML(c), jyRashiTabHTML(c), jyDashaTabHTML(c)];
-  h+='<div style="padding:0 4px;"><div class="hj-tabs">';
-  for(i=0;i<3;i++) h+='<button type="button" class="hj-tab'+(i===cur?' on':'')+'" id="jy-tab-'+uid+'-'+i+'" onclick="jyTab(\''+uid+'\','+i+')">'+labels[i]+'</button>';
+  var uid = birthdate.replace(/[^0-9]/g,'')+(isPartner?'p':''), cur = window._jyTabIdx||0, labels=['まとめ','ナクシャトラ','出生図','ダシャー'], i, h='';
+  window._jyCalcs = window._jyCalcs || {}; window._jyCalcs[uid] = c;
+  var panes=[jySummaryTabHTML(c), jyNakTabHTML(c), jyRashiTabHTML(c), jyDashaTabHTML(c)];
+  h+='<div class="jy-root" data-uid="'+uid+'" style="padding:0 4px;"><div class="hj-tabs">';
+  for(i=0;i<4;i++) h+='<button type="button" class="hj-tab jy-tabbtn'+(i===cur?' on':'')+'" onclick="jyTab(this,'+i+')">'+labels[i]+'</button>';
   h+='</div>';
-  for(i=0;i<3;i++) h+='<div id="jy-pane-'+uid+'-'+i+'" style="display:'+(i===cur?'block':'none')+';">'+panes[i]+'</div>';
+  for(i=0;i<4;i++) h+='<div class="jy-pane" style="display:'+(i===cur?'block':'none')+';">'+panes[i]+'</div>';
   h+='</div>';
   return h;
 }
@@ -22353,11 +22461,15 @@ function buildJyotishKutaHTML(bdA, bdB){
   h+='<div style="font-size:11px;color:var(--muted);line-height:1.8;margin-bottom:8px;">あなた：'+jyEsc(JY_NAK[a.moon.nak].n)+'（月 '+LT_SIGNS[a.moon.sign]+'）'+(a.nakUncertain?'<span style="color:#fbbf24;">?</span>':'')
     +'<br>相手：'+jyEsc(JY_NAK[b.moon.nak].n)+'（月 '+LT_SIGNS[b.moon.sign]+'）'+(b.nakUncertain?'<span style="color:#fbbf24;">?</span>':'')+'</div>';
   for(i=0;i<8;i++){
-    var K=JY_KUTA[i], pt=main.pts[i], pc=Math.round(pt/K.m*100);
-    h+='<div style="margin-bottom:9px;"><div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text);"><span style="font-weight:700;">'+jyEsc(K.n)+'</span><span>'+pt+' / '+K.m+'</span></div>'
-      +'<div style="height:5px;border-radius:3px;background:rgba(255,255,255,.08);margin:3px 0;"><div style="height:5px;border-radius:3px;width:'+pc+'%;background:'+(pc>=50?'#e8c96a':'#8a8098')+';"></div></div>'
-      +'<div style="font-size:10px;color:var(--muted);line-height:1.6;">'+jyEsc(K.s)+'</div></div>';
+    var K=JY_KUTA[i], pt=main.pts[i], pc=Math.round(pt/K.m*100), kc=(pc>=75?'#e8c96a':(pc>=50?'#cdb97a':'#f472b6'));
+    h+='<div style="margin-bottom:8px;padding:9px 11px;border-radius:10px;background:rgba(255,255,255,.04);border-left:3px solid '+kc+';">'
+      +'<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--text);"><span style="font-weight:700;">'+jyEsc(K.n)+'</span>'
+      +'<span style="color:'+kc+';font-weight:700;">'+pt+'<span style="font-size:10px;font-weight:400;color:var(--muted);"> / '+K.m+'</span></span></div>'
+      +'<div style="height:6px;border-radius:3px;background:rgba(255,255,255,.08);margin:5px 0;"><div style="height:6px;border-radius:3px;width:'+Math.max(pc,3)+'%;background:'+kc+';"></div></div>'
+      +'<div style="font-size:10px;color:var(--muted);line-height:1.6;">'+jyEsc(K.s)+'</div>'
+      +(pt===0?'<div style="font-size:12px;color:#f9c5dd;line-height:1.7;margin-top:5px;">💡 '+jyEsc(K.a)+'</div>':'')+'</div>';
   }
+  h+='<div style="font-size:10px;color:var(--muted);text-align:center;margin:2px 0 8px;"><span style="color:#e8c96a;">■</span> 合っている　<span style="color:#f472b6;">■</span> ちがいがある</div>';
   h+='<div style="font-size:9px;color:var(--muted);line-height:1.7;margin-top:8px;">インドで結婚の相性を見るときに使われる伝統的な計算（アシュタ・クータ）です。月の位置だけを見るので、ふたりの相性の一部分です。男性側・女性側の決まりがある伝統的な計算のため、上のボタンで入れ替えられます。点数の表は流派で少しちがいがあります。</div></div>';
   return h;
 }
