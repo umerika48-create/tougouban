@@ -18543,6 +18543,48 @@ function showMonthPillarKanshiFriends(kanIdx, shiIdx) {
   showModal(html);
 }
 
+/* 🔯ボタン：月柱（月干＋月支）が同じ友達と、日柱（日干＋日支）が同じ友達を同時に表示 */
+function showMonthDayKanshiFriends(mKan, mShi, dKan, dShi) {
+  var KAN10md = ['甲','乙','丙','丁','戊','己','庚','辛','壬','癸'];
+  var SHI12md = ['子','丑','寅','卯','辰','巳','午','未','申','酉','戌','亥'];
+  var meishikis = (typeof getFriendMeishiki === 'function') ? getFriendMeishiki() : [];
+  function collect(key, kanIdx, shiIdx) {
+    var names = [];
+    meishikis.forEach(function(m){
+      var fd = FRIEND_DATA.find(function(d){ return d.name === m.name; });
+      if (fd && fd.hidden) return;
+      var p = m[key];
+      if (p && p.kan === kanIdx && p.shi === shiIdx) names.push(m.name);
+    });
+    return names;
+  }
+  function block(title, key, kanIdx, shiIdx) {
+    if (kanIdx < 0 || shiIdx < 0) return '';
+    var label = KAN10md[kanIdx] + SHI12md[shiIdx];
+    var names = collect(key, kanIdx, shiIdx);
+    var kw = KANSHI_KEYWORD[label];
+    var h = '<div style="font-size:14px;font-weight:700;color:var(--gold-light);margin-bottom:4px;">' + title + '　' + label + '</div>';
+    if (kw) {
+      h += '<div style="font-size:12px;color:#b8a8ff;margin-bottom:10px;">「' + kw + '」</div>';
+    } else {
+      h += '<div style="margin-bottom:10px;"></div>';
+    }
+    if (names.length === 0) {
+      h += '<div style="font-size:13px;color:var(--muted);">該当する友達データが見つかりませんでした。</div>';
+    } else {
+      h += (typeof buildFriendBadgeHTML === 'function' ? buildFriendBadgeHTML(names, true, null) : names.join('、'));
+    }
+    return h;
+  }
+  var html = block('月柱・月支', 'month_p', mKan, mShi);
+  var dayHtml = block('日柱・日支', 'day_p', dKan, dShi);
+  if (html && dayHtml) {
+    html += '<div style="height:1px;background:rgba(255,255,255,0.12);margin:16px 0;"></div>';
+  }
+  html += dayHtml;
+  showModal(html);
+}
+
 function getFriendMeishiki(forceYakodoki) {
   var isYak = (forceYakodoki !== undefined) ? forceYakodoki : (typeof window._yakodoki !== 'undefined' ? window._yakodoki : false);
   // 0時用・23時用の2種キャッシュ
@@ -20501,8 +20543,8 @@ function renderResult(year_p, month_p, day_p, hour_p, birthStr, unknownTime, hid
     var kc = kanClass(p.kan);
     var dayEx = i === 2 ? ' day' : '';
     var kanName = KAN10[p.kan];
-    var dayStarMark = (i === 2 && day_p) ? "<span onclick=\"event.stopPropagation();showDayPillarKanshiFriends(".concat(day_p.kan, ",").concat(day_p.shi, ")\" style=\"position:absolute;top:50%;left:4px;transform:translateY(-50%);display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;cursor:pointer;z-index:2;\" title=\"\u65E5\u67F1\u304C\u540C\u3058\u53CB\u9054\u3092\u898B\u308B\">\ud83d\udd2f</span>") : '';
-    var monthStarMark = (i === 1 && month_p) ? "<span onclick=\"event.stopPropagation();showMonthPillarKanshiFriends(".concat(month_p.kan, ",").concat(month_p.shi, ")\" style=\"position:absolute;top:50%;left:4px;transform:translateY(-50%);display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;cursor:pointer;z-index:2;\" title=\"\u6708\u67F1\u304C\u540C\u3058\u53CB\u9054\u3092\u898B\u308B\">\ud83d\udd2f</span>") : '';
+    var dayStarMark = (i === 2 && day_p) ? "<span onclick=\"event.stopPropagation();showMonthDayKanshiFriends(".concat(month_p ? month_p.kan : -1, ",").concat(month_p ? month_p.shi : -1, ",").concat(day_p ? day_p.kan : -1, ",").concat(day_p ? day_p.shi : -1, ")\" style=\"position:absolute;top:50%;left:4px;transform:translateY(-50%);display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;cursor:pointer;z-index:2;\" title=\"\u6708\u67F1\u30FB\u65E5\u67F1\u304C\u540C\u3058\u53CB\u9054\u3092\u898B\u308B\">\ud83d\udd2f</span>") : '';
+    var monthStarMark = (i === 1 && month_p) ? "<span onclick=\"event.stopPropagation();showMonthDayKanshiFriends(".concat(month_p ? month_p.kan : -1, ",").concat(month_p ? month_p.shi : -1, ",").concat(day_p ? day_p.kan : -1, ",").concat(day_p ? day_p.shi : -1, ")\" style=\"position:absolute;top:50%;left:4px;transform:translateY(-50%);display:inline-flex;align-items:center;justify-content:center;font-size:11px;line-height:1;cursor:pointer;z-index:2;\" title=\"\u6708\u67F1\u30FB\u65E5\u67F1\u304C\u540C\u3058\u53CB\u9054\u3092\u898B\u308B\">\ud83d\udd2f</span>") : '';
     return "<td class=\"".concat(cols[i], " kan").concat(dayEx, " ").concat(kc, "\" style=\"position:relative;\">\n        ").concat(dayStarMark).concat(monthStarMark, "\n        <span class=\"kan-pill\" onclick=\"openKanPanel('").concat(kanName, "',").concat(i, ",'").concat(month_p ? SHI12[month_p.shi] : "", "','").concat([year_p, month_p, day_p, hour_p][i] ? SHI12[[year_p, month_p, day_p, hour_p][i].shi] : "", "')\">").concat(kanName, "</span>\n      </td>");
   }).join(''), "\n  </tr>");
 
