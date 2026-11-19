@@ -1899,7 +1899,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   <footer>
     Produced by Sakuraco<br>
     立春（2月4日）を年の切替<br>
-    <span style="font-size:9px;opacity:.5;">版 2026-11-20 時差の固定を解消</span>
+    <span style="font-size:9px;opacity:.5;">版 2026-11-20 範囲外の注意書き</span>
   </footer>
 </div>
 
@@ -5222,6 +5222,13 @@ function getTzNote(info) {
   return (info.diff > 0 ? '夏時間として計算（世界時との差 ' : '当時の現地の時差で計算（世界時との差 ') + t + '時間）';
 }
 /* ======= 夏時間の自動判定 END ======= */
+
+/* 惑星の表の範囲（世界時 1940-01-01〜2028-12-31）の外かどうか。外だと、火星〜冥王星の位置が出せない */
+function planetTableOutOfRange(y, mo, d) {
+  var ymd = y * 10000 + mo * 100 + d;
+  return ymd < 19400101 || ymd > 20281231;
+}
+var PLANET_RANGE_NOTE = '1940年1月〜2028年12月の外に生まれた人は、火星・水星・木星・金星・土星・天王星・海王星・冥王星の位置を計算できません。ここに出る星座は、あてになりません。';
 
 /* 出生時刻（現地の時計）から、四柱推命に必要な2種類の時刻を返す
    ・jst   : 年柱・月柱の節入り判定用。節入りは「太陽の位置で決まる全世界共通の瞬間」なので、補正せず時計の時刻（日本時間に換算）で比べる
@@ -12581,6 +12588,10 @@ function buildHoroscopeHTML(p) {
   else h += ' <span style="color:#fbbf24;">（時刻不明・正午近似）</span>';
   if (p.cityData) h += ' / ' + p.placeVal;
   h += '</div>';
+
+  if (planetTableOutOfRange(p.y, p.mo, p.d)) {
+    h += '<div style="font-size:11px;color:#fbbf24;line-height:1.7;margin:8px 0;padding:8px 10px;border-radius:8px;background:rgba(251,191,36,.08);">⚠ ' + PLANET_RANGE_NOTE + '太陽・月は計算できています。</div>';
+  }
 
   /* 天体テーブル */
   var _hc = p.houseCusps;
@@ -22331,6 +22342,7 @@ function jySummaryTabHTML(c){
   var h='', i, names=[], seen={}, m=c.moonCands[0], d=jyCurDasha(c);
   var ring='display:inline-block;width:36px;height:36px;line-height:36px;border-radius:50%;font-weight:700;text-align:center;';
   if(c.tzNote) h+='<div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:8px;">🕐 '+jyEsc(c.tzNote)+'</div>';
+  if(c.missing) h+='<div style="font-size:11px;color:#fbbf24;line-height:1.7;margin-bottom:8px;">⚠ この生年月日は、火星・水星・木星・金星・土星を計算できません（計算できるのは1940年1月〜2028年12月生まれ）。太陽・月・ラーフ・ケートゥだけを使っています。</div>';
   if(!c.nakUncertain){
     h+=jySummaryTile(jyBadge(3,36), '月のナクシャトラ（生まれ持った心）', jyEsc(JY_NAK[m.nak].n), jyEsc(JY_NAK[m.nak].h), 1);
   } else {
@@ -22421,7 +22433,7 @@ function jyRashiTabHTML(c){
   if(!c.hasTime) h+='<div style="font-size:11px;color:#fbbf24;line-height:1.7;margin-bottom:8px;">生まれた時刻がわからないため、正午の位置で表示しています。月は半日で約6.5°動くので、月の星座とナクシャトラは変わることがあります。ラグナとハウスは出せません。</div>';
   else if(!c.lagna) h+='<div style="font-size:11px;color:#fbbf24;line-height:1.7;margin-bottom:8px;">出生地がわからないため、ラグナとハウスは出せません。</div>';
   if(c.tzNote) h+='<div style="font-size:11px;color:var(--muted);line-height:1.7;margin-bottom:8px;">🕐 '+jyEsc(c.tzNote)+'</div>';
-  if(c.missing) h+='<div style="font-size:11px;color:#fbbf24;line-height:1.7;margin-bottom:8px;">この生年月日は、火星・水星・木星・金星・土星が計算の範囲外です（1940年より前など）。太陽・月・ラーフ・ケートゥだけを表示しています。</div>';
+  if(c.missing) h+='<div style="font-size:11px;color:#fbbf24;line-height:1.7;margin-bottom:8px;">⚠ この生年月日は、火星・水星・木星・金星・土星を計算できません（計算できるのは1940年1月〜2028年12月生まれ）。太陽・月・ラーフ・ケートゥだけを表示しています。ナクシャトラとダシャーは月で決まるので、そのまま見られます。</div>';
   h+=jyChartHTML(c);
   h+='<table style="width:100%;border-collapse:collapse;margin-top:10px;">';
   h+='<tr><td style="'+td+'color:var(--muted);font-size:9px;">天体</td><td style="'+td+'color:var(--muted);font-size:9px;">星座</td><td style="'+td+'color:var(--muted);font-size:9px;">度数</td><td style="'+td+'color:var(--muted);font-size:9px;">ナクシャトラ</td><td style="'+td+'color:var(--muted);font-size:9px;text-align:right;">ハウス</td></tr>';
