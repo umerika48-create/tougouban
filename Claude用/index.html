@@ -22924,6 +22924,8 @@ function saveHjMemo() {
   var ta = document.getElementById('hj-memo-text');
   var key = ta.dataset.key;
   if (!key) return;
+  var tEl = document.getElementById('hjTitle');
+  if (tEl && ta.dataset.keyTitle !== tEl.textContent) { resetHjMemoUi(); return; }
   MEMO_DATA[key] = ta.value;
   saveMemoStorage(key, ta.value);
   var btn = document.getElementById('hj-memo-copy-btn');
@@ -22939,6 +22941,7 @@ function openHjMemo() {
   wrap.style.display = isOpen ? 'none' : 'block';
   if (!isOpen) {
     ta.dataset.key = key;
+    ta.dataset.keyTitle = titleEl.textContent;
     ta.value = MEMO_DATA[key] || '';
     // ストレージから読み込み（loadMemoStorageは同期で文字列を返す）
     var val = loadMemoStorage(key);
@@ -22946,6 +22949,33 @@ function openHjMemo() {
     ta.focus();
   }
 }
+/* パネルが切り替わったら、MEMO欄を閉じて紐づけを外す（開いたまま別パネルを開いても、前のパネルのMEMOを書き換えない） */
+function resetHjMemoUi() {
+  var wrap = document.getElementById('hj-memo-wrap');
+  var ta = document.getElementById('hj-memo-text');
+  if (wrap) wrap.style.display = 'none';
+  if (ta) { ta.value = ''; delete ta.dataset.key; delete ta.dataset.keyTitle; }
+}
+function resetHjPreWrap() {
+  var t = document.getElementById('hjTitle');
+  if (t && window._hjPreTitle !== t.textContent) {
+    var d = document.getElementById('hjDesc'); var c = document.getElementById('hjContext');
+    if (d) d.style.whiteSpace = '';
+    if (c) c.style.whiteSpace = '';
+  }
+}
+(function () {
+  function start() {
+    var t = document.getElementById('hjTitle');
+    var panel = document.getElementById('hjPanel');
+    if (!t || !panel || typeof MutationObserver === 'undefined') return;
+    new MutationObserver(function () { resetHjMemoUi(); resetHjPreWrap(); })
+      .observe(t, { childList: true, characterData: true, subtree: true });
+    new MutationObserver(function () { resetHjMemoUi(); })
+      .observe(panel, { attributes: true, attributeFilter: ['class'] });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start); else start();
+})();
 /* ======= メモ保存・読み込み END ======= */
 
 function copyHjMemoData() {
@@ -23187,6 +23217,7 @@ function openDaunKssPanel(kanName, shiName, nik){
   document.getElementById('hjDesc').textContent = desc;
   document.getElementById('hjContext').style.whiteSpace = 'pre-wrap';
   document.getElementById('hjContext').textContent = ctx;
+  window._hjPreTitle = document.getElementById('hjTitle').textContent;
   document.getElementById('hjPanel').classList.add('open');
   document.getElementById('hjOverlay').classList.add('open');
 }
