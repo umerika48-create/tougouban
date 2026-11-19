@@ -1899,7 +1899,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   <footer>
     Produced by Sakuraco<br>
     立春（2月4日）を年の切替<br>
-    <span style="font-size:9px;opacity:.5;">版 2026-11-16 夏時間の自動判定</span>
+    <span style="font-size:9px;opacity:.5;">版 2026-11-20 時差の固定を解消</span>
   </footer>
 </div>
 
@@ -2442,7 +2442,9 @@ function buildHoroscopeDataTables(bodies, cusps) {
 
 function buildAspectHTML(p) {
   /* 天体黄経リスト */
-  var _utH = p.hasTime ? (p.birthHour + (p.birthMin||0)/60 - 9) : 0;
+  /* 出生地の時差（夏時間・海外にも対応）で世界時にする。時刻不明は、ほかの天体と同じ「現地の正午」 */
+  var _tzP = getTzInfo(p.cityData, p.y, p.mo, p.d, p.hasTime ? p.birthHour : 12, p.hasTime ? (p.birthMin||0) : 0).tz;
+  var _utH = p.hasTime ? (p.birthHour + (p.birthMin||0)/60 - _tzP) : (12 - _tzP);
   var _tbl = {
     MERCURY:LON_MERCURY_0UT, VENUS:LON_VENUS_0UT, MARS:LON_MARS_0UT,
     JUPITER:LON_JUPITER_0UT, SATURN:LON_SATURN_0UT, URANUS:LON_URANUS_0UT,
@@ -12583,7 +12585,8 @@ function buildHoroscopeHTML(p) {
   /* 天体テーブル */
   var _hc = p.houseCusps;
   function _h(lon) { return (_hc && lon !== null && lon !== undefined) ? getHouseNumber(lon, _hc) : null; }
-  var _utHour = p.hasTime ? (p.birthHour + (p.birthMin||0)/60 - 9) : 0;
+  var _tzP2 = getTzInfo(p.cityData, p.y, p.mo, p.d, p.hasTime ? p.birthHour : 12, p.hasTime ? (p.birthMin||0) : 0).tz;
+  var _utHour = p.hasTime ? (p.birthHour + (p.birthMin||0)/60 - _tzP2) : (12 - _tzP2);
   var _sunLonVal = getSunLon(p.y, p.mo, p.d, _utHour);
   var _lonTablesH = {
     MERCURY: LON_MERCURY_0UT, VENUS: LON_VENUS_0UT,
