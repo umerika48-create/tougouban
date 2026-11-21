@@ -1899,7 +1899,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   <footer>
     Produced by Sakuraco<br>
     立春（2月4日）を年の切替<br>
-    <span style="font-size:9px;opacity:.5;">版 2026-11-20 惑星の表を1880年から</span>
+    <span style="font-size:9px;opacity:.5;">版 2026-11-21 あたり星（九曜星）つき</span>
   </footer>
 </div>
 
@@ -7511,8 +7511,15 @@ function renderTripleBreakdown(c) {
       + '<span>'+rank+' <span style="opacity:.7;">'+r.score+'点</span> <span style="letter-spacing:1px;">'+stars+'</span></span>'
       + '</div>';
   });
+  if (c.atariName) {
+    var abn = c.atariBonus || 0;
+    h += '<div onclick="event.stopPropagation();showSystemDetail('+c.yr+',\'atari\');" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;cursor:pointer;padding:2px 4px;border-radius:6px;">'
+      + '<span style="color:#e8c96a;font-weight:700;">あたり星 <span style="font-size:9px;color:var(--muted);font-weight:400;">▶</span></span>'
+      + '<span>'+c.atariMark+' '+c.atariName+'（'+c.atariRank+'） <span style="opacity:.7;">'+(abn>0?'+'+abn+'点':'±0')+'</span></span>'
+      + '</div>';
+  }
   h += '<div style="border-top:1px solid rgba(255,255,255,.1);margin:4px 0;"></div>';
-  h += '<div style="display:flex;justify-content:space-between;font-weight:700;"><span>合計（平均）</span><span>'+c.rank+' '+c.score+'点 '+scoreToStars(c.score)+'</span></div>';
+  h += '<div style="display:flex;justify-content:space-between;font-weight:700;"><span>'+(c.atariName?'合計（3占術の平均＋あたり星）':'合計（平均）')+'</span><span>'+c.rank+' '+c.score+'点 '+scoreToStars(c.score)+'</span></div>';
   h += '</div>';
   return h;
 }
@@ -7540,6 +7547,21 @@ function showSystemDetail(yr, key) {
         + '</div>';
     } else {
       html += '<div style="font-size:11px;color:var(--muted);">生年月日が未入力のため計算できません。</div>';
+    }
+  } else if (key === 'atari') {
+    var atR = birthdate ? atariCalc(birthdate, yr) : null;
+    html = '<div style="font-size:12px;font-weight:700;color:#e8c96a;margin-bottom:6px;">あたり星の内訳（'+yr+'年）</div>';
+    if (atR) {
+      html += '<div style="background:rgba(232,201,106,0.08);border:1px solid rgba(232,201,106,0.25);border-radius:8px;padding:8px 10px;font-size:11px;color:var(--text);line-height:1.9;">'
+        + '<div style="font-size:14px;font-weight:700;color:#e8c96a;margin-bottom:4px;">'+atR.mark+' '+atR.name+'（'+atR.rank+'）　数え歳'+atR.age+'歳</div>'
+        + '<div style="font-weight:700;margin-bottom:3px;">'+atR.st.hito+'</div>'
+        + '<div style="margin-bottom:4px;">'+atR.st.body+'</div>'
+        + '<div style="color:var(--muted);">'+atR.st.season+'</div>'
+        + '<div style="border-top:1px solid rgba(255,255,255,.1);margin:6px 0 2px;"></div>'
+        + '<div style="display:flex;justify-content:space-between;font-weight:700;"><span>総合点への加点</span><span>'+(atR.bonus>0?'+'+atR.bonus+'点':'±0')+'</span></div>'
+        + '</div>';
+    } else {
+      html += '<div style="font-size:11px;color:var(--muted);">生年月日が未入力、またはまだ生まれていない年のため計算できません。</div>';
     }
   } else if (key === 'shichuu') {
     var scResult = birthdate ? calcShichuuYearScore(birthdate, yr) : null;
@@ -7658,6 +7680,9 @@ function buildNineYearCycle(honmei, targetYear, birthdate) {
     } else {
       combined = kyuseiScore;
     }
+    /* あたり星（九曜星・数え歳）の加点：大吉+5／半吉+2／末吉・大凶は±0（加点のみ）。生年月日があるときだけ */
+    var atariR = (birthdate && typeof atariCalc === 'function') ? atariCalc(birthdate, yr) : null;
+    if (atariR && atariR.bonus) { combined = Math.min(100, combined + atariR.bonus); }
     /* 3占術平均は分布が42〜73点あたりに寄るため、境目を専用に調整（◎65/○50/△40）。
        2占術・1占術のみの場合は今まで通りの境目（◎60/○42/△28）を使う */
     var cLevel, cRank;
@@ -7674,6 +7699,7 @@ function buildNineYearCycle(honmei, targetYear, birthdate) {
     return { yr:yr, palace:palace, rank:cRank, level:cLevel, score:combined, label:d.label,
              kyuseiScore:kyuseiScore, rokkuScore:rokkuScore, shichuuScore:shichuuScore,
              kyuseiRank:kyuseiRank, kyuseiLevel:kyuseiLevel,
+             atariName:(atariR?atariR.name:''), atariRank:(atariR?atariR.rank:''), atariMark:(atariR?atariR.mark:''), atariBonus:(atariR?atariR.bonus:0), atariAge:(atariR?atariR.age:null),
              isTarget:(yr===targetYear), isNow:(yr===nowYear), gokyoAdj:d.gokyoAdj, breakdown:d.gokyoAdj&&d.gokyoAdj.breakdown?d.gokyoAdj.breakdown:null };
   });
   /* 結婚・転職におすすめの年（組み合わせスコア上位2年）にマークを付ける */
@@ -11193,6 +11219,7 @@ function buildPersonalCardsHTML(birthdate, honmei, kYear, kMonth, isPartner) {
     '</div>';
   h += buildAspectCardHTML(birthdate, isPartner);
   h += buildJyotishCardHTML(birthdate, isPartner);
+  h += buildAtariCardHTML(birthdate, isPartner);
 
   h +=
     '<div class="card fade-up">'+
@@ -11844,6 +11871,7 @@ var h = '<div style="text-align:right;margin-bottom:8px;">'+
     '</div>';
   h += buildAspectCardHTML(birthdate, isPartner);
   h += buildJyotishCardHTML(birthdate, isPartner);
+  h += buildAtariCardHTML(birthdate, isPartner);
 
   h +=
     '<div class="card fade-up">'+
@@ -12933,6 +12961,7 @@ function calculate() {
       '</div>';
     html += buildAspectCardHTML(birthdate, false);
     html += buildJyotishCardHTML(birthdate, false);
+    html += buildAtariCardHTML(birthdate, false);
 
     html +=
       '<div class="card fade-up">'+
@@ -22615,6 +22644,204 @@ function buildJyotishKutaCardHTML(bdA, bdB){
   return makeAccordion('jyotish-kuta-card', 'インド占星術 相性', '<div id="jy-kuta-body">'+buildJyotishKutaHTML(bdA, bdB)+'</div>', false, '#f472b6');
 }
 /* ======= インド占星術 END ======= */
+
+/* ======= あたり星（九曜星・数え歳）: 独立カード＋年運の総合点への加点 ======= */
+/* 数え歳（生まれた年を1歳、元日に年を重ねる）を9で割った余りで、九曜星が決まる（男女共通）。
+   数え歳 1=羅喉星、2=土曜星、3=水曜星、4=金曜星、5=日曜星、6=火曜星、7=計都星、8=月曜星、9=木曜星、10=羅喉星…（9年で1周） */
+var ATARI_ORDER_IDX = ['羅喉星','土曜星','水曜星','金曜星','日曜星','火曜星','計都星','月曜星','木曜星'];
+/* 一覧表の並び（本の表と同じ） */
+var ATARI_LIST_ORDER_IDX = ['木曜星','月曜星','計都星','火曜星','日曜星','金曜星','水曜星','土曜星','羅喉星'];
+/* 年運の総合点への加点（加点のみ。大凶・末吉は±0） */
+var ATARI_BONUS_BY_RANK = { '大吉': 5, '半吉': 2, '末吉': 0, '大凶': 0 };
+var ATARI_MARK_BY_RANK = { '大吉': '○', '半吉': '◐', '末吉': '◑', '大凶': '●' };
+var ATARI_COLOR_BY_RANK = { '大吉': '#e8c96a', '半吉': '#cdb97a', '末吉': '#7ab8d4', '大凶': '#f9a8c9' };
+var ATARI_STAR = {
+  '木曜星': { y:'もくようせい', r:'大吉',
+    hito:'始めたことが、すくすく育つ年',
+    body:'ちいさく始めたことが、思った以上に大きく育っていく年です。春に動き出したことは、木が芽を出すように形になりやすい流れがあります。新しい挑戦と、人とのご縁が、あなたの追い風になりますよ。うまくいくときほど足もとを見て、ゆっくり進めていきましょう。',
+    season:'春に始めると、とくに◎。油断しなければ、一年を通して追い風です。' },
+  '月曜星': { y:'げつようせい', r:'大吉',
+    hito:'助けが自然と集まる、うるおいの年',
+    body:'がんばりすぎなくても、まわりから手が差しのべられる年です。かわいた土に水がしみ込むように、運がすっと流れ出していきます。人の助けと、信じて続けてきたことへの実りが、2つそろって届きますよ。うれしい流れに乗りつつ、先走りしすぎないのがコツです。',
+    season:'ひとつずつ丁寧に進めるほど、運が育ちます。勢いだけの動きは、少しひかえめに。' },
+  '計都星': { y:'けいとせい', r:'大凶',
+    hito:'春は慎重に、秋からほっと軽くなる年',
+    body:'大凶と聞くと身がまえてしまいますが、実は「立て直しの準備」にぴったりの年です。とくに春の3か月は、大きな決断や無理な動きを控えて、足もとを整える時期にすると安心です。見直しで整った土台と、秋から少しずつ軽くなっていく流れが、あなたを守ってくれますよ。ゆっくり確かめながら進めば、大丈夫です。',
+    season:'春の3か月は、とくに慎重に。秋から冬にかけて、少しずつ落ち着いていきます。' },
+  '火曜星': { y:'かようせい', r:'大凶',
+    hito:'守りを固めて、年のかわり目を待つ年',
+    body:'勢いよく進みたくなる年ほど、守りを固めるほうが運を味方にできます。火の元や戸締まり、お金まわりの確認など、身近な備えがそのまま安心につながる年です。仕事や商売の大きな勝負は慎重に、備える力と見直す力の2つを味方にしてください。無理をせず、年が変わるのをゆったり待ちましょう。',
+    season:'火の元・戸締まり・お金の管理を丁寧に。大きな勝負ごとは、ひかえめに。' },
+  '日曜星': { y:'にちようせい', r:'大吉',
+    hito:'追い風に乗って、実りを受け取る年',
+    body:'追い風が吹いている年に、いちばん輝くのは「謙虚さ」を忘れない人です。財運も、仕事の流れも、帆を上げた舟のようにすいすい進みやすい年になります。お金の実りと、物事が順調に運ぶ流れの2つがそろっていますよ。うれしいときこそ感謝を言葉にして、ご縁を長持ちさせていきましょう。',
+    season:'一年を通して順風です。おごりの心だけ、そっと手放して進みましょう。' },
+  '金曜星': { y:'きんようせい', r:'半吉',
+    hito:'信じる道を、こつこつ進めば実る年',
+    body:'大きな波はなくても、じわじわと成果がたまっていく年です。信じて続けてきたことは成功しやすく、売り買いや、育てるものごとにも、よい流れがあります。コツコツ型の努力と、北に向かう動きが、とくに味方してくれますよ。落ち着いて積み上げるほど、あとから大きく効いてきます。',
+    season:'北に向かって動くことが、とくに◎。売買や、育てるものごとに追い風です。' },
+  '水曜星': { y:'すいようせい', r:'末吉',
+    hito:'目上の人の引き立てで、後半に開ける年',
+    body:'前半はひかえめでも、後半にぐっと開けていく年です。目上の方や頼れる人に引き立てられて、うれしい出来事が増えていきます。人からの信頼と、秋から冬にかけての追い風が、あなたの強みになりますよ。春夏は焦らず力をためて、秋になったら思い切り出していきましょう。',
+    season:'春から夏はひかえめに。秋から冬は、何をしてもよい流れです。' },
+  '土曜星': { y:'どようせい', r:'半吉',
+    hito:'夏から秋は体を労わり、願いごとは先に回す年',
+    body:'じっくり型の年ですが、夏から秋にかけては、体調に気を配りたい時期です。願いごとは少し先に回して、家づくりや土いじりなど、大きな動きも落ち着いてからにすると安心です。心と体のメンテナンスと、足もとを固める時間の2つが、のちの安定につながります。休むことも前進のうちですよ。',
+    season:'夏から秋は、体調に気を配って。願いごとや、土に関わる大きな動きは、見合わせると安心です。' },
+  '羅喉星': { y:'らごうせい', r:'大凶',
+    hito:'無理せず、守りに徹して、次の流れを整える年',
+    body:'もっとも慎重さをすすめる星ですが、その分「立ち止まる力」が育つ年でもあります。八方ふさがりに感じても、新しいことを広げず、お金や契約、健康を確かめていくだけで、守れるものがたくさんあります。見直しと準備の2つを丁寧にして、次の大きな流れに備えましょう。静かにこの一年を越えることが、あなたの力になります。',
+    season:'新しいことを広げすぎず、お金・契約・健康の確認を丁寧に。' }
+};
+
+/* 数え歳。生まれた年を1歳とし、元日に年を重ねる（誕生日は関係しない） */
+function atariAge(birthYear, year){ return year - birthYear + 1; }
+function atariIdx(age){ return (((age - 1) % 9) + 9) % 9; }
+function atariCalc(birthdate, year){
+  if(!birthdate) return null;
+  var by = parseInt(String(birthdate).split('-')[0], 10);
+  if(isNaN(by) || isNaN(year)) return null;
+  var age = atariAge(by, year);
+  if(age < 1) return null;
+  var name = ATARI_ORDER_IDX[atariIdx(age)], st = ATARI_STAR[name];
+  return { age:age, name:name, st:st, rank:st.r, mark:ATARI_MARK_BY_RANK[st.r], bonus:ATARI_BONUS_BY_RANK[st.r] || 0 };
+}
+/* 和暦（改元の年は「令和元年/平成31年」のように両方出す） */
+function atariEra(y){
+  var s = [];
+  if(y >= 2019) s.push('令和' + (y === 2019 ? '元' : (y - 2018)) + '年');
+  if(y >= 1989 && y <= 2019) s.push('平成' + (y === 1989 ? '元' : (y - 1988)) + '年');
+  if(y >= 1926 && y <= 1989) s.push('昭和' + (y === 1926 ? '元' : (y - 1925)) + '年');
+  if(y >= 1912 && y <= 1926) s.push('大正' + (y === 1912 ? '元' : (y - 1911)) + '年');
+  if(y >= 1868 && y <= 1912) s.push('明治' + (y === 1868 ? '元' : (y - 1867)) + '年');
+  return s.join('/');
+}
+function atariTargetYear(){
+  var el = document.getElementById('targetYear');
+  var ty = el ? parseInt(el.value, 10) : NaN;
+  if(isNaN(ty)) ty = new Date().getFullYear();
+  var s = window._atYearSel;
+  if(s && s.base === ty && s.y) return s.y;
+  return ty;
+}
+function atariTabBtns(cur){
+  var labels = ['まとめ','九曜星の一覧'], i, h = '<div class="hj-tabs">';
+  for(i = 0; i < labels.length; i++) h += '<button type="button" class="hj-tab at-tabbtn' + (i === cur ? ' on' : '') + '" onclick="atariTab(this,' + i + ')">' + labels[i] + '</button>';
+  return h + '</div>';
+}
+function atariSummaryHTML(suffix, bd, yr, r){
+  var h = '', i, y2, r2, c2;
+  if(!r) return '<div class="hj-box" style="font-size:13px;line-height:1.8;">' + yr + '年は、まだ生まれていない年のため、あたり星は出せません。</div>';
+  var col = ATARI_COLOR_BY_RANK[r.rank];
+  h += '<div class="hj-hero"><div class="hj-hero-l">' + yr + '年のあたり星　数え歳' + r.age + '歳</div>'
+    + '<div class="hj-hero-t"><span style="color:' + col + ';">' + r.mark + '</span> ' + jyEsc(r.name) + '（' + jyEsc(r.st.y) + '）　<span style="color:' + col + ';">' + jyEsc(r.rank) + '</span></div></div>';
+  h += '<div class="hj-box"><div style="font-size:14px;font-weight:700;color:var(--sk-gold-light,#e8c96a);margin-bottom:6px;">' + jyEsc(r.st.hito) + '</div>'
+    + '<div style="font-size:13px;line-height:1.9;color:var(--text);">' + jyEsc(r.st.body) + '</div></div>';
+  h += '<div class="hj-box"><div style="font-size:10px;color:var(--muted);margin-bottom:3px;">季節・動き方の目安</div>'
+    + '<div style="font-size:12px;line-height:1.8;color:var(--text);">' + jyEsc(r.st.season) + '</div></div>';
+  h += '<div style="font-size:11px;color:var(--muted);line-height:1.7;margin:0 2px 12px;">年運サイクルの総合点への反映：<b style="color:' + col + ';">' + (r.bonus > 0 ? '+' + r.bonus + '点' : '加点なし（±0）') + '</b></div>';
+  /* これからの9年（9年で九曜星が1周する） */
+  h += '<div style="font-size:11px;color:var(--muted);margin:0 2px 6px;">この年からの9年の流れ（タップでその年に切り替え）</div>';
+  h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">';
+  for(i = 0; i < 9; i++){
+    y2 = yr + i; r2 = atariCalc(bd, y2);
+    if(!r2) continue;
+    c2 = ATARI_COLOR_BY_RANK[r2.rank];
+    h += '<div onclick="atariSetYear(\'' + suffix + '\',' + y2 + ')" style="cursor:pointer;padding:7px 4px;border-radius:10px;text-align:center;background:rgba(255,255,255,.04);border:1px solid ' + (i === 0 ? 'rgba(232,201,106,.7)' : 'rgba(255,255,255,.12)') + ';">'
+      + '<div style="font-size:10px;color:var(--muted);">' + y2 + '年・' + r2.age + '歳</div>'
+      + '<div style="font-size:12px;font-weight:700;color:' + c2 + ';">' + r2.mark + ' ' + jyEsc(r2.name.replace('星','')) + '</div>'
+      + '<div style="font-size:9px;color:' + c2 + ';">' + jyEsc(r2.rank) + '</div></div>';
+  }
+  h += '</div>';
+  return h;
+}
+function atariListHTML(yr, r){
+  var h = '', k, a, name, st, col, chips, born, mine;
+  h += '<div style="font-size:11px;color:var(--muted);line-height:1.7;margin:0 2px 8px;">' + yr + '年（' + jyEsc(atariEra(yr)) + '）の数え歳と、生まれ年の一覧です。数字は「数え歳（生まれ年）」を表します。</div>';
+  for(k = 0; k < ATARI_LIST_ORDER_IDX.length; k++){
+    name = ATARI_LIST_ORDER_IDX[k]; st = ATARI_STAR[name]; col = ATARI_COLOR_BY_RANK[st.r];
+    mine = (r && r.name === name);
+    chips = '';
+    for(a = 1; a <= 99; a++){
+      if(ATARI_ORDER_IDX[atariIdx(a)] !== name) continue;
+      born = yr - a + 1;
+      chips += '<span style="display:inline-block;margin:2px 3px 2px 0;padding:2px 7px;border-radius:10px;font-size:10px;line-height:1.5;background:' + ((mine && a === r.age) ? 'rgba(232,201,106,.3)' : 'rgba(255,255,255,.05)') + ';border:1px solid ' + ((mine && a === r.age) ? 'rgba(232,201,106,.8)' : 'rgba(255,255,255,.14)') + ';color:var(--text);">' + a + '歳<span style="color:var(--muted);">（' + born + '）</span></span>';
+    }
+    h += '<div style="margin-bottom:8px;padding:9px 11px;border-radius:10px;background:rgba(255,255,255,.04);border-left:3px solid ' + col + ';' + (mine ? 'box-shadow:0 0 0 1px rgba(232,201,106,.6);' : '') + '">'
+      + '<div style="display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--text);"><span style="font-weight:700;">' + ATARI_MARK_BY_RANK[st.r] + ' ' + jyEsc(name) + (mine ? '　<span style="font-size:10px;color:#e8c96a;">← あなたの' + yr + '年</span>' : '') + '</span>'
+      + '<span style="color:' + col + ';font-weight:700;font-size:12px;">' + jyEsc(st.r) + '</span></div>'
+      + '<div style="font-size:11px;color:var(--muted);line-height:1.6;margin:3px 0 4px;">' + jyEsc(st.hito) + '</div>'
+      + '<div>' + chips + '</div></div>';
+  }
+  h += '<div style="font-size:10px;color:var(--muted);text-align:center;margin:2px 0 8px;">○ 大吉　◐ 半吉　◑ 末吉　● 大凶</div>';
+  return h;
+}
+function atariBuildBody(suffix){
+  var ctx = (window._atCtx || {})[suffix];
+  if(!ctx) return '';
+  var bd = ctx.bd, yr = atariTargetYear(), r = atariCalc(bd, yr), cur = window._atTabIdx || 0, thisY = new Date().getFullYear();
+  var _b = 'padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;cursor:pointer;border:1px solid rgba(232,201,106,.45);background:transparent;color:#e8c96a;';
+  var h = '<div class="at-root" style="padding:0 4px;">';
+  h += '<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:10px;">'
+    + '<button type="button" onclick="atariSetYear(\'' + suffix + '\',' + (yr - 1) + ')" style="' + _b + '">◀</button>'
+    + '<span style="font-size:13px;font-weight:700;color:var(--text);min-width:120px;text-align:center;">' + yr + '年（' + jyEsc(atariEra(yr).split('/')[0]) + '）</span>'
+    + '<button type="button" onclick="atariSetYear(\'' + suffix + '\',' + (yr + 1) + ')" style="' + _b + '">▶</button>'
+    + '<button type="button" onclick="atariSetYear(\'' + suffix + '\',' + thisY + ')" style="' + _b + '">今年</button>'
+    + '<button type="button" onclick="atariSetYear(\'' + suffix + '\',' + (thisY + 1) + ')" style="' + _b + '">来年</button></div>';
+  h += atariTabBtns(cur);
+  h += '<div class="at-pane" style="display:' + (cur === 0 ? 'block' : 'none') + ';">' + atariSummaryHTML(suffix, bd, yr, r) + '</div>';
+  h += '<div class="at-pane" style="display:' + (cur === 1 ? 'block' : 'none') + ';">' + atariListHTML(yr, r) + '</div>';
+  h += '<div style="font-size:9px;color:var(--muted);line-height:1.7;margin-top:8px;">九曜星は、数え歳（生まれた年を1歳として、元日に年を重ねる数え方）で決まる、一年の吉凶の目安です。男女共通で、9年で一巡します。ほかの占術とあわせて、ひとつの見方として参考にしてください。</div>';
+  return h + '</div>';
+}
+function atariTab(btn, idx){
+  var root = btn.parentNode.parentNode, i, bs = btn.parentNode.children, panes = root.querySelectorAll('.at-pane');
+  for(i = 0; i < bs.length; i++) bs[i].className = 'hj-tab at-tabbtn' + (i === idx ? ' on' : '');
+  for(i = 0; i < panes.length; i++) panes[i].style.display = (i === idx ? 'block' : 'none');
+  window._atTabIdx = idx;
+}
+function atariSetYear(suffix, y){
+  var el = document.getElementById('targetYear'), ty = el ? parseInt(el.value, 10) : NaN;
+  if(isNaN(ty)) ty = new Date().getFullYear();
+  if(y < 1870) y = 1870;
+  if(y > 2100) y = 2100;
+  window._atYearSel = { base: ty, y: y };
+  var box = document.getElementById('at-tabbody-' + suffix);
+  if(box) box.innerHTML = atariBuildBody(suffix);
+}
+/* 個人のカード（インド占星術のカードと同じ作り。相性のときは あなた／相手 を切り替える） */
+function buildAtariCardHTML(birthdate, isPartner){
+  if(!birthdate) return '';
+  var suffix = 'at' + birthdate.replace(/[^0-9]/g,'') + (isPartner ? 'p' : '');
+  window._atCtx = window._atCtx || {};
+  window._atCtx[suffix] = { bd: birthdate, isPartner: !!isPartner };
+  var body = atariBuildBody(suffix);
+  if(!window._compatBdB) return makeAccordion('atari-' + suffix, 'あたり星（九曜星）', '<div id="at-tabbody-' + suffix + '">' + body + '</div>', false);
+  var _act = 'padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;';
+  var _on = _act + 'background:var(--accent);color:#fff;border-color:var(--accent);';
+  var _off = _act + 'background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);font-weight:600;';
+  var tabs = '<div style="display:flex;gap:4px;">'
+    + '<button id="at-btn-me-' + suffix + '" onclick="event.stopPropagation();switchAtariCard(&quot;me&quot;,&quot;' + suffix + '&quot;)" style="' + (isPartner ? _off : _on) + '">あなた</button>'
+    + '<button id="at-btn-partner-' + suffix + '" onclick="event.stopPropagation();switchAtariCard(&quot;partner&quot;,&quot;' + suffix + '&quot;)" style="' + (isPartner ? _on : _off) + '">相手</button></div>';
+  var label = '<span style="display:flex;align-items:center;justify-content:space-between;width:100%;"><span>あたり星（九曜星）</span>' + tabs + '</span>';
+  return makeAccordion('atari-' + suffix, label, '<div id="at-tabbody-' + suffix + '">' + body + '</div>', false);
+}
+function switchAtariCard(view, suffix){
+  var isPartner = (view === 'partner');
+  var bM = document.getElementById('at-btn-me-' + suffix), bP = document.getElementById('at-btn-partner-' + suffix);
+  if(!bM || !bP) return;
+  var _act = 'padding:3px 10px;border-radius:10px;font-size:10px;font-weight:700;cursor:pointer;border:1px solid;';
+  var _on = _act + 'background:var(--accent);color:#fff;border-color:var(--accent);';
+  var _off = _act + 'background:transparent;color:rgba(168,154,255,.4);border-color:rgba(168,154,255,.3);font-weight:600;';
+  bM.setAttribute('style', isPartner ? _off : _on); bP.setAttribute('style', isPartner ? _on : _off);
+  var bd = isPartner ? window._compatBdB : (window._nyBirthdateMe || window._compatBdA);
+  if(!bd) return;
+  window._atCtx = window._atCtx || {};
+  window._atCtx[suffix] = { bd: bd, isPartner: isPartner };
+  var box = document.getElementById('at-tabbody-' + suffix);
+  if(box) box.innerHTML = atariBuildBody(suffix);
+}
+/* ======= あたり星 END ======= */
 /* アスペクト表の度数（グリッドのセル・一覧の行）をタップした時に、辞典のアスペクト解釈文を表示する */
 var LT_ASPECT_NAME_MAP = { 'コンジャンクション':'合', 'セクスタイル':'六分', 'スクエア':'四分', 'トライン':'三分', 'クインカンクス':'クインカンクス', 'オポジション':'対立' };
 function openAspectDictPanel(bodyAName, bodyBName, aspectNameKatakana) {
