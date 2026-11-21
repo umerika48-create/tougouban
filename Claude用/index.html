@@ -1899,7 +1899,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   <footer>
     Produced by Sakuraco<br>
     立春（2月4日）を年の切替<br>
-    <span style="font-size:9px;opacity:.5;">版 2026-11-21 あたり星（九曜星）つき</span>
+    <span style="font-size:9px;opacity:.5;">版 2026-11-21 あたり星を年運の表にも</span>
   </footer>
 </div>
 
@@ -8312,6 +8312,7 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
           (c.gokyoAdj&&c.gokyoAdj.flags&&c.gokyoAdj.flags.indexOf('gokusatsu')>=0?renderGokusatsuNote('nylabel-gk-'+idx):'')+
         '</div>'+
         '<div style="font-size:8px;color:rgba(255,255,255,.6);letter-spacing:.05em;margin-top:2px;">'+palDat.starName+'('+(KYU_NAME_SHORT[c.palace]||'')+(KYU_DIRECTION[c.palace]?'・'+KYU_DIRECTION[c.palace]:'')+')'+'</div>'+
+        (c.atariName ? '<div onclick="event.stopPropagation();showSystemDetail('+c.yr+',\'atari\');" style="font-size:9px;font-weight:700;text-align:center;margin-top:2px;cursor:pointer;color:'+(ATARI_COLOR_BY_RANK[c.atariRank]||'#e8c96a')+';">'+c.atariName.replace('星','')+'('+c.atariRank+')'+c.atariMark+'</div>' : '')+
         (birthdate ?
           '<div style="margin-top:5px;padding-top:5px;border-top:1px solid rgba(255,255,255,.07);">'+
             '<span class="rokku-popup-btn" onclick="toggleRokkuDetail(\''+rokkuDetailId+'\',event)">'+rLabel+'</span>'+
