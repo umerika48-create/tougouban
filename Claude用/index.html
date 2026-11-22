@@ -1899,7 +1899,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   <footer>
     Produced by Sakuraco<br>
     立春（2月4日）を年の切替<br>
-    <span style="font-size:9px;opacity:.5;">版 2026-11-22 年運の「総合」ボタン</span>
+    <span style="font-size:9px;opacity:.5;">版 2026-11-23 年運の総合点：4占術ブレンド</span>
   </footer>
 </div>
 
@@ -7512,14 +7512,13 @@ function renderTripleBreakdown(c) {
       + '</div>';
   });
   if (c.atariName) {
-    var abn = c.atariBonus || 0;
-    h += '<div onclick="event.stopPropagation();showSystemDetail('+c.yr+',\'atari\');" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;cursor:pointer;padding:2px 4px;border-radius:6px;">'
+        h += '<div onclick="event.stopPropagation();showSystemDetail('+c.yr+',\'atari\');" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;cursor:pointer;padding:2px 4px;border-radius:6px;">'
       + '<span style="color:#e8c96a;font-weight:700;">あたり星 <span style="font-size:9px;color:var(--muted);font-weight:400;">▶</span></span>'
-      + '<span>'+c.atariMark+' '+c.atariName+'（'+c.atariRank+'） <span style="opacity:.7;">'+(abn>0?'+'+abn+'点':'±0')+'</span></span>'
+      + '<span>'+c.atariMark+' '+c.atariName+'（'+c.atariRank+'） <span style="opacity:.7;">'+(c.atariPoint!=null?c.atariPoint+'点（20％）':'')+'</span></span>'
       + '</div>';
   }
   h += '<div style="border-top:1px solid rgba(255,255,255,.1);margin:4px 0;"></div>';
-  h += '<div style="display:flex;justify-content:space-between;font-weight:700;"><span>'+(c.atariName?'合計（3占術の平均＋あたり星）':'合計（平均）')+'</span><span>'+c.rank+' '+c.score+'点 '+scoreToStars(c.score)+'</span></div>';
+  h += '<div style="display:flex;justify-content:space-between;font-weight:700;"><span>'+(c.atariName?'合計（3占術をそろえて平均80％＋あたり星20％）':'合計（平均）')+'</span><span>'+c.rank+' '+c.score+'点 '+scoreToStars(c.score)+'</span></div>';
   h += '</div>';
   return h;
 }
@@ -7558,7 +7557,7 @@ function showSystemDetail(yr, key) {
         + '<div style="margin-bottom:4px;">'+atR.st.body+'</div>'
         + '<div style="color:var(--muted);">'+atR.st.season+'</div>'
         + '<div style="border-top:1px solid rgba(255,255,255,.1);margin:6px 0 2px;"></div>'
-        + '<div style="display:flex;justify-content:space-between;font-weight:700;"><span>総合点への加点</span><span>'+(atR.bonus>0?'+'+atR.bonus+'点':'±0')+'</span></div>'
+        + '<div style="display:flex;justify-content:space-between;font-weight:700;"><span>総合点への反映（重み20％）</span><span>'+ATARI_POINT_BY_RANK[atR.rank]+'点</span></div>'
         + '</div>';
     } else {
       html += '<div style="font-size:11px;color:var(--muted);">生年月日が未入力、またはまだ生まれていない年のため計算できません。</div>';
@@ -7673,16 +7672,26 @@ function buildNineYearCycle(honmei, targetYear, birthdate) {
     /* 3占術（九星気学＋六星占術＋四柱推命）の組み合わせスコア（全部揃っていれば3つ平均、四柱推命が計算できない場合は今まで通り2つ平均） */
     var combined;
     var isTriple = (rokkuScore !== null && shichuuScore !== null);
+    var atariR = (birthdate && typeof atariCalc === 'function') ? atariCalc(birthdate, yr) : null;
+    var atariPt = null;
     if (isTriple) {
-      combined = Math.round((kyuseiScore + rokkuScore + shichuuScore) / 3);
+      /* 3占術は点の高さ・ばらつきがそれぞれ違う（六星は高めで振れ幅が大きく、四柱は低め）ので、
+         混ぜる直前だけ「平均53点・ばらつき22」にそろえてから平均する。各占術の表示点は変えない */
+      var nK = normYearScore(kyuseiScore, 'kyusei'), nR = normYearScore(rokkuScore, 'rokku'), nS = normYearScore(shichuuScore, 'shichuu');
+      var avg3 = (nK + nR + nS) / 3;
+      if (atariR) {
+        /* あたり星（九曜星）は4つ目の占術として20％の重みで混ぜる（大吉85／半吉68／末吉52／大凶25点） */
+        atariPt = ATARI_POINT_BY_RANK[atariR.rank];
+        combined = Math.round(avg3 * (1 - ATARI_WEIGHT) + atariPt * ATARI_WEIGHT);
+      } else {
+        combined = Math.round(avg3);
+      }
+      combined = Math.max(0, Math.min(100, combined));
     } else if (rokkuScore !== null) {
       combined = Math.round((rokkuScore + kyuseiScore) / 2);
     } else {
       combined = kyuseiScore;
     }
-    /* あたり星（九曜星・数え歳）の加点：大吉+5／半吉+2／末吉・大凶は±0（加点のみ）。生年月日があるときだけ */
-    var atariR = (birthdate && typeof atariCalc === 'function') ? atariCalc(birthdate, yr) : null;
-    if (atariR && atariR.bonus) { combined = Math.min(100, combined + atariR.bonus); }
     /* 3占術平均は分布が42〜73点あたりに寄るため、境目を専用に調整（◎65/○50/△40）。
        2占術・1占術のみの場合は今まで通りの境目（◎60/○42/△28）を使う */
     var cLevel, cRank;
@@ -7699,7 +7708,7 @@ function buildNineYearCycle(honmei, targetYear, birthdate) {
     return { yr:yr, palace:palace, rank:cRank, level:cLevel, score:combined, label:d.label,
              kyuseiScore:kyuseiScore, rokkuScore:rokkuScore, shichuuScore:shichuuScore,
              kyuseiRank:kyuseiRank, kyuseiLevel:kyuseiLevel,
-             atariName:(atariR?atariR.name:''), atariRank:(atariR?atariR.rank:''), atariMark:(atariR?atariR.mark:''), atariBonus:(atariR?atariR.bonus:0), atariAge:(atariR?atariR.age:null),
+             atariName:(atariR?atariR.name:''), atariRank:(atariR?atariR.rank:''), atariMark:(atariR?atariR.mark:''), atariBonus:(atariR?atariR.bonus:0), atariPoint:atariPt, atariAge:(atariR?atariR.age:null),
              isTarget:(yr===targetYear), isNow:(yr===nowYear), gokyoAdj:d.gokyoAdj, breakdown:d.gokyoAdj&&d.gokyoAdj.breakdown?d.gokyoAdj.breakdown:null };
   });
   /* 結婚・転職におすすめの年（組み合わせスコア上位2年）にマークを付ける */
@@ -22653,8 +22662,18 @@ function buildJyotishKutaCardHTML(bdA, bdB){
 var ATARI_ORDER_IDX = ['羅喉星','土曜星','水曜星','金曜星','日曜星','火曜星','計都星','月曜星','木曜星'];
 /* 一覧表の並び（本の表と同じ） */
 var ATARI_LIST_ORDER_IDX = ['木曜星','月曜星','計都星','火曜星','日曜星','金曜星','水曜星','土曜星','羅喉星'];
-/* 年運の総合点への加点（加点のみ。大凶・末吉は±0） */
+/* （旧）加点方式の値。現在は ATARI_POINT_BY_RANK＋ATARI_WEIGHT でブレンド */
 var ATARI_BONUS_BY_RANK = { '大吉': 5, '半吉': 2, '末吉': 0, '大凶': 0 };
+/* 年運の総合点：あたり星を4つ目の占術として混ぜる点数と重み／3占術のものさしそろえ（実測の平均・ばらつき） */
+var ATARI_POINT_BY_RANK = { '大吉': 85, '半吉': 68, '末吉': 52, '大凶': 25 };
+var ATARI_WEIGHT = 0.2;
+var YEAR_NORM_PARAMS = { kyusei:{m:51.3,sd:21.9}, rokku:{m:58.7,sd:30.1}, shichuu:{m:47.8,sd:22.0} };
+var YEAR_NORM_TARGET = { m:53, sd:22 };
+function normYearScore(v, key) {
+  var q = YEAR_NORM_PARAMS[key];
+  var z = (v - q.m) / q.sd;
+  return Math.max(0, Math.min(100, YEAR_NORM_TARGET.m + z * YEAR_NORM_TARGET.sd));
+}
 var ATARI_MARK_BY_RANK = { '大吉': '○', '半吉': '◐', '末吉': '◑', '大凶': '●' };
 var ATARI_COLOR_BY_RANK = { '大吉': '#e8c96a', '半吉': '#cdb97a', '末吉': '#7ab8d4', '大凶': '#f9a8c9' };
 var ATARI_STAR = {
@@ -22741,7 +22760,7 @@ function atariSummaryHTML(suffix, bd, yr, r){
     + '<div style="font-size:13px;line-height:1.9;color:var(--text);">' + jyEsc(r.st.body) + '</div></div>';
   h += '<div class="hj-box"><div style="font-size:10px;color:var(--muted);margin-bottom:3px;">季節・動き方の目安</div>'
     + '<div style="font-size:12px;line-height:1.8;color:var(--text);">' + jyEsc(r.st.season) + '</div></div>';
-  h += '<div style="font-size:11px;color:var(--muted);line-height:1.7;margin:0 2px 12px;">年運サイクルの総合点への反映：<b style="color:' + col + ';">' + (r.bonus > 0 ? '+' + r.bonus + '点' : '加点なし（±0）') + '</b></div>';
+  h += '<div style="font-size:11px;color:var(--muted);line-height:1.7;margin:0 2px 12px;">年運サイクルの総合点への反映：<b style="color:' + col + ';">4つ目の占術として20％の重みで混ぜる（' + ATARI_POINT_BY_RANK[r.rank] + '点）</b></div>';
   /* これからの9年（9年で九曜星が1周する） */
   h += '<div style="font-size:11px;color:var(--muted);margin:0 2px 6px;">この年からの9年の流れ（タップでその年に切り替え）</div>';
   h += '<div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:10px;">';
