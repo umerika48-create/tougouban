@@ -1899,7 +1899,7 @@ footer { text-align:center; padding-top:28px; font-size:10px; color:var(--muted)
   <footer>
     Produced by Sakuraco<br>
     立春（2月4日）を年の切替<br>
-    <span style="font-size:9px;opacity:.5;">版 2026-11-21 あたり星を年運の表にも</span>
+    <span style="font-size:9px;opacity:.5;">版 2026-11-22 年運の「総合」ボタン</span>
   </footer>
 </div>
 
@@ -8298,11 +8298,12 @@ function buildNineYearHTML(honmei, targetYear, birthdate) {
         (c.isTarget ? '<div class="cycle-now-badge">占いたい年</div>' : '')+
         (c.isRecommended ? '<div style="position:absolute;top:4px;right:6px;font-size:6px;color:var(--gold);background:rgba(201,168,76,.15);border:1px solid rgba(201,168,76,.4);border-radius:6px;padding:1px 4px;">★おすすめ</div>' : '')+
         '<div class="cycle-year" style="color:'+(c.isTarget?'var(--gold-light)':'var(--muted)')+'">'+c.yr+'</div>'+
-        '<div class="cycle-rank '+c.kyuseiLevel+'" style="display:flex;align-items:baseline;gap:3px;justify-content:center;cursor:pointer;" onclick="toggleScoreBreakdown(\'nyscore-'+idx+'\',event);">'+c.kyuseiRank+'<span style="font-size:6px;font-weight:400;opacity:.55;">(気学)</span><span style="font-size:11px;font-weight:700;opacity:1;color:'+(c.level==='ex'?'#ffd700':c.level==='good'?'#e8e8e8':c.level==='mid'?'#ffb347':'#ff5555')+';">'+c.score+'<span style="font-size:6px;font-weight:400;opacity:.7;">(総合)</span></span></div>'+
+        '<div class="cycle-rank '+c.kyuseiLevel+'" style="display:flex;align-items:baseline;gap:3px;justify-content:center;">'+c.kyuseiRank+'<span style="font-size:6px;font-weight:400;opacity:.55;">(気学)</span></div>'+
         '<div style="font-size:9px;text-align:center;letter-spacing:1px;margin-bottom:2px;color:'+(c.kyuseiLevel==='ex'?'#ffd700':c.kyuseiLevel==='good'?'#b8a8ff':c.kyuseiLevel==='mid'?'#80b8ff':'#ff9999')+';">'+
         (c.kyuseiLevel==='ex'?'★★★★★':c.kyuseiLevel==='good'?'★★★★☆':c.kyuseiLevel==='mid'?'★★★☆☆':(c.kyuseiScore>=14?'★★☆☆☆':'★☆☆☆☆'))+
         '<span style="font-size:7px;color:var(--muted);letter-spacing:0;margin-left:3px;">（気学）</span>'+
         '</div>'+
+        (function(){ var _tc=(c.level==='ex'?'#ffd700':c.level==='good'?'#e8e8e8':c.level==='mid'?'#ffb347':'#ff5555'); return '<button type="button" class="nyc-total-btn" onclick="toggleScoreBreakdown(\'nyscore-'+idx+'\',event);" style="display:block;margin:4px auto 5px;padding:4px 11px;border-radius:14px;border:1.5px solid '+_tc+';background:rgba(255,255,255,.07);color:'+_tc+';font-size:11px;font-weight:700;line-height:1.3;cursor:pointer;white-space:nowrap;">総合 <span style="font-size:15px;">'+c.score+'</span>点 ▶</button>'; })()+
         '<div class="core-num-detail" id="nyscore-'+idx+'">'+renderTripleBreakdown(c)+'</div>'+
         '<div class="cycle-label" onclick="toggleCycleLabel(\'nylabel-'+idx+'\',event)">'+c.label+
           (c.gokyoAdj && PALACE_LUCK[c.palace] && PALACE_LUCK[c.palace].labelSub ? '<span style="font-size:8px;color:var(--muted);display:block;">'+PALACE_LUCK[c.palace].labelSub+'</span>' : '')+
